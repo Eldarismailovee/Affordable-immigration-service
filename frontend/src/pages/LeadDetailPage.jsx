@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   generateAgreementForLead,
@@ -69,7 +69,7 @@ export default function LeadDetailPage() {
   const [syncingDocketwise, setSyncingDocketwise] = useState(false);
   const [updatingPayment, setUpdatingPayment] = useState(false);
 
-  async function loadDetail() {
+  const loadDetail = useCallback(async () => {
     setLoading(true);
     setError("");
 
@@ -81,7 +81,7 @@ export default function LeadDetailPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [leadId]);
 
   async function handleGenerateAgreement() {
     setGeneratingAgreement(true);
@@ -141,7 +141,7 @@ export default function LeadDetailPage() {
 
   useEffect(() => {
     loadDetail();
-  }, [leadId]);
+  }, [loadDetail]);
 
   return (
     <div className="min-h-screen bg-[#040816] px-4 py-10 text-white md:px-6 lg:px-8">

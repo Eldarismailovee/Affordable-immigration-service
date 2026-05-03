@@ -1,7 +1,19 @@
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
+CREATE TABLE IF NOT EXISTS users (
+  id UUID PRIMARY KEY,
+  email TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  full_name TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('admin', 'user')),
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'disabled')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS leads (
   id UUID PRIMARY KEY,
+  user_id UUID REFERENCES users(id) ON DELETE SET NULL,
   first_name TEXT NOT NULL,
   last_name TEXT NOT NULL,
   email TEXT NOT NULL,
@@ -98,6 +110,9 @@ CREATE TABLE IF NOT EXISTS site_settings (
 );
 
 CREATE INDEX IF NOT EXISTS idx_intakes_lead_id ON intakes(lead_id);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+CREATE INDEX IF NOT EXISTS idx_leads_user_id ON leads(user_id);
 CREATE INDEX IF NOT EXISTS idx_agreements_lead_id ON agreements(lead_id);
 CREATE INDEX IF NOT EXISTS idx_onboarding_packets_lead_id ON onboarding_packets(lead_id);
 CREATE INDEX IF NOT EXISTS idx_bookings_lead_id ON bookings(lead_id);

@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { getAgreementByLead, getAgreementPdfUrl } from "../services/api";
+import { getAgreementByLead, openAgreementPdf } from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 export default function AgreementPage() {
   const { leadId } = useParams();
+  const { isAdmin } = useAuth();
   const [agreement, setAgreement] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [openingPdf, setOpeningPdf] = useState(false);
 
   useEffect(() => {
     async function loadAgreement() {
@@ -26,6 +29,19 @@ export default function AgreementPage() {
     loadAgreement();
   }, [leadId]);
 
+  async function handleOpenPdf() {
+    setOpeningPdf(true);
+    setError("");
+
+    try {
+      await openAgreementPdf(leadId);
+    } catch (err) {
+      setError(err.message || "Failed to open PDF");
+    } finally {
+      setOpeningPdf(false);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#040816] px-4 py-10 text-white md:px-6">
       <div className="mx-auto max-w-5xl">
@@ -40,20 +56,29 @@ export default function AgreementPage() {
           </div>
 
           <div className="flex gap-3">
-            <Link
-              to="/admin"
+            {isAdmin ? (
+              <Link
+                to="/admin"
+                className="rounded-full border border-white/15 bg-white/5 px-5 py-3 font-semibold text-white transition hover:border-amber-400/40 hover:text-amber-300"
+              >
+                Back to admin
+              </Link>
+            ) : (
+              <Link
+                to="/account"
+                className="rounded-full border border-white/15 bg-white/5 px-5 py-3 font-semibold text-white transition hover:border-amber-400/40 hover:text-amber-300"
+              >
+                Account
+              </Link>
+            )}
+            <button
+              type="button"
+              onClick={handleOpenPdf}
+              disabled={openingPdf}
               className="rounded-full border border-white/15 bg-white/5 px-5 py-3 font-semibold text-white transition hover:border-amber-400/40 hover:text-amber-300"
             >
-              Back to admin
-            </Link>
-            <a
-              href={getAgreementPdfUrl(leadId)}
-              target="_blank"
-              rel="noreferrer"
-              className="rounded-full border border-white/15 bg-white/5 px-5 py-3 font-semibold text-white transition hover:border-amber-400/40 hover:text-amber-300"
-            >
-              Download PDF
-            </a>
+              {openingPdf ? "Opening..." : "Download PDF"}
+            </button>
             <Link
               to="/"
               className="rounded-full bg-amber-400 px-5 py-3 font-semibold text-slate-950 transition hover:bg-amber-300"

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { finalIntakeSchema } from "../src/schemas/intake.schema.js";
+import { finalIntakeSchema } from "../backend/src/schemas/intake.schema.js";
 
 const validPayload = {
   selectedPackage: "filing",

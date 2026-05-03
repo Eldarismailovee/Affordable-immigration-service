@@ -2,7 +2,7 @@ import { createIntake } from "../services/intake.service.js";
 
 export async function createIntakeController(req, res, next) {
   try {
-    const lead = await createIntake(req.body);
+    const lead = await createIntake(req.body, req.user);
 
     res.status(201).json({
       message: "Intake submitted successfully",

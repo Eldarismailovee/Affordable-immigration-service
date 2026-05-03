@@ -1,9 +1,26 @@
 const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:5000/api";
+const AUTH_TOKEN_KEY = "immigration-auth-token";
+
+export function getAuthToken() {
+  return localStorage.getItem(AUTH_TOKEN_KEY);
+}
+
+export function setAuthToken(token) {
+  if (token) {
+    localStorage.setItem(AUTH_TOKEN_KEY, token);
+    return;
+  }
+
+  localStorage.removeItem(AUTH_TOKEN_KEY);
+}
 
 async function request(path, options = {}) {
+  const token = getAuthToken();
+
   const response = await fetch(`${API_URL}${path}`, {
     headers: {
       "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers || {}),
     },
     ...options,
@@ -37,6 +54,24 @@ export async function calculatePricing(payload) {
   });
 }
 
+export async function register(payload) {
+  return request("/auth/register", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function login(payload) {
+  return request("/auth/login", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getCurrentUser() {
+  return request("/auth/me");
+}
+
 export async function generateAgreementPreview(payload) {
   return request("/agreement/generate", {
     method: "POST",
@@ -53,6 +88,21 @@ export async function submitIntake(payload) {
 
 export async function getAdminLeads() {
   return request("/admin/leads");
+}
+
+export async function getAccountLeads() {
+  return request("/account/leads");
+}
+
+export async function getAdminUsers() {
+  return request("/admin/users");
+}
+
+export async function updateAdminUserRole(userId, role) {
+  return request(`/admin/users/${userId}/role`, {
+    method: "PATCH",
+    body: JSON.stringify({ role }),
+  });
 }
 
 export async function getOnboardingPacket(leadId) {
@@ -92,6 +142,42 @@ export function getOnboardingPdfUrl(leadId) {
   return `${API_URL}/onboarding/${leadId}/pdf`;
 }
 
+async function openAuthenticatedPdf(path) {
+  const token = getAuthToken();
+  const popup = window.open("", "_blank");
+  const response = await fetch(`${API_URL}${path}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+
+  if (!response.ok) {
+    if (popup) {
+      popup.close();
+    }
+
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.message || "Failed to open PDF");
+  }
+
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+
+  if (popup) {
+    popup.location.href = url;
+  } else {
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
+export function openAgreementPdf(leadId) {
+  return openAuthenticatedPdf(`/agreement/${leadId}/pdf`);
+}
+
+export function openOnboardingPdf(leadId) {
+  return openAuthenticatedPdf(`/onboarding/${leadId}/pdf`);
+}
+
 export async function updatePaymentStatus(leadId, status) {
   return request(`/payments/${leadId}/status`, {
     method: "PATCH",
@@ -113,9 +199,11 @@ export async function updateSiteSettings(payload) {
 export async function uploadImage(file) {
   const formData = new FormData();
   formData.append("image", file);
+  const token = getAuthToken();
 
   const response = await fetch(`${API_URL}/uploads/image`, {
     method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
     body: formData,
   });
 

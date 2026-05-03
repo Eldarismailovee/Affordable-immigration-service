@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { calculatePricing } from "../src/utils/pricingCalculator.js";
+import { calculatePricing } from "../backend/src/utils/pricingCalculator.js";
 
 test("guidance package returns expected range", () => {
   const result = calculatePricing({

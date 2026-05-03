@@ -4,7 +4,7 @@ import { calculatePricing } from "../utils/pricingCalculator.js";
 import { generateAgreement } from "./agreement.service.js";
 import { generateOnboardingPacket } from "./onboarding.service.js";
 
-export async function createIntake(payload) {
+export async function createIntake(payload, user) {
   const pricing = calculatePricing(payload);
   const agreement = generateAgreement(payload);
   const onboarding = generateOnboardingPacket(payload);
@@ -25,11 +25,12 @@ export async function createIntake(payload) {
     await client.query(
       `
       INSERT INTO leads (
-        id, first_name, last_name, email, phone, status
-      ) VALUES ($1, $2, $3, $4, $5, $6)
+        id, user_id, first_name, last_name, email, phone, status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
       `,
       [
         leadId,
+        user?.id || null,
         payload.firstName,
         payload.lastName,
         payload.email,

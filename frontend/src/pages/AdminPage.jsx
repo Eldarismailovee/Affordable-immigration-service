@@ -123,19 +123,25 @@ export default function AdminPage() {
           </div>
 
           <div className="flex gap-3">
-            
             <Link
               to="/"
               className="rounded-full border border-white/15 bg-white/5 px-5 py-3 font-semibold text-white transition hover:border-amber-400/40 hover:text-amber-300"
             >
               Back to site
-              <Link
-              
-  to="/admin/settings"
-  className="rounded-full border border-white/15 bg-white/5 px-5 py-3 font-semibold text-white transition hover:border-amber-400/40 hover:text-amber-300"
->
-  Site settings
-</Link>
+            </Link>
+
+            <Link
+              to="/admin/users"
+              className="rounded-full border border-white/15 bg-white/5 px-5 py-3 font-semibold text-white transition hover:border-amber-400/40 hover:text-amber-300"
+            >
+              Users
+            </Link>
+
+            <Link
+              to="/admin/settings"
+              className="rounded-full border border-white/15 bg-white/5 px-5 py-3 font-semibold text-white transition hover:border-amber-400/40 hover:text-amber-300"
+            >
+              Site settings
             </Link>
 
             <button

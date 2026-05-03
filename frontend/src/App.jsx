@@ -1,10 +1,16 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
+import { AuthProvider } from "./context/AuthContext";
 import { IntakeProvider } from "./context/IntakeContext";
 import { SiteSettingsProvider } from "./context/SiteSettingsContext";
 
 import HomePage from "./pages/HomePage";
 import StartPage from "./pages/StartPage";
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
+import AccountPage from "./pages/AccountPage";
 import AdminPage from "./pages/AdminPage";
+import AdminUsersPage from "./pages/AdminUsersPage";
 import LeadDetailPage from "./pages/LeadDetailPage";
 import AgreementPage from "./pages/AgreementPage";
 import TermsPage from "./pages/TermsPage";
@@ -26,12 +32,37 @@ export default function App() {
   return (
     <BrowserRouter>
       <SiteSettingsProvider>
-        <IntakeProvider>
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/start" element={<StartPage />} />
+        <AuthProvider>
+          <IntakeProvider>
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+              <Route
+                path="/account"
+                element={
+                  <ProtectedRoute>
+                    <AccountPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/start"
+                element={
+                  <ProtectedRoute>
+                    <StartPage />
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route path="/intake" element={<IntakeLayout />}>
+              <Route
+                path="/intake"
+                element={
+                  <ProtectedRoute>
+                    <IntakeLayout />
+                  </ProtectedRoute>
+                }
+              >
               <Route index element={<Navigate to="package" replace />} />
               <Route path="package" element={<PackageStepPage />} />
               <Route path="client" element={<ClientStepPage />} />
@@ -42,16 +73,60 @@ export default function App() {
               <Route path="success" element={<SuccessPage />} />
             </Route>
 
-            <Route path="/admin" element={<AdminPage />} />
-            <Route path="/admin/settings" element={<SiteSettingsPage />} />
-            <Route path="/admin/leads/:leadId" element={<LeadDetailPage />} />
-            <Route path="/agreement/:leadId" element={<AgreementPage />} />
-            <Route path="/onboarding/:leadId" element={<OnboardingPacketPage />} />
-            <Route path="/terms" element={<TermsPage />} />
-            <Route path="/privacy" element={<PrivacyPage />} />
-            <Route path="/disclaimer" element={<DisclaimerPage />} />
-          </Routes>
-        </IntakeProvider>
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute roles={["admin"]}>
+                    <AdminPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/users"
+                element={
+                  <ProtectedRoute roles={["admin"]}>
+                    <AdminUsersPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/settings"
+                element={
+                  <ProtectedRoute roles={["admin"]}>
+                    <SiteSettingsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/leads/:leadId"
+                element={
+                  <ProtectedRoute roles={["admin"]}>
+                    <LeadDetailPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/agreement/:leadId"
+                element={
+                  <ProtectedRoute>
+                    <AgreementPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/onboarding/:leadId"
+                element={
+                  <ProtectedRoute>
+                    <OnboardingPacketPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="/terms" element={<TermsPage />} />
+              <Route path="/privacy" element={<PrivacyPage />} />
+              <Route path="/disclaimer" element={<DisclaimerPage />} />
+            </Routes>
+          </IntakeProvider>
+        </AuthProvider>
       </SiteSettingsProvider>
     </BrowserRouter>
   );
