@@ -22,6 +22,19 @@ export async function initializeDatabase() {
     CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
     CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
     CREATE INDEX IF NOT EXISTS idx_leads_user_id ON leads(user_id);
+
+    CREATE TABLE IF NOT EXISTS admin_audit_log (
+      id UUID PRIMARY KEY,
+      user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+      method TEXT NOT NULL,
+      path TEXT NOT NULL,
+      status INTEGER,
+      request_id TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_admin_audit_user ON admin_audit_log(user_id);
+    CREATE INDEX IF NOT EXISTS idx_admin_audit_created ON admin_audit_log(created_at DESC);
   `);
 
   if (!env.ADMIN_EMAIL || !env.ADMIN_PASSWORD) {
