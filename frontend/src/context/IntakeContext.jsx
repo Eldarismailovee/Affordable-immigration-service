@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 const STORAGE_KEY = "immigration-intake";
 
@@ -39,26 +39,26 @@ export function IntakeProvider({ children }) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(intake));
   }, [intake]);
 
-  function updateField(name, value) {
+  const updateField = useCallback((name, value) => {
     setIntake((prev) => ({ ...prev, [name]: value }));
-  }
+  }, []);
 
-  function updateFields(values) {
+  const updateFields = useCallback((values) => {
     setIntake((prev) => ({ ...prev, ...values }));
-  }
+  }, []);
 
-  function setAgreementPreview(preview) {
+  const setAgreementPreview = useCallback((preview) => {
     setIntake((prev) => ({ ...prev, agreementPreview: preview }));
-  }
+  }, []);
 
-  function setSubmissionResult(result) {
+  const setSubmissionResult = useCallback((result) => {
     setIntake((prev) => ({ ...prev, submissionResult: result }));
-  }
+  }, []);
 
-  function resetIntake() {
+  const resetIntake = useCallback(() => {
     setIntake(defaultState);
     localStorage.removeItem(STORAGE_KEY);
-  }
+  }, []);
 
   const value = useMemo(
     () => ({
@@ -69,7 +69,14 @@ export function IntakeProvider({ children }) {
       setSubmissionResult,
       resetIntake,
     }),
-    [intake]
+    [
+      intake,
+      updateField,
+      updateFields,
+      setAgreementPreview,
+      setSubmissionResult,
+      resetIntake,
+    ]
   );
 
   return <IntakeContext.Provider value={value}>{children}</IntakeContext.Provider>;

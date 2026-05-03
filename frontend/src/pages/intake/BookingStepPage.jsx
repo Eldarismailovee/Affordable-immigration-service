@@ -4,6 +4,46 @@ import { useIntake } from "../../context/IntakeContext";
 import { submitIntake } from "../../services/api";
 import usePricingCalculator from "../../hooks/usePricingCalculator";
 
+const requiredFields = [
+  ["firstName", "First name"],
+  ["lastName", "Last name"],
+  ["email", "Email"],
+  ["phone", "Phone"],
+  ["caseType", "Case type"],
+  ["preferredDateTime", "Preferred date/time"],
+  ["billingName", "Billing contact name"],
+  ["billingEmail", "Billing contact email"],
+];
+
+function getValidationMessage(intake) {
+  const missingField = requiredFields.find(([field]) => {
+    const value = intake[field];
+    return typeof value !== "string" || value.trim().length === 0;
+  });
+
+  if (missingField) {
+    return `${missingField[1]} is required. Please go back and complete it.`;
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(intake.email)) {
+    return "Client email is invalid. Please go back and check it.";
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(intake.billingEmail)) {
+    return "Billing email is invalid.";
+  }
+
+  if (String(intake.phone).trim().length < 5) {
+    return "Phone is required. Please go back and check it.";
+  }
+
+  if (!intake.consentManualProcessing) {
+    return "Please confirm manual payment processing consent.";
+  }
+
+  return "";
+}
+
 export default function BookingStepPage() {
   const navigate = useNavigate();
   const { intake, updateField, setSubmissionResult } = useIntake();
@@ -21,6 +61,13 @@ export default function BookingStepPage() {
     setError("");
 
     try {
+      const validationMessage = getValidationMessage(intake);
+
+      if (validationMessage) {
+        setError(validationMessage);
+        return;
+      }
+
       const result = await submitIntake({
         ...intake,
         additionalI130Count: Number(intake.additionalI130Count || 0),

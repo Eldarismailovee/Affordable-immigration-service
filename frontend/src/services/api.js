@@ -12,7 +12,19 @@ async function request(path, options = {}) {
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    throw new Error(data.message || "Request failed");
+    const validationDetails = Array.isArray(data.errors)
+      ? data.errors
+          .map((item) => `${item.path || "field"}: ${item.message}`)
+          .join("; ")
+      : "";
+
+    const error = new Error(
+      validationDetails
+        ? `${data.message || "Request failed"}: ${validationDetails}`
+        : data.message || "Request failed"
+    );
+    error.details = data.errors || [];
+    throw error;
   }
 
   return data;

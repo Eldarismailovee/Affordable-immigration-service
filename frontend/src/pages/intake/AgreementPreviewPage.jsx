@@ -1,8 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useIntake } from "../../context/IntakeContext";
 import { generateAgreementPreview } from "../../services/api";
-import usePricingCalculator from "../../hooks/usePricingCalculator";
 
 export default function AgreementPreviewPage() {
   const navigate = useNavigate();
@@ -10,38 +9,61 @@ export default function AgreementPreviewPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const pricing = usePricingCalculator({
-    selectedPackage: intake.selectedPackage,
-    additionalI130Count: intake.additionalI130Count,
-    expedited: intake.expedited,
-  });
+  const previewPayload = useMemo(
+    () => ({
+      selectedPackage: intake.selectedPackage,
+      firstName: intake.firstName,
+      lastName: intake.lastName,
+      email: intake.email,
+      phone: intake.phone,
+      caseType: intake.caseType,
+      notes: intake.notes || "",
+      additionalI130Count: Number(intake.additionalI130Count || 0),
+      expedited: Boolean(intake.expedited),
+    }),
+    [
+      intake.selectedPackage,
+      intake.firstName,
+      intake.lastName,
+      intake.email,
+      intake.phone,
+      intake.caseType,
+      intake.notes,
+      intake.additionalI130Count,
+      intake.expedited,
+    ]
+  );
 
   useEffect(() => {
+    let ignore = false;
+
     async function loadPreview() {
       setLoading(true);
       setError("");
 
       try {
-        const result = await generateAgreementPreview({
-          ...intake,
-          additionalI130Count: Number(intake.additionalI130Count || 0),
-          pricingPreview: pricing,
-        });
+        const result = await generateAgreementPreview(previewPayload);
 
-        setAgreementPreview(result);
+        if (!ignore) {
+          setAgreementPreview(result);
+        }
       } catch (err) {
-        setError(err.message || "Failed to generate agreement preview");
+        if (!ignore) {
+          setError(err.message || "Failed to generate agreement preview");
+        }
       } finally {
-        setLoading(false);
+        if (!ignore) {
+          setLoading(false);
+        }
       }
     }
 
     loadPreview();
-  }, [
-    intake,
-    pricing,
-    setAgreementPreview,
-  ]);
+
+    return () => {
+      ignore = true;
+    };
+  }, [previewPayload, setAgreementPreview]);
 
   return (
     <div>
