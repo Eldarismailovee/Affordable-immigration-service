@@ -1,5 +1,15 @@
 import { randomUUID } from "crypto";
-import pool from "../db/pool.js";
+import { withTransaction } from "../repositories/transaction.js";
+import {
+  createBookingRecord,
+  createIntakeRecord,
+  createLead,
+  listLeadSummaries,
+} from "../repositories/lead.repository.js";
+import { createAgreement } from "../repositories/agreement.repository.js";
+import { createOnboardingPacket } from "../repositories/onboarding.repository.js";
+import { createPaymentRecord } from "../repositories/payment.repository.js";
+import { createDocketwiseSyncRecord } from "../repositories/docketwise.repository.js";
 import { calculatePricing } from "../utils/pricingCalculator.js";
 import { generateAgreement } from "./agreement.service.js";
 import { generateOnboardingPacket } from "./onboarding.service.js";
@@ -17,140 +27,87 @@ export async function createIntake(payload, user) {
   const paymentId = randomUUID();
   const docketwiseSyncId = randomUUID();
 
-  const client = await pool.connect();
+  return withTransaction(async (client) => {
+    await createLead(
+      {
+        id: leadId,
+        userId: user?.id || null,
+        firstName: payload.firstName,
+        lastName: payload.lastName,
+        email: payload.email,
+        phone: payload.phone,
+        status: "new",
+      },
+      client
+    );
 
-  try {
-    await client.query("BEGIN");
-
-    await client.query(
-      `
-      INSERT INTO leads (
-        id, user_id, first_name, last_name, email, phone, status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-      `,
-      [
+    await createIntakeRecord(
+      {
+        id: intakeId,
         leadId,
-        user?.id || null,
-        payload.firstName,
-        payload.lastName,
-        payload.email,
-        payload.phone,
-        "new",
-      ]
+        selectedPackage: payload.selectedPackage,
+        caseType: payload.caseType,
+        notes: payload.notes || "",
+        additionalI130Count: payload.additionalI130Count,
+        expedited: payload.expedited,
+        pricingMin: pricing.minTotal,
+        pricingMax: pricing.maxTotal,
+      },
+      client
     );
 
-    await client.query(
-      `
-      INSERT INTO intakes (
-        id,
-        lead_id,
-        selected_package,
-        case_type,
-        notes,
-        additional_i130_count,
-        expedited,
-        pricing_min,
-        pricing_max,
-        agreement_status,
-        booking_status,
-        payment_status,
-        docketwise_status
-      ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
-      )
-      `,
-      [
-        intakeId,
+    await createAgreement(
+      {
+        id: agreementId,
         leadId,
-        payload.selectedPackage,
-        payload.caseType,
-        payload.notes || "",
-        Number(payload.additionalI130Count || 0),
-        Boolean(payload.expedited),
-        pricing.minTotal,
-        pricing.maxTotal,
-        "generated",
-        "requested",
-        "pending_manual_processing",
-        "not_synced",
-      ]
+        title: agreement.agreementTitle,
+        htmlContent: agreement.html,
+      },
+      client
     );
 
-    await client.query(
-      `
-      INSERT INTO agreements (
-        id, lead_id, title, html_content, status
-      ) VALUES ($1, $2, $3, $4, $5)
-      `,
-      [agreementId, leadId, agreement.agreementTitle, agreement.html, "generated"]
-    );
-
-    await client.query(
-      `
-      INSERT INTO onboarding_packets (
-        id, lead_id, title, html_content, status
-      ) VALUES ($1, $2, $3, $4, $5)
-      `,
-      [onboardingId, leadId, onboarding.title, onboarding.html, "generated"]
-    );
-
-    await client.query(
-      `
-      INSERT INTO bookings (
-        id, lead_id, consultation_type, preferred_date_time, status
-      ) VALUES ($1, $2, $3, $4, $5)
-      `,
-      [
-        bookingId,
+    await createOnboardingPacket(
+      {
+        id: onboardingId,
         leadId,
-        payload.consultationType,
-        payload.preferredDateTime,
-        "requested",
-      ]
+        title: onboarding.title,
+        htmlContent: onboarding.html,
+      },
+      client
     );
 
-    await client.query(
-      `
-      INSERT INTO payments (
-        id,
-        lead_id,
-        amount_min,
-        amount_max,
-        status,
-        manual_review,
-        notes,
-        billing_name,
-        billing_email,
-        payment_preference,
-        consent_manual_processing,
-        updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
-      `,
-      [
-        paymentId,
+    await createBookingRecord(
+      {
+        id: bookingId,
         leadId,
-        pricing.minTotal,
-        pricing.maxTotal,
-        "pending_manual_processing",
-        true,
-        payload.paymentNotes || "Payment to be processed manually by office",
-        payload.billingName,
-        payload.billingEmail,
-        payload.paymentPreference,
-        Boolean(payload.consentManualProcessing),
-      ]
+        consultationType: payload.consultationType,
+        preferredDateTime: payload.preferredDateTime,
+      },
+      client
     );
 
-    await client.query(
-      `
-      INSERT INTO docketwise_sync (
-        id, lead_id, external_id, status, error_message, last_synced_at
-      ) VALUES ($1, $2, $3, $4, $5, $6)
-      `,
-      [docketwiseSyncId, leadId, null, "not_synced", null, null]
+    await createPaymentRecord(
+      {
+        id: paymentId,
+        leadId,
+        amountMin: pricing.minTotal,
+        amountMax: pricing.maxTotal,
+        notes: payload.paymentNotes || "Payment to be processed manually by office",
+        billingName: payload.billingName,
+        billingEmail: payload.billingEmail,
+        paymentPreference: payload.paymentPreference,
+        consentManualProcessing: payload.consentManualProcessing,
+      },
+      client
     );
 
-    await client.query("COMMIT");
+    await createDocketwiseSyncRecord(
+      {
+        id: docketwiseSyncId,
+        leadId,
+      },
+      client
+    );
 
     return {
       id: leadId,
@@ -179,67 +136,9 @@ export async function createIntake(payload, user) {
       status: "new",
       createdAt: new Date().toISOString(),
     };
-  } catch (error) {
-    await client.query("ROLLBACK");
-    throw error;
-  } finally {
-    client.release();
-  }
+  });
 }
 
 export async function listLeads() {
-  const { rows } = await pool.query(`
-    SELECT
-      l.id,
-      l.first_name,
-      l.last_name,
-      l.email,
-      l.phone,
-      l.status,
-      l.created_at,
-      i.selected_package,
-      i.case_type,
-      i.agreement_status,
-      i.booking_status,
-      i.payment_status,
-      COALESCE(ds.status, i.docketwise_status) AS docketwise_status,
-      ds.external_id AS docketwise_external_id,
-      i.pricing_min,
-      i.pricing_max,
-      op.status AS onboarding_status,
-      ag.status AS agreement_document_status
-    FROM leads l
-    LEFT JOIN LATERAL (
-      SELECT *
-      FROM intakes i
-      WHERE i.lead_id = l.id
-      ORDER BY i.created_at DESC
-      LIMIT 1
-    ) i ON TRUE
-    LEFT JOIN LATERAL (
-      SELECT *
-      FROM onboarding_packets op
-      WHERE op.lead_id = l.id
-      ORDER BY op.generated_at DESC
-      LIMIT 1
-    ) op ON TRUE
-    LEFT JOIN LATERAL (
-      SELECT *
-      FROM agreements ag
-      WHERE ag.lead_id = l.id
-      ORDER BY ag.generated_at DESC
-      LIMIT 1
-    ) ag ON TRUE
-    LEFT JOIN LATERAL (
-      SELECT *
-      FROM docketwise_sync ds
-      WHERE ds.lead_id = l.id
-      ORDER BY ds.created_at DESC
-      LIMIT 1
-    ) ds ON TRUE
-    ORDER BY l.created_at DESC
-    LIMIT 100
-  `);
-
-  return rows;
+  return listLeadSummaries();
 }

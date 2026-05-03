@@ -1,5 +1,6 @@
-import pool from "../db/pool.js";
 import { sanitizeUser, verifyAuthToken } from "../utils/auth.js";
+import { getLeadById } from "../services/lead.service.js";
+import { getUserById } from "../services/user.service.js";
 
 function getBearerToken(req) {
   const header = req.get("authorization") || "";
@@ -20,17 +21,7 @@ export async function optionalAuth(req, _res, next) {
       return next();
     }
 
-    const { rows } = await pool.query(
-      `
-      SELECT id, email, full_name, role, status, created_at, updated_at
-      FROM users
-      WHERE id = $1
-      LIMIT 1
-      `,
-      [payload.sub]
-    );
-
-    const user = rows[0];
+    const user = await getUserById(payload.sub);
 
     if (user?.status === "active") {
       req.user = sanitizeUser(user);
@@ -82,24 +73,15 @@ export async function requireLeadAccess(req, res, next) {
       return next();
     }
 
-    const leadId = req.params.leadId;
-    const { rows } = await pool.query(
-      `
-      SELECT user_id
-      FROM leads
-      WHERE id = $1
-      LIMIT 1
-      `,
-      [leadId]
-    );
+    const lead = await getLeadById(req.params.leadId);
 
-    if (rows.length === 0) {
+    if (!lead) {
       return res.status(404).json({
         message: "Lead not found",
       });
     }
 
-    if (rows[0].user_id !== req.user.id) {
+    if (lead.user_id !== req.user.id) {
       return res.status(403).json({
         message: "You do not have access to this lead",
       });

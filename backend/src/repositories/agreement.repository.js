@@ -14,3 +14,23 @@ export async function findLatestAgreementByLeadId(leadId, db = pool) {
 
   return rows[0] || null;
 }
+
+export async function createAgreement(
+  {
+    id,
+    leadId,
+    title,
+    htmlContent,
+    status = "generated",
+  },
+  db = pool
+) {
+  await db.query(
+    `
+    INSERT INTO agreements (
+      id, lead_id, title, html_content, status
+    ) VALUES ($1, $2, $3, $4, $5)
+    `,
+    [id, leadId, title, htmlContent, status]
+  );
+}

@@ -1,29 +1,17 @@
-import { randomUUID } from "crypto";
-import pool from "../db/pool.js";
 import { createAuthToken, hashPassword, sanitizeUser, verifyPassword } from "../utils/auth.js";
-
-async function getUserByEmail(email) {
-  const { rows } = await pool.query(
-    `
-    SELECT id, email, password_hash, full_name, role, status, created_at, updated_at
-    FROM users
-    WHERE email = $1
-    LIMIT 1
-    `,
-    [email.toLowerCase()]
-  );
-
-  return rows[0] || null;
-}
+import {
+  countUsers,
+  createUser,
+  findUserByEmail,
+} from "../repositories/user.repository.js";
 
 async function getInitialRole() {
-  const { rows } = await pool.query("SELECT COUNT(*)::int AS total FROM users");
-  return rows[0]?.total === 0 ? "admin" : "user";
+  return (await countUsers()) === 0 ? "admin" : "user";
 }
 
 export async function registerUser(payload) {
   const email = payload.email.toLowerCase();
-  const existing = await getUserByEmail(email);
+  const existing = await findUserByEmail(email);
 
   if (existing) {
     const error = new Error("A user with this email already exists");
@@ -34,22 +22,14 @@ export async function registerUser(payload) {
   const role = await getInitialRole();
   const passwordHash = await hashPassword(payload.password);
 
-  const { rows } = await pool.query(
-    `
-    INSERT INTO users (
-      id,
+  const user = sanitizeUser(
+    await createUser({
       email,
-      password_hash,
-      full_name,
+      passwordHash,
+      fullName: payload.fullName,
       role,
-      status
-    ) VALUES ($1, $2, $3, $4, $5, 'active')
-    RETURNING id, email, full_name, role, status, created_at, updated_at
-    `,
-    [randomUUID(), email, passwordHash, payload.fullName, role]
+    })
   );
-
-  const user = sanitizeUser(rows[0]);
 
   return {
     user,
@@ -58,7 +38,7 @@ export async function registerUser(payload) {
 }
 
 export async function loginUser(payload) {
-  const user = await getUserByEmail(payload.email);
+  const user = await findUserByEmail(payload.email);
 
   if (!user || user.status !== "active") {
     const error = new Error("Invalid email or password");
