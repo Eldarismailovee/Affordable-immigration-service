@@ -48,7 +48,7 @@ async function request(path, options = {}) {
 }
 
 export async function calculatePricing(payload) {
-  return request("/pricing/calculate", {
+  return request("/public/pricing/calculate", {
     method: "POST",
     body: JSON.stringify(payload),
   });
@@ -73,14 +73,14 @@ export async function getCurrentUser() {
 }
 
 export async function generateAgreementPreview(payload) {
-  return request("/agreement/generate", {
+  return request("/account/agreement/generate", {
     method: "POST",
     body: JSON.stringify(payload),
   });
 }
 
 export async function submitIntake(payload) {
-  return request("/intake", {
+  return request("/account/intake", {
     method: "POST",
     body: JSON.stringify(payload),
   });
@@ -106,11 +106,11 @@ export async function updateAdminUserRole(userId, role) {
 }
 
 export async function getOnboardingPacket(leadId) {
-  return request(`/onboarding/${leadId}`);
+  return request(`/account/onboarding/${leadId}`);
 }
 
 export async function generateOnboardingPacketForLead(leadId) {
-  return request(`/onboarding/${leadId}/generate`, {
+  return request(`/admin/onboarding/${leadId}/generate`, {
     method: "POST",
   });
 }
@@ -119,27 +119,27 @@ export async function getAdminLeadDetail(leadId) {
 }
 
 export async function getAgreementByLead(leadId) {
-  return request(`/agreement/${leadId}`);
+  return request(`/account/agreement/${leadId}`);
 }
 
 export async function generateAgreementForLead(leadId) {
-  return request(`/agreement/${leadId}/generate`, {
+  return request(`/admin/agreement/${leadId}/generate`, {
     method: "POST",
   });
 }
 
 export async function syncLeadToDocketwise(leadId) {
-  return request(`/docketwise/${leadId}/sync`, {
+  return request(`/admin/docketwise/${leadId}/sync`, {
     method: "POST",
   });
 }
 
 export function getAgreementPdfUrl(leadId) {
-  return `${API_URL}/agreement/${leadId}/pdf`;
+  return `${API_URL}/account/agreement/${leadId}/pdf`;
 }
 
 export function getOnboardingPdfUrl(leadId) {
-  return `${API_URL}/onboarding/${leadId}/pdf`;
+  return `${API_URL}/account/onboarding/${leadId}/pdf`;
 }
 
 async function openAuthenticatedPdf(path) {
@@ -171,26 +171,26 @@ async function openAuthenticatedPdf(path) {
 }
 
 export function openAgreementPdf(leadId) {
-  return openAuthenticatedPdf(`/agreement/${leadId}/pdf`);
+  return openAuthenticatedPdf(`/account/agreement/${leadId}/pdf`);
 }
 
 export function openOnboardingPdf(leadId) {
-  return openAuthenticatedPdf(`/onboarding/${leadId}/pdf`);
+  return openAuthenticatedPdf(`/account/onboarding/${leadId}/pdf`);
 }
 
 export async function updatePaymentStatus(leadId, status) {
-  return request(`/payments/${leadId}/status`, {
+  return request(`/admin/payments/${leadId}/status`, {
     method: "PATCH",
     body: JSON.stringify({ status }),
   });
 }
 
 export async function getSiteSettings() {
-  return request("/site-settings");
+  return request("/public/site-settings");
 }
 
 export async function updateSiteSettings(payload) {
-  return request("/site-settings", {
+  return request("/admin/site-settings", {
     method: "PUT",
     body: JSON.stringify(payload),
   });
@@ -201,7 +201,7 @@ export async function uploadImage(file) {
   formData.append("image", file);
   const token = getAuthToken();
 
-  const response = await fetch(`${API_URL}/uploads/image`, {
+  const response = await fetch(`${API_URL}/admin/uploads/image`, {
     method: "POST",
     headers: token ? { Authorization: `Bearer ${token}` } : {},
     body: formData,

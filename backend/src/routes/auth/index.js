@@ -3,10 +3,10 @@ import {
   loginController,
   meController,
   registerController,
-} from "../controllers/auth.controller.js";
-import { requireAuth } from "../middleware/auth.js";
-import { validateRequest } from "../middleware/validateRequest.js";
-import { loginSchema, registerSchema } from "../schemas/auth.schema.js";
+} from "../../controllers/auth.controller.js";
+import { requireAuth } from "../../middleware/auth.js";
+import { validateRequest } from "../../middleware/validateRequest.js";
+import { loginSchema, registerSchema } from "../../schemas/auth.schema.js";
 
 const router = Router();
 

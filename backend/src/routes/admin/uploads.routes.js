@@ -2,7 +2,7 @@ import { Router } from "express";
 import {
   uploadImageController,
   uploadImageMiddleware,
-} from "../controllers/upload.controller.js";
+} from "../../controllers/upload.controller.js";
 
 const router = Router();
 

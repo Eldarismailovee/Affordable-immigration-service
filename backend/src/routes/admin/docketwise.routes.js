@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { createDocketwiseController } from "../controllers/docketwise.controller.js";
-import { syncLeadToDocketwiseController } from "../controllers/docketwise-admin.controller.js";
+import { createDocketwiseController } from "../../controllers/docketwise.controller.js";
+import { syncLeadToDocketwiseController } from "../../controllers/docketwise-admin.controller.js";
 
 const router = Router();
 
