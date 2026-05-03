@@ -1,42 +1,25 @@
-import pool from "../db/pool.js";
-import { renderHtmlToPdfBuffer } from "../services/pdf.service.js";
+import { renderOnboardingPdfByLeadId } from "../services/onboarding-document.service.js";
 
 export async function downloadOnboardingPdfController(req, res, next) {
   try {
     const { leadId } = req.params;
+    const result = await renderOnboardingPdfByLeadId(leadId);
 
-    const { rows } = await pool.query(
-      `
-      SELECT id, lead_id, title, html_content, status, generated_at
-      FROM onboarding_packets
-      WHERE lead_id = $1
-      ORDER BY generated_at DESC
-      LIMIT 1
-      `,
-      [leadId]
-    );
-
-    if (rows.length === 0) {
+    if (!result) {
       return res.status(404).json({
         message: "Onboarding packet not found",
       });
     }
 
-    const packet = rows[0];
-    const pdfBuffer = await renderHtmlToPdfBuffer({
-      title: packet.title || "Onboarding Packet",
-      html: packet.html_content,
-    });
-
     res.status(200);
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Length", pdfBuffer.length);
+    res.setHeader("Content-Length", result.pdfBuffer.length);
     res.setHeader(
       "Content-Disposition",
       `inline; filename="onboarding-${leadId}.pdf"`
     );
 
-    res.end(pdfBuffer);
+    res.end(result.pdfBuffer);
   } catch (error) {
     next(error);
   }

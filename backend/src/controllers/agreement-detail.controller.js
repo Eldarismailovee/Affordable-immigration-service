@@ -1,27 +1,17 @@
-import pool from "../db/pool.js";
+import { getAgreementByLeadId } from "../services/agreement-document.service.js";
 
 export async function getAgreementByLeadController(req, res, next) {
   try {
     const { leadId } = req.params;
+    const agreement = await getAgreementByLeadId(leadId);
 
-    const { rows } = await pool.query(
-      `
-      SELECT id, lead_id, title, html_content, status, generated_at
-      FROM agreements
-      WHERE lead_id = $1
-      ORDER BY generated_at DESC
-      LIMIT 1
-      `,
-      [leadId]
-    );
-
-    if (rows.length === 0) {
+    if (!agreement) {
       return res.status(404).json({
         message: "Agreement not found",
       });
     }
 
-    res.json({ agreement: rows[0] });
+    res.json({ agreement });
   } catch (error) {
     next(error);
   }
