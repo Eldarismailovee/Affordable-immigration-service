@@ -69,16 +69,16 @@ export async function requireLeadAccess(req, res, next) {
       });
     }
 
-    if (req.user.role === "admin") {
-      return next();
-    }
-
     const lead = await getLeadById(req.params.leadId);
 
     if (!lead) {
       return res.status(404).json({
         message: "Lead not found",
       });
+    }
+
+    if (req.user.role === "admin") {
+      return next();
     }
 
     if (lead.user_id !== req.user.id) {

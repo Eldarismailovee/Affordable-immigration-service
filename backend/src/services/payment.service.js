@@ -1,4 +1,4 @@
-import { withTransaction } from "../repositories/transaction.js";
+import { withTransaction } from "../db/transaction.js";
 import {
   updateIntakePaymentStatusByLeadId,
   updatePaymentStatusByLeadId,

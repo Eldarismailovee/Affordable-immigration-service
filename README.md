@@ -18,11 +18,13 @@ This is not just a brochure site. It is a small legal-ops product with a full cl
 
 - public landing page with pricing, services, FAQ, intake CTA, and legal pages
 - guided multi-step intake flow
+- authentication for registered users and admin-only operations
 - backend pricing calculation and validation
 - automated fee agreement preview
 - automated onboarding packet generation
 - PostgreSQL-backed persistence for leads, intakes, documents, bookings, payments, and site settings
 - admin dashboard with lead list and lead detail views
+- admin user management with role updates
 - document generation for older leads from inside admin
 - Docketwise sync stub with visible sync status
 - site settings editor for logo, contact info, language mode, and marketing images
@@ -48,14 +50,22 @@ Can:
 
 - review leads in admin dashboard
 - open detailed lead records
+- manage registered users and admin/user roles
 - view agreement and onboarding assets
 - generate missing documents for older leads
 - update payment status
 - trigger Docketwise sync stub
 - manage site settings and marketing assets
 
-### 3) Attorney
-The product currently supports the attorney workflow indirectly through intake review, generated documents, package selection, and consultation booking. A dedicated attorney-only role or auth layer can be added next.
+### 3) Registered user
+Can:
+
+- sign in to a personal account
+- submit intake as the account owner
+- view their own leads and generated documents
+
+### 4) Attorney
+The product currently supports the attorney workflow indirectly through intake review, generated documents, package selection, and consultation booking. A dedicated attorney-only role can be added next.
 
 ## Core features
 
@@ -108,6 +118,8 @@ Express API
   - pricing
   - agreement generation
   - onboarding generation
+  - services
+  - repositories
   - payment workflow
   - site settings
   - uploads
@@ -115,6 +127,7 @@ Express API
         |
         v
 PostgreSQL
+  - versioned migrations
   - leads
   - intakes
   - agreements
@@ -200,7 +213,9 @@ backend/
     controllers/
     routes/
     services/
+    repositories/
     db/
+      migrations/
     schemas/
     middleware/
     utils/
@@ -234,6 +249,7 @@ docker-compose.yml
 cd backend
 npm install
 cp .env.example .env
+npm run migrate
 npm run dev
 ```
 
@@ -256,6 +272,8 @@ curl http://127.0.0.1:5000/api/health
 ```bash
 docker compose up --build
 ```
+
+The backend applies versioned database migrations on startup. `backend/src/db/schema.sql` is kept only as a pointer for older tooling; migrations in `backend/src/db/migrations/` are the source of truth.
 
 ### Rebuild from scratch
 ```bash
@@ -281,6 +299,10 @@ CLIENT_URL=http://127.0.0.1
 BASE_URL=http://127.0.0.1
 DATABASE_URL=postgresql://immigration:change-me@postgres:5432/immigration_firm
 CHROMIUM_PATH=/usr/bin/chromium
+AUTH_TOKEN_SECRET=replace-with-a-long-random-secret
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=change-me-admin-password
+ADMIN_NAME=System Administrator
 
 VITE_API_URL=/api
 ```
@@ -292,6 +314,18 @@ Key variables:
 - `BASE_URL`
 - `DATABASE_URL`
 - `CHROMIUM_PATH`
+- `AUTH_TOKEN_SECRET`
+- `ADMIN_EMAIL`
+- `ADMIN_PASSWORD`
+- `ADMIN_NAME`
+
+### Database migrations
+```bash
+cd backend
+npm run migrate
+```
+
+Migrations are applied in filename order and recorded in the `schema_migrations` table. New database changes should be added as a new SQL file, not by editing runtime initialization code.
 
 ### Frontend
 Key variable:
@@ -336,9 +370,9 @@ Deployment path:
 
 ## Limitations / next steps
 
-- admin auth still needs to be added
 - Docketwise is currently a stub flow, not a production API integration
 - media uploads use local disk storage, not object storage
+- audit logging currently covers admin mutations, but not every user-facing action
 - legal text should be reviewed by counsel before public launch
 - live demo hosting and polished video walkthrough should be added next
 

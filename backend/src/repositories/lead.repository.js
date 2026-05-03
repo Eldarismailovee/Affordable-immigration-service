@@ -2,11 +2,14 @@ import pool from "../db/pool.js";
 
 export async function listLeadSummaries({ userId } = {}, db = pool) {
   const params = [];
-  const whereClause = userId ? "WHERE l.user_id = $1" : "";
+  const filters = ["l.deleted_at IS NULL"];
 
   if (userId) {
     params.push(userId);
+    filters.push(`l.user_id = $${params.length}`);
   }
+
+  const whereClause = `WHERE ${filters.join(" AND ")}`;
 
   const { rows } = await db.query(
     `
@@ -74,7 +77,26 @@ export async function findLeadById(leadId, db = pool) {
     SELECT id, user_id, first_name, last_name, email, phone, status, created_at, updated_at
     FROM leads
     WHERE id = $1
+      AND deleted_at IS NULL
     LIMIT 1
+    `,
+    [leadId]
+  );
+
+  return rows[0] || null;
+}
+
+export async function softDeleteLeadById(leadId, db = pool) {
+  const { rows } = await db.query(
+    `
+    UPDATE leads
+    SET
+      status = 'closed',
+      deleted_at = COALESCE(deleted_at, NOW()),
+      updated_at = NOW()
+    WHERE id = $1
+      AND deleted_at IS NULL
+    RETURNING id, user_id, first_name, last_name, email, phone, status, created_at, updated_at
     `,
     [leadId]
   );

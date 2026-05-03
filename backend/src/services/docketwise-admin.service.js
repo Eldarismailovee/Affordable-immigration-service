@@ -9,7 +9,7 @@ import {
   createDocketwiseSyncRecord,
   updateDocketwiseSyncById,
 } from "../repositories/docketwise.repository.js";
-import { withTransaction } from "../repositories/transaction.js";
+import { withTransaction } from "../db/transaction.js";
 
 export async function syncLeadToDocketwise(leadId) {
   const lead = await findLeadById(leadId);

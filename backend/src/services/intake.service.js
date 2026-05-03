@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { withTransaction } from "../repositories/transaction.js";
+import { withTransaction } from "../db/transaction.js";
 import {
   createBookingRecord,
   createIntakeRecord,

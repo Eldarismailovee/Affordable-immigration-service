@@ -9,7 +9,6 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./backend/src/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
     networks:
       - appnet
 
@@ -25,6 +24,10 @@ services:
       BASE_URL: ${BASE_URL}
       DATABASE_URL: ${DATABASE_URL}
       CHROMIUM_PATH: ${CHROMIUM_PATH}
+      AUTH_TOKEN_SECRET: ${AUTH_TOKEN_SECRET}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      ADMIN_NAME: ${ADMIN_NAME}
     depends_on:
       - postgres
     volumes:

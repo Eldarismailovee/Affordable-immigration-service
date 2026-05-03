@@ -8,7 +8,7 @@ import {
   createAgreement,
   findLatestAgreementByLeadId,
 } from "../repositories/agreement.repository.js";
-import { withTransaction } from "../repositories/transaction.js";
+import { withTransaction } from "../db/transaction.js";
 import { generateAgreement } from "./agreement.service.js";
 
 export async function generateAgreementForLead(leadId) {

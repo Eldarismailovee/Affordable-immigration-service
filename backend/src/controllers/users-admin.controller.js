@@ -1,4 +1,4 @@
-import { listUsers, updateUserRole } from "../services/user.service.js";
+import { deleteUser, listUsers, updateUserRole } from "../services/user.service.js";
 
 export async function listUsersController(_req, res, next) {
   try {
@@ -12,6 +12,15 @@ export async function listUsersController(_req, res, next) {
 export async function updateUserRoleController(req, res, next) {
   try {
     const user = await updateUserRole(req.params.userId, req.body.role);
+    res.json({ user });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function deleteUserController(req, res, next) {
+  try {
+    const user = await deleteUser(req.params.userId);
     res.json({ user });
   } catch (error) {
     next(error);

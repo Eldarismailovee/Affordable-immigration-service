@@ -3,6 +3,7 @@ import {
   countActiveAdmins,
   findUserById,
   listUsers as listUserRows,
+  softDeleteUserById,
   updateUserRoleById,
 } from "../repositories/user.repository.js";
 
@@ -41,4 +42,26 @@ export async function updateUserRole(userId, role) {
   }
 
   return sanitizeUser(await updateUserRoleById(userId, role));
+}
+
+export async function deleteUser(userId) {
+  const currentUser = await findUserById(userId);
+
+  if (!currentUser) {
+    const error = new Error("User not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (currentUser.role === "admin") {
+    const activeAdminCount = await countActiveAdmins();
+
+    if (activeAdminCount <= 1) {
+      const error = new Error("At least one active administrator is required");
+      error.statusCode = 400;
+      throw error;
+    }
+  }
+
+  return sanitizeUser(await softDeleteUserById(userId));
 }

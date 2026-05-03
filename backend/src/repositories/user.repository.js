@@ -9,10 +9,11 @@ export async function findUserByEmail(email, db = pool) {
     `
     SELECT ${AUTH_USER_FIELDS}
     FROM users
-    WHERE email = $1
+    WHERE LOWER(email) = LOWER($1)
+      AND deleted_at IS NULL
     LIMIT 1
     `,
-    [email.toLowerCase()]
+    [email]
   );
 
   return rows[0] || null;
@@ -24,6 +25,7 @@ export async function findUserById(userId, db = pool) {
     SELECT ${SAFE_USER_FIELDS}
     FROM users
     WHERE id = $1
+      AND deleted_at IS NULL
     LIMIT 1
     `,
     [userId]
@@ -33,13 +35,21 @@ export async function findUserById(userId, db = pool) {
 }
 
 export async function countUsers(db = pool) {
-  const { rows } = await db.query("SELECT COUNT(*)::int AS total FROM users");
+  const { rows } = await db.query(
+    "SELECT COUNT(*)::int AS total FROM users WHERE deleted_at IS NULL"
+  );
   return rows[0]?.total || 0;
 }
 
 export async function countActiveAdmins(db = pool) {
   const { rows } = await db.query(
-    "SELECT COUNT(*)::int AS total FROM users WHERE role = 'admin' AND status = 'active'"
+    `
+    SELECT COUNT(*)::int AS total
+    FROM users
+    WHERE role = 'admin'
+      AND status = 'active'
+      AND deleted_at IS NULL
+    `
   );
 
   return rows[0]?.total || 0;
@@ -69,6 +79,7 @@ export async function listUsers(db = pool) {
     `
     SELECT ${SAFE_USER_FIELDS}
     FROM users
+    WHERE deleted_at IS NULL
     ORDER BY created_at DESC
     `
   );
@@ -82,9 +93,28 @@ export async function updateUserRoleById(userId, role, db = pool) {
     UPDATE users
     SET role = $2, updated_at = NOW()
     WHERE id = $1
+      AND deleted_at IS NULL
     RETURNING ${SAFE_USER_FIELDS}
     `,
     [userId, role]
+  );
+
+  return rows[0] || null;
+}
+
+export async function softDeleteUserById(userId, db = pool) {
+  const { rows } = await db.query(
+    `
+    UPDATE users
+    SET
+      status = 'disabled',
+      deleted_at = COALESCE(deleted_at, NOW()),
+      updated_at = NOW()
+    WHERE id = $1
+      AND deleted_at IS NULL
+    RETURNING ${SAFE_USER_FIELDS}
+    `,
+    [userId]
   );
 
   return rows[0] || null;

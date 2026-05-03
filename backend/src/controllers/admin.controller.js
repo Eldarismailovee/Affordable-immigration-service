@@ -1,5 +1,5 @@
 import { listLeads } from "../services/intake.service.js";
-import { getLeadDetail } from "../services/admin.service.js";
+import { deleteLead, getLeadDetail } from "../services/admin.service.js";
 
 export async function listLeadsController(req, res, next) {
   try {
@@ -22,6 +22,16 @@ export async function getLeadDetailController(req, res, next) {
     }
 
     res.json(detail);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function deleteLeadController(req, res, next) {
+  try {
+    const { leadId } = req.params;
+    const lead = await deleteLead(leadId);
+    res.json({ lead });
   } catch (error) {
     next(error);
   }
