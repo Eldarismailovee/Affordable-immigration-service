@@ -3,6 +3,9 @@ import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
 import env from "../config/env.js";
+import { IMAGE_UPLOAD_MIME_TYPES, MAX_IMAGE_UPLOAD_BYTES } from "../constants/domain.js";
+import { uploadImageResponseSchema } from "../schemas/response.schema.js";
+import { sendResponse } from "../utils/sendResponse.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -28,19 +31,21 @@ const storage = multer.diskStorage({
 });
 
 function fileFilter(_req, file, cb) {
-  if (file.mimetype && file.mimetype.startsWith("image/")) {
+  if (IMAGE_UPLOAD_MIME_TYPES.includes(file.mimetype)) {
     cb(null, true);
     return;
   }
 
-  cb(new Error("Only image uploads are allowed"));
+  const error = new Error("Only JPEG, PNG, WebP, or GIF uploads are allowed");
+  error.statusCode = 400;
+  cb(error);
 }
 
 const upload = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: 5 * 1024 * 1024,
+    fileSize: MAX_IMAGE_UPLOAD_BYTES,
   },
 });
 
@@ -56,14 +61,19 @@ export function uploadImageController(req, res) {
   const baseUrl = env.BASE_URL || `${req.protocol}://${req.get("host")}`;
   const url = `${baseUrl}/uploads/${req.file.filename}`;
 
-  res.status(201).json({
-    message: "Image uploaded successfully",
-    file: {
-      filename: req.file.filename,
-      originalName: req.file.originalname,
-      mimeType: req.file.mimetype,
-      size: req.file.size,
-      url,
+  sendResponse(
+    res,
+    uploadImageResponseSchema,
+    {
+      message: "Image uploaded successfully",
+      file: {
+        filename: req.file.filename,
+        originalName: req.file.originalname,
+        mimeType: req.file.mimetype,
+        size: req.file.size,
+        url,
+      },
     },
-  });
+    201
+  );
 }

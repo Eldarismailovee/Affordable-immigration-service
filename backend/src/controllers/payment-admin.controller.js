@@ -1,4 +1,6 @@
 import { updateLeadPaymentStatus } from "../services/payment.service.js";
+import { paymentMutationResponseSchema } from "../schemas/response.schema.js";
+import { sendResponse } from "../utils/sendResponse.js";
 
 export async function updatePaymentStatusController(req, res, next) {
   try {
@@ -6,9 +8,7 @@ export async function updatePaymentStatusController(req, res, next) {
     const { status } = req.body;
     const payment = await updateLeadPaymentStatus(leadId, status);
 
-    res.json({
-      payment,
-    });
+    sendResponse(res, paymentMutationResponseSchema, { payment });
   } catch (error) {
     next(error);
   }

@@ -1,4 +1,5 @@
 import { sanitizeUser, verifyAuthToken } from "../utils/auth.js";
+import { ACTIVE_USER_STATUS, ADMIN_ROLE } from "../constants/domain.js";
 import { getLeadById } from "../services/lead.service.js";
 import { getUserById } from "../services/user.service.js";
 
@@ -23,7 +24,7 @@ export async function optionalAuth(req, _res, next) {
 
     const user = await getUserById(payload.sub);
 
-    if (user?.status === "active") {
+    if (user?.status === ACTIVE_USER_STATUS) {
       req.user = sanitizeUser(user);
     }
 
@@ -77,7 +78,7 @@ export async function requireLeadAccess(req, res, next) {
       });
     }
 
-    if (req.user.role === "admin") {
+    if (req.user.role === ADMIN_ROLE) {
       return next();
     }
 

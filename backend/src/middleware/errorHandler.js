@@ -2,8 +2,11 @@ import env from "../config/env.js";
 import { logger } from "../lib/logger.js";
 
 export function errorHandler(err, req, res, _next) {
+  const isUploadError = err.name === "MulterError";
   const statusCode =
-    err.statusCode || (res.statusCode && res.statusCode !== 200 ? res.statusCode : 500);
+    err.statusCode ||
+    (isUploadError ? 400 : null) ||
+    (res.statusCode && res.statusCode !== 200 ? res.statusCode : 500);
 
   const log = req.log || logger;
   log.error(

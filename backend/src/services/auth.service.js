@@ -1,4 +1,5 @@
 import { createAuthToken, hashPassword, sanitizeUser, verifyPassword } from "../utils/auth.js";
+import { ACTIVE_USER_STATUS, ADMIN_ROLE, USER_ROLE } from "../constants/domain.js";
 import {
   countUsers,
   createUser,
@@ -6,7 +7,7 @@ import {
 } from "../repositories/user.repository.js";
 
 async function getInitialRole() {
-  return (await countUsers()) === 0 ? "admin" : "user";
+  return (await countUsers()) === 0 ? ADMIN_ROLE : USER_ROLE;
 }
 
 export async function registerUser(payload) {
@@ -40,7 +41,7 @@ export async function registerUser(payload) {
 export async function loginUser(payload) {
   const user = await findUserByEmail(payload.email);
 
-  if (!user || user.status !== "active") {
+  if (!user || user.status !== ACTIVE_USER_STATUS) {
     const error = new Error("Invalid email or password");
     error.statusCode = 401;
     throw error;

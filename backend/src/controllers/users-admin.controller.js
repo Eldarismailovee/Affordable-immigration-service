@@ -1,9 +1,14 @@
 import { deleteUser, listUsers, updateUserRole } from "../services/user.service.js";
+import {
+  userMutationResponseSchema,
+  usersListResponseSchema,
+} from "../schemas/response.schema.js";
+import { sendResponse } from "../utils/sendResponse.js";
 
 export async function listUsersController(_req, res, next) {
   try {
     const users = await listUsers();
-    res.json({ users });
+    sendResponse(res, usersListResponseSchema, { users });
   } catch (error) {
     next(error);
   }
@@ -12,7 +17,7 @@ export async function listUsersController(_req, res, next) {
 export async function updateUserRoleController(req, res, next) {
   try {
     const user = await updateUserRole(req.params.userId, req.body.role);
-    res.json({ user });
+    sendResponse(res, userMutationResponseSchema, { user });
   } catch (error) {
     next(error);
   }
@@ -21,7 +26,7 @@ export async function updateUserRoleController(req, res, next) {
 export async function deleteUserController(req, res, next) {
   try {
     const user = await deleteUser(req.params.userId);
-    res.json({ user });
+    sendResponse(res, userMutationResponseSchema, { user });
   } catch (error) {
     next(error);
   }

@@ -1,4 +1,5 @@
 import { sanitizeUser } from "../utils/auth.js";
+import { ADMIN_ROLE } from "../constants/domain.js";
 import {
   countActiveAdmins,
   findUserById,
@@ -6,6 +7,7 @@ import {
   softDeleteUserById,
   updateUserRoleById,
 } from "../repositories/user.repository.js";
+import { userRoleSchema } from "../schemas/domain.schema.js";
 
 export async function getUserById(userId) {
   return findUserById(userId);
@@ -17,11 +19,15 @@ export async function listUsers() {
 }
 
 export async function updateUserRole(userId, role) {
-  if (!["admin", "user"].includes(role)) {
+  const result = userRoleSchema.safeParse(role);
+
+  if (!result.success) {
     const error = new Error("Invalid role");
     error.statusCode = 400;
     throw error;
   }
+
+  const nextRole = result.data;
 
   const currentUser = await findUserById(userId);
 
@@ -31,7 +37,7 @@ export async function updateUserRole(userId, role) {
     throw error;
   }
 
-  if (currentUser.role === "admin" && role !== "admin") {
+  if (currentUser.role === ADMIN_ROLE && nextRole !== ADMIN_ROLE) {
     const activeAdminCount = await countActiveAdmins();
 
     if (activeAdminCount <= 1) {
@@ -41,7 +47,7 @@ export async function updateUserRole(userId, role) {
     }
   }
 
-  return sanitizeUser(await updateUserRoleById(userId, role));
+  return sanitizeUser(await updateUserRoleById(userId, nextRole));
 }
 
 export async function deleteUser(userId) {
@@ -53,7 +59,7 @@ export async function deleteUser(userId) {
     throw error;
   }
 
-  if (currentUser.role === "admin") {
+  if (currentUser.role === ADMIN_ROLE) {
     const activeAdminCount = await countActiveAdmins();
 
     if (activeAdminCount <= 1) {

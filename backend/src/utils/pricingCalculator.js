@@ -1,3 +1,5 @@
+import { FILING_PACKAGE, GUIDANCE_PACKAGE } from "../constants/domain.js";
+
 export function calculatePricing({
   selectedPackage,
   additionalI130Count = 0,
@@ -6,12 +8,12 @@ export function calculatePricing({
   let min = 0;
   let max = 0;
 
-  if (selectedPackage === "guidance") {
+  if (selectedPackage === GUIDANCE_PACKAGE) {
     min = 1000;
     max = 1500;
   }
 
-  if (selectedPackage === "filing") {
+  if (selectedPackage === FILING_PACKAGE) {
     min = 2000;
     max = 2500;
   }

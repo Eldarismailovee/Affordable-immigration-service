@@ -10,7 +10,3 @@ export const loginSchema = z.object({
   email: z.email("Valid email is required"),
   password: z.string().min(1, "Password is required"),
 });
-
-export const updateUserRoleSchema = z.object({
-  role: z.enum(["admin", "user"]),
-});

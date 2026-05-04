@@ -1,10 +1,9 @@
-import { randomUUID } from "crypto";
 import {
   findLatestIntakeByLeadId,
   findLeadById,
 } from "../repositories/lead.repository.js";
 import {
-  createOnboardingPacket,
+  createOnboardingPacketForLead,
   findLatestOnboardingPacketByLeadId,
 } from "../repositories/onboarding.repository.js";
 import { generateOnboardingPacket } from "./onboarding.service.js";
@@ -43,16 +42,11 @@ export async function generateOnboardingPacketForLead(leadId) {
     expedited: Boolean(intake.expedited),
   });
 
-  const onboardingId = randomUUID();
-
-  await createOnboardingPacket({
-    id: onboardingId,
+  const created = await createOnboardingPacketForLead({
     leadId,
     title: packet.title,
     htmlContent: packet.html,
   });
-
-  const created = await findLatestOnboardingPacketByLeadId(leadId);
 
   return {
     alreadyExists: false,

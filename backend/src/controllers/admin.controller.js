@@ -1,10 +1,16 @@
 import { listLeads } from "../services/intake.service.js";
 import { deleteLead, getLeadDetail } from "../services/admin.service.js";
+import {
+  leadDetailResponseSchema,
+  leadMutationResponseSchema,
+  leadsListResponseSchema,
+} from "../schemas/response.schema.js";
+import { sendResponse } from "../utils/sendResponse.js";
 
 export async function listLeadsController(req, res, next) {
   try {
     const leads = await listLeads();
-    res.json({ leads });
+    sendResponse(res, leadsListResponseSchema, { leads });
   } catch (error) {
     next(error);
   }
@@ -21,7 +27,7 @@ export async function getLeadDetailController(req, res, next) {
       });
     }
 
-    res.json(detail);
+    sendResponse(res, leadDetailResponseSchema, detail);
   } catch (error) {
     next(error);
   }
@@ -31,7 +37,7 @@ export async function deleteLeadController(req, res, next) {
   try {
     const { leadId } = req.params;
     const lead = await deleteLead(leadId);
-    res.json({ lead });
+    sendResponse(res, leadMutationResponseSchema, { lead });
   } catch (error) {
     next(error);
   }

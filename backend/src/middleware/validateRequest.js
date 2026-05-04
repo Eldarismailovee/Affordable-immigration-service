@@ -1,18 +1,40 @@
 export function validateRequest(schema) {
   return (req, res, next) => {
-    const result = schema.safeParse(req.body);
+    const isBodyOnlySchema = typeof schema.safeParse === "function";
+    const schemas = isBodyOnlySchema ? { body: schema } : schema;
+    const parsedValues = {};
+    const errors = [];
 
-    if (!result.success) {
+    for (const [source, sourceSchema] of Object.entries(schemas)) {
+      const result = sourceSchema.safeParse(req[source]);
+
+      if (!result.success) {
+        errors.push(
+          ...result.error.issues.map((issue) => ({
+            path:
+              isBodyOnlySchema && source === "body"
+                ? issue.path.join(".")
+                : [source, ...issue.path].join("."),
+            message: issue.message,
+          }))
+        );
+        continue;
+      }
+
+      parsedValues[source] = result.data;
+    }
+
+    if (errors.length > 0) {
       return res.status(400).json({
         message: "Validation failed",
-        errors: result.error.issues.map((issue) => ({
-          path: issue.path.join("."),
-          message: issue.message,
-        })),
+        errors,
       });
     }
 
-    req.body = result.data;
+    for (const [source, value] of Object.entries(parsedValues)) {
+      req[source] = value;
+    }
+
     next();
   };
 }

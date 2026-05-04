@@ -1,14 +1,11 @@
-import { randomUUID } from "crypto";
 import {
   findLatestIntakeByLeadId,
   findLeadById,
-  updateIntakeAgreementStatusByLeadId,
 } from "../repositories/lead.repository.js";
 import {
-  createAgreement,
+  createAgreementForLead,
   findLatestAgreementByLeadId,
 } from "../repositories/agreement.repository.js";
-import { withTransaction } from "../db/transaction.js";
 import { generateAgreement } from "./agreement.service.js";
 
 export async function generateAgreementForLead(leadId) {
@@ -45,26 +42,14 @@ export async function generateAgreementForLead(leadId) {
     expedited: Boolean(intake.expedited),
   });
 
-  const agreementId = randomUUID();
-
-  return withTransaction(async (client) => {
-    await createAgreement(
-      {
-        id: agreementId,
-        leadId,
-        title: agreement.agreementTitle,
-        htmlContent: agreement.html,
-      },
-      client
-    );
-
-    await updateIntakeAgreementStatusByLeadId(leadId, "generated", client);
-
-    const created = await findLatestAgreementByLeadId(leadId, client);
-
-    return {
-      alreadyExists: false,
-      agreement: created,
-    };
+  const created = await createAgreementForLead({
+    leadId,
+    title: agreement.agreementTitle,
+    htmlContent: agreement.html,
   });
+
+  return {
+    alreadyExists: false,
+    agreement: created,
+  };
 }

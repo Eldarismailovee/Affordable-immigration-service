@@ -1,4 +1,5 @@
 import env from "../config/env.js";
+import { ADMIN_ROLE } from "../constants/domain.js";
 import { hashPassword } from "../utils/auth.js";
 import { createUser, findUserByEmail } from "../repositories/user.repository.js";
 
@@ -20,6 +21,6 @@ export async function seedInitialAdmin() {
     email,
     passwordHash,
     fullName: env.ADMIN_NAME || "System Administrator",
-    role: "admin",
+    role: ADMIN_ROLE,
   });
 }

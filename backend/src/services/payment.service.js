@@ -1,16 +1,5 @@
-import { withTransaction } from "../db/transaction.js";
-import {
-  updateIntakePaymentStatusByLeadId,
-  updatePaymentStatusByLeadId,
-} from "../repositories/payment.repository.js";
-
-const allowedStatuses = [
-  "pending_manual_processing",
-  "payment_requested",
-  "invoice_sent",
-  "paid",
-  "failed",
-];
+import { updateLeadPaymentStatusCascade } from "../repositories/payment.repository.js";
+import { paymentStatusSchema } from "../schemas/domain.schema.js";
 
 export function createManualPaymentRecord(payload) {
   return {
@@ -22,23 +11,23 @@ export function createManualPaymentRecord(payload) {
 }
 
 export async function updateLeadPaymentStatus(leadId, status) {
-  if (!allowedStatuses.includes(status)) {
+  const result = paymentStatusSchema.safeParse(status);
+
+  if (!result.success) {
     const error = new Error("Invalid payment status");
     error.statusCode = 400;
     throw error;
   }
 
-  return withTransaction(async (client) => {
-    const payment = await updatePaymentStatusByLeadId(leadId, status, client);
+  const nextStatus = result.data;
 
-    if (!payment) {
-      const error = new Error("Payment record not found");
-      error.statusCode = 404;
-      throw error;
-    }
+  const payment = await updateLeadPaymentStatusCascade(leadId, nextStatus);
 
-    await updateIntakePaymentStatusByLeadId(leadId, status, client);
+  if (!payment) {
+    const error = new Error("Payment record not found");
+    error.statusCode = 404;
+    throw error;
+  }
 
-    return payment;
-  });
+  return payment;
 }

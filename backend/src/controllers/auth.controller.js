@@ -1,9 +1,11 @@
 import { loginUser, registerUser } from "../services/auth.service.js";
+import { authResponseSchema, meResponseSchema } from "../schemas/response.schema.js";
+import { sendResponse } from "../utils/sendResponse.js";
 
 export async function registerController(req, res, next) {
   try {
     const result = await registerUser(req.body);
-    res.status(201).json(result);
+    sendResponse(res, authResponseSchema, result, 201);
   } catch (error) {
     next(error);
   }
@@ -12,12 +14,12 @@ export async function registerController(req, res, next) {
 export async function loginController(req, res, next) {
   try {
     const result = await loginUser(req.body);
-    res.json(result);
+    sendResponse(res, authResponseSchema, result);
   } catch (error) {
     next(error);
   }
 }
 
 export function meController(req, res) {
-  res.json({ user: req.user || null });
+  sendResponse(res, meResponseSchema, { user: req.user || null });
 }
