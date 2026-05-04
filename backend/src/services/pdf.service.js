@@ -1,4 +1,5 @@
 import puppeteer from "puppeteer-core";
+import { escapeHtml } from "../utils/htmlEscape.js";
 
 const CHROMIUM_PATH = process.env.CHROMIUM_PATH || "/usr/bin/chromium";
 
@@ -16,13 +17,25 @@ export async function renderHtmlToPdfBuffer({ title, html }) {
 
   try {
     const page = await browser.newPage();
+    await page.setJavaScriptEnabled(false);
+    await page.setRequestInterception(true);
+    page.on("request", (request) => {
+      const url = request.url();
+
+      if (url === "about:blank" || url.startsWith("data:")) {
+        request.continue();
+        return;
+      }
+
+      request.abort();
+    });
 
     const fullHtml = `
       <!doctype html>
       <html>
         <head>
           <meta charset="utf-8" />
-          <title>${title || "Document"}</title>
+          <title>${escapeHtml(title || "Document")}</title>
           <style>
             html, body {
               margin: 0;

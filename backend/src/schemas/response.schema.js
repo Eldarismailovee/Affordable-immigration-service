@@ -24,6 +24,7 @@ export const userResponseSchema = z
     fullName: z.string(),
     role: userRoleSchema,
     status: userStatusSchema,
+    emailVerifiedAt: dateLikeSchema.nullable().optional(),
     createdAt: dateLikeSchema.optional(),
     updatedAt: dateLikeSchema.optional(),
   })
@@ -32,7 +33,22 @@ export const userResponseSchema = z
 export const authResponseSchema = z.object({
   user: userResponseSchema,
   token: z.string().min(1),
+  refreshToken: z.string().min(1),
+  expiresIn: z.number().int().positive(),
 });
+
+export const tokenRefreshResponseSchema = z.object({
+  token: z.string().min(1),
+  refreshToken: z.string().min(1),
+  expiresIn: z.number().int().positive(),
+});
+
+export const messageResponseSchema = z
+  .object({
+    message: z.string(),
+    debugToken: z.string().optional(),
+  })
+  .passthrough();
 
 export const meResponseSchema = z.object({
   user: userResponseSchema.nullable(),

@@ -6,10 +6,22 @@ const NODE_ENV = process.env.NODE_ENV || "development";
 const isProduction = NODE_ENV === "production";
 
 const DEFAULT_AUTH_SECRET = "development-auth-secret-change-me";
+const PLACEHOLDER_AUTH_SECRET = "replace-with-a-long-random-secret";
 const AUTH_TOKEN_SECRET = process.env.AUTH_TOKEN_SECRET || (isProduction ? "" : DEFAULT_AUTH_SECRET);
 
 if (isProduction && !AUTH_TOKEN_SECRET) {
   throw new Error("AUTH_TOKEN_SECRET must be set in production");
+}
+
+if (AUTH_TOKEN_SECRET.length < 32) {
+  throw new Error("AUTH_TOKEN_SECRET must be at least 32 characters");
+}
+
+if (
+  isProduction &&
+  [DEFAULT_AUTH_SECRET, PLACEHOLDER_AUTH_SECRET].includes(AUTH_TOKEN_SECRET)
+) {
+  throw new Error("AUTH_TOKEN_SECRET must not use a default or placeholder value in production");
 }
 
 function parseList(value) {

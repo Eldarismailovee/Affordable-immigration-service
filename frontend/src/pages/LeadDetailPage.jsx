@@ -7,6 +7,7 @@ import {
   syncLeadToDocketwise,
   updatePaymentStatus,
 } from "../services/api";
+import { sanitizeDocumentHtml } from "../utils/sanitizeDocumentHtml";
 
 function formatDate(value) {
   if (!value) return "—";
@@ -253,7 +254,9 @@ export default function LeadDetailPage() {
               {detail.agreement?.html_content ? (
                 <div
                   className="prose prose-invert max-w-none rounded-3xl border border-white/10 bg-slate-950/50 p-6"
-                  dangerouslySetInnerHTML={{ __html: detail.agreement.html_content }}
+                  dangerouslySetInnerHTML={{
+                    __html: sanitizeDocumentHtml(detail.agreement.html_content),
+                  }}
                 />
               ) : (
                 <div className="text-slate-400">No agreement found.</div>

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useIntake } from "../../context/IntakeContext";
 import { generateAgreementPreview } from "../../services/api";
+import { sanitizeDocumentHtml } from "../../utils/sanitizeDocumentHtml";
 
 export default function AgreementPreviewPage() {
   const navigate = useNavigate();
@@ -86,7 +87,9 @@ export default function AgreementPreviewPage() {
       {!loading && !error && intake.agreementPreview ? (
         <div
           className="prose prose-invert mt-8 max-w-none rounded-3xl border border-white/10 bg-slate-950/50 p-6"
-          dangerouslySetInnerHTML={{ __html: intake.agreementPreview.html }}
+          dangerouslySetInnerHTML={{
+            __html: sanitizeDocumentHtml(intake.agreementPreview.html),
+          }}
         />
       ) : null}
 

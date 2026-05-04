@@ -1,5 +1,6 @@
 const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:5000/api";
 const AUTH_TOKEN_KEY = "immigration-auth-token";
+const REFRESH_TOKEN_KEY = "immigration-refresh-token";
 
 export function getAuthToken() {
   return localStorage.getItem(AUTH_TOKEN_KEY);
@@ -14,19 +15,85 @@ export function setAuthToken(token) {
   localStorage.removeItem(AUTH_TOKEN_KEY);
 }
 
-async function request(path, options = {}) {
+export function getRefreshToken() {
+  return localStorage.getItem(REFRESH_TOKEN_KEY);
+}
+
+export function setRefreshToken(token) {
+  if (token) {
+    localStorage.setItem(REFRESH_TOKEN_KEY, token);
+    return;
+  }
+
+  localStorage.removeItem(REFRESH_TOKEN_KEY);
+}
+
+export function setAuthTokens({ token, refreshToken }) {
+  setAuthToken(token);
+  setRefreshToken(refreshToken);
+}
+
+export function clearAuthTokens() {
+  setAuthToken("");
+  setRefreshToken("");
+}
+
+function buildJsonHeaders(options = {}) {
   const token = getAuthToken();
 
-  const response = await fetch(`${API_URL}${path}`, {
+  return {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(options.headers || {}),
+  };
+}
+
+async function parseJsonResponse(response) {
+  return response.json().catch(() => ({}));
+}
+
+async function refreshAuthTokens() {
+  const refreshToken = getRefreshToken();
+
+  if (!refreshToken) {
+    return null;
+  }
+
+  const response = await fetch(`${API_URL}/auth/refresh`, {
+    method: "POST",
     headers: {
       "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(options.headers || {}),
     },
-    ...options,
+    body: JSON.stringify({ refreshToken }),
   });
 
-  const data = await response.json().catch(() => ({}));
+  const data = await parseJsonResponse(response);
+
+  if (!response.ok) {
+    clearAuthTokens();
+    return null;
+  }
+
+  setAuthTokens(data);
+  return data.token;
+}
+
+async function request(path, options = {}) {
+  const { skipRefresh = false, ...fetchOptions } = options;
+  const response = await fetch(`${API_URL}${path}`, {
+    headers: buildJsonHeaders(fetchOptions),
+    ...fetchOptions,
+  });
+
+  if (response.status === 401 && !skipRefresh) {
+    const refreshedToken = await refreshAuthTokens();
+
+    if (refreshedToken) {
+      return request(path, { ...fetchOptions, skipRefresh: true });
+    }
+  }
+
+  const data = await parseJsonResponse(response);
 
   if (!response.ok) {
     const validationDetails = Array.isArray(data.errors)
@@ -65,6 +132,44 @@ export async function login(payload) {
   return request("/auth/login", {
     method: "POST",
     body: JSON.stringify(payload),
+  });
+}
+
+export async function logout(refreshToken) {
+  return request("/auth/logout", {
+    method: "POST",
+    body: JSON.stringify({ refreshToken }),
+    skipRefresh: true,
+  });
+}
+
+export async function requestPasswordReset(email) {
+  return request("/auth/password-reset/request", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+    skipRefresh: true,
+  });
+}
+
+export async function confirmPasswordReset(payload) {
+  return request("/auth/password-reset/confirm", {
+    method: "POST",
+    body: JSON.stringify(payload),
+    skipRefresh: true,
+  });
+}
+
+export async function requestEmailVerification() {
+  return request("/auth/email-verification/request", {
+    method: "POST",
+  });
+}
+
+export async function confirmEmailVerification(token) {
+  return request("/auth/email-verification/confirm", {
+    method: "POST",
+    body: JSON.stringify({ token }),
+    skipRefresh: true,
   });
 }
 
@@ -143,11 +248,20 @@ export function getOnboardingPdfUrl(leadId) {
 }
 
 async function openAuthenticatedPdf(path) {
-  const token = getAuthToken();
   const popup = window.open("", "_blank");
-  const response = await fetch(`${API_URL}${path}`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
+
+  async function fetchPdf() {
+    const token = getAuthToken();
+    return fetch(`${API_URL}${path}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+  }
+
+  let response = await fetchPdf();
+
+  if (response.status === 401 && (await refreshAuthTokens())) {
+    response = await fetchPdf();
+  }
 
   if (!response.ok) {
     if (popup) {
@@ -199,15 +313,23 @@ export async function updateSiteSettings(payload) {
 export async function uploadImage(file) {
   const formData = new FormData();
   formData.append("image", file);
-  const token = getAuthToken();
 
-  const response = await fetch(`${API_URL}/admin/uploads/image`, {
-    method: "POST",
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-    body: formData,
-  });
+  async function sendUpload() {
+    const token = getAuthToken();
+    return fetch(`${API_URL}/admin/uploads/image`, {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    });
+  }
 
-  const data = await response.json().catch(() => ({}));
+  let response = await sendUpload();
+
+  if (response.status === 401 && (await refreshAuthTokens())) {
+    response = await sendUpload();
+  }
+
+  const data = await parseJsonResponse(response);
 
   if (!response.ok) {
     throw new Error(data.message || "Image upload failed");

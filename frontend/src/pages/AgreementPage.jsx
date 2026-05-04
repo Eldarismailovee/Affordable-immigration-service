@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getAgreementByLead, openAgreementPdf } from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import { sanitizeDocumentHtml } from "../utils/sanitizeDocumentHtml";
 
 export default function AgreementPage() {
   const { leadId } = useParams();
@@ -103,7 +104,7 @@ export default function AgreementPage() {
         {!loading && !error && agreement ? (
           <div
             className="prose prose-invert max-w-none rounded-[2rem] border border-white/10 bg-white/5 p-8"
-            dangerouslySetInnerHTML={{ __html: agreement.html_content }}
+            dangerouslySetInnerHTML={{ __html: sanitizeDocumentHtml(agreement.html_content) }}
           />
         ) : null}
       </div>

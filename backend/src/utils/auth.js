@@ -1,24 +1,15 @@
 import crypto from "crypto";
 import { promisify } from "util";
+import { SignJWT, jwtVerify } from "jose";
 import env from "../config/env.js";
 
 const scryptAsync = promisify(crypto.scrypt);
-const TOKEN_TTL_SECONDS = 60 * 60 * 24 * 7;
+export const ACCESS_TOKEN_TTL_SECONDS = 15 * 60;
+export const REFRESH_TOKEN_TTL_DAYS = 30;
+export const EMAIL_VERIFICATION_TOKEN_TTL_HOURS = 24;
+export const PASSWORD_RESET_TOKEN_TTL_MINUTES = 30;
 
-function base64UrlEncode(value) {
-  return Buffer.from(JSON.stringify(value)).toString("base64url");
-}
-
-function base64UrlDecode(value) {
-  return JSON.parse(Buffer.from(value, "base64url").toString("utf8"));
-}
-
-function sign(value) {
-  return crypto
-    .createHmac("sha256", env.AUTH_TOKEN_SECRET)
-    .update(value)
-    .digest("base64url");
-}
+const authSecret = new TextEncoder().encode(env.AUTH_TOKEN_SECRET);
 
 export async function hashPassword(password) {
   const salt = crypto.randomBytes(16).toString("hex");
@@ -44,48 +35,55 @@ export async function verifyPassword(password, passwordHash) {
   return crypto.timingSafeEqual(storedBuffer, key);
 }
 
-export function createAuthToken(user) {
-  const header = base64UrlEncode({ alg: "HS256", typ: "JWT" });
-  const payload = base64UrlEncode({
-    sub: user.id,
+export async function createAccessToken(user, { sessionId } = {}) {
+  return new SignJWT({
     role: user.role,
-    exp: Math.floor(Date.now() / 1000) + TOKEN_TTL_SECONDS,
-  });
-  const unsigned = `${header}.${payload}`;
-
-  return `${unsigned}.${sign(unsigned)}`;
+    typ: "access",
+    ...(sessionId ? { sid: sessionId } : {}),
+  })
+    .setProtectedHeader({ alg: "HS256", typ: "JWT" })
+    .setSubject(user.id)
+    .setIssuedAt()
+    .setJti(crypto.randomUUID())
+    .setExpirationTime(`${ACCESS_TOKEN_TTL_SECONDS}s`)
+    .sign(authSecret);
 }
 
-export function verifyAuthToken(token) {
+export async function verifyAuthToken(token) {
   try {
-    const [header, payload, signature] = String(token || "").split(".");
+    const { payload } = await jwtVerify(String(token || ""), authSecret, {
+      algorithms: ["HS256"],
+      typ: "JWT",
+    });
 
-    if (!header || !payload || !signature) {
+    if (payload.typ !== "access" || !payload.sub) {
       return null;
     }
 
-    const unsigned = `${header}.${payload}`;
-    const expected = sign(unsigned);
-    const signatureBuffer = Buffer.from(signature);
-    const expectedBuffer = Buffer.from(expected);
-
-    if (
-      signatureBuffer.length !== expectedBuffer.length ||
-      !crypto.timingSafeEqual(signatureBuffer, expectedBuffer)
-    ) {
-      return null;
-    }
-
-    const decoded = base64UrlDecode(payload);
-
-    if (!decoded.exp || decoded.exp < Math.floor(Date.now() / 1000)) {
-      return null;
-    }
-
-    return decoded;
+    return payload;
   } catch {
     return null;
   }
+}
+
+export function createOpaqueToken() {
+  return crypto.randomBytes(48).toString("base64url");
+}
+
+export function hashToken(token) {
+  return crypto.createHash("sha256").update(String(token)).digest("hex");
+}
+
+export function addMinutes(date, minutes) {
+  return new Date(date.getTime() + minutes * 60 * 1000);
+}
+
+export function addHours(date, hours) {
+  return new Date(date.getTime() + hours * 60 * 60 * 1000);
+}
+
+export function addDays(date, days) {
+  return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
 }
 
 export function sanitizeUser(user) {
@@ -97,6 +95,7 @@ export function sanitizeUser(user) {
     fullName: user.full_name,
     role: user.role,
     status: user.status,
+    emailVerifiedAt: user.email_verified_at,
     createdAt: user.created_at,
     updatedAt: user.updated_at,
   };

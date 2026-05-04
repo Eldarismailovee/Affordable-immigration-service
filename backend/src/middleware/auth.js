@@ -16,7 +16,7 @@ function getBearerToken(req) {
 export async function optionalAuth(req, _res, next) {
   try {
     const token = getBearerToken(req);
-    const payload = token ? verifyAuthToken(token) : null;
+    const payload = token ? await verifyAuthToken(token) : null;
 
     if (!payload?.sub) {
       return next();

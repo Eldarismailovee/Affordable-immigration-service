@@ -1,3 +1,5 @@
+import { escapeHtml } from "../utils/htmlEscape.js";
+
 export function renderOnboardingHtml({
   payload,
   packageLabel,
@@ -5,13 +7,15 @@ export function renderOnboardingHtml({
   additionalCount,
   expeditedText,
 }) {
+  const clientName = `${escapeHtml(payload.firstName)} ${escapeHtml(payload.lastName)}`;
+
   return `
     <div>
       <h1 style="font-size:28px; margin-bottom:16px;">Client Onboarding Packet</h1>
 
-      <p><strong>Client:</strong> ${payload.firstName} ${payload.lastName}</p>
-      <p><strong>Package selected:</strong> ${packageLabel}</p>
-      <p><strong>Case type:</strong> ${payload.caseType}</p>
+      <p><strong>Client:</strong> ${clientName}</p>
+      <p><strong>Package selected:</strong> ${escapeHtml(packageLabel)}</p>
+      <p><strong>Case type:</strong> ${escapeHtml(payload.caseType)}</p>
 
       <hr style="margin:20px 0; border-color:#334155;" />
 
@@ -37,9 +41,9 @@ export function renderOnboardingHtml({
       </ul>
 
       <h2 style="font-size:22px; margin:20px 0 10px;">Your service structure</h2>
-      <p>${whoFiles}</p>
-      <p><strong>Additional I-130 petitions:</strong> ${additionalCount}</p>
-      <p><strong>Expedited option:</strong> ${expeditedText}</p>
+      <p>${escapeHtml(whoFiles)}</p>
+      <p><strong>Additional I-130 petitions:</strong> ${escapeHtml(additionalCount)}</p>
+      <p><strong>Expedited option:</strong> ${escapeHtml(expeditedText)}</p>
 
       <h2 style="font-size:22px; margin:20px 0 10px;">Required documents checklist</h2>
       <ul>

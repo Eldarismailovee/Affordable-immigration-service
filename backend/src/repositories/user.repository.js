@@ -1,7 +1,8 @@
 import { randomUUID } from "crypto";
 import pool from "../db/pool.js";
 
-const SAFE_USER_FIELDS = "id, email, full_name, role, status, created_at, updated_at";
+const SAFE_USER_FIELDS =
+  "id, email, full_name, role, status, email_verified_at, created_at, updated_at";
 const AUTH_USER_FIELDS = `${SAFE_USER_FIELDS}, password_hash`;
 
 export async function findUserByEmail(email, db = pool) {
@@ -97,6 +98,40 @@ export async function updateUserRoleById(userId, role, db = pool) {
     RETURNING ${SAFE_USER_FIELDS}
     `,
     [userId, role]
+  );
+
+  return rows[0] || null;
+}
+
+export async function updateUserPasswordById(userId, passwordHash, db = pool) {
+  const { rows } = await db.query(
+    `
+    UPDATE users
+    SET
+      password_hash = $2,
+      updated_at = NOW()
+    WHERE id = $1
+      AND deleted_at IS NULL
+    RETURNING ${SAFE_USER_FIELDS}
+    `,
+    [userId, passwordHash]
+  );
+
+  return rows[0] || null;
+}
+
+export async function markUserEmailVerifiedById(userId, db = pool) {
+  const { rows } = await db.query(
+    `
+    UPDATE users
+    SET
+      email_verified_at = COALESCE(email_verified_at, NOW()),
+      updated_at = NOW()
+    WHERE id = $1
+      AND deleted_at IS NULL
+    RETURNING ${SAFE_USER_FIELDS}
+    `,
+    [userId]
   );
 
   return rows[0] || null;

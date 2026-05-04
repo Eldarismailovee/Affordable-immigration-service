@@ -1,27 +1,33 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import {
+  clearAuthTokens,
   getAuthToken,
+  getRefreshToken,
   getCurrentUser,
   login as loginRequest,
+  logout as logoutRequest,
   register as registerRequest,
-  setAuthToken,
+  setAuthTokens,
 } from "../services/api";
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(Boolean(getAuthToken()));
+  const [loading, setLoading] = useState(Boolean(getAuthToken() || getRefreshToken()));
 
-  const logout = useCallback(() => {
-    setAuthToken("");
+  const logout = useCallback(async () => {
+    const refreshToken = getRefreshToken();
+    clearAuthTokens();
     setUser(null);
+
+    if (refreshToken) {
+      await logoutRequest(refreshToken).catch(() => {});
+    }
   }, []);
 
   const refreshUser = useCallback(async () => {
-    const token = getAuthToken();
-
-    if (!token) {
+    if (!getAuthToken() && !getRefreshToken()) {
       setUser(null);
       setLoading(false);
       return null;
@@ -43,14 +49,14 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(async (payload) => {
     const result = await loginRequest(payload);
-    setAuthToken(result.token);
+    setAuthTokens(result);
     setUser(result.user);
     return result.user;
   }, []);
 
   const register = useCallback(async (payload) => {
     const result = await registerRequest(payload);
-    setAuthToken(result.token);
+    setAuthTokens(result);
     setUser(result.user);
     return result.user;
   }, []);
