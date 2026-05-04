@@ -1,5 +1,4 @@
 import pool from "../db/pool.js";
-import { withTransaction } from "../db/transaction.js";
 
 export async function createPaymentRecord(
   {
@@ -86,17 +85,4 @@ export async function updateIntakePaymentStatusByLeadId(leadId, status, db = poo
     `,
     [leadId, status]
   );
-}
-
-export async function updateLeadPaymentStatusCascade(leadId, status) {
-  return withTransaction(async (client) => {
-    const payment = await updatePaymentStatusByLeadId(leadId, status, client);
-
-    if (!payment) {
-      return null;
-    }
-
-    await updateIntakePaymentStatusByLeadId(leadId, status, client);
-    return payment;
-  });
 }

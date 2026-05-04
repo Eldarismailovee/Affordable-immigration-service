@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { paymentStatusSchema, userRoleSchema } from "./domain.schema.js";
+import { paymentStatusSchema, userRoleSchema } from "../domain/validators.js";
 
 export const updateUserRoleSchema = z
   .object({

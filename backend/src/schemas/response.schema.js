@@ -11,7 +11,7 @@ import {
   userRoleSchema,
   userStatusSchema,
   uuidSchema,
-} from "./domain.schema.js";
+} from "../domain/validators.js";
 
 const dateLikeSchema = z.union([z.string(), z.date()]);
 const nullableStringSchema = z.string().nullable().optional();
@@ -134,6 +134,86 @@ export const paymentMutationResponseSchema = z.object({
       updated_at: dateLikeSchema,
     })
     .passthrough(),
+});
+
+const agreementDocumentSchema = z
+  .object({
+    id: uuidSchema,
+    lead_id: uuidSchema,
+    title: z.string(),
+    html_content: z.string(),
+    status: documentStatusSchema.optional(),
+    generated_at: dateLikeSchema.optional(),
+  })
+  .passthrough();
+
+const onboardingDocumentSchema = z
+  .object({
+    id: uuidSchema,
+    lead_id: uuidSchema,
+    title: z.string(),
+    html_content: z.string(),
+    status: documentStatusSchema.optional(),
+    generated_at: dateLikeSchema.optional(),
+  })
+  .passthrough();
+
+export const agreementPreviewResponseSchema = z.object({
+  agreementTitle: z.string(),
+  html: z.string(),
+});
+
+export const agreementResponseSchema = z.object({
+  agreement: agreementDocumentSchema,
+});
+
+export const agreementGenerationResponseSchema = z.object({
+  alreadyExists: z.boolean(),
+  agreement: agreementDocumentSchema,
+});
+
+export const onboardingPacketResponseSchema = z.object({
+  onboarding: onboardingDocumentSchema,
+});
+
+export const onboardingGenerationResponseSchema = z.object({
+  alreadyExists: z.boolean(),
+  onboarding: onboardingDocumentSchema,
+});
+
+export const bookingCreateResponseSchema = z.object({
+  success: z.boolean(),
+  consultationType: z.string(),
+  durationMinutes: z.number().int().positive(),
+  email: z.string().nullable().optional(),
+  status: z.string(),
+});
+
+export const docketwiseStubResponseSchema = z.object({
+  success: z.boolean(),
+  provider: z.string(),
+  status: z.string(),
+  message: z.string(),
+  intakeEmail: z.email().nullable(),
+});
+
+const docketwiseSyncRecordResponseSchema = z
+  .object({
+    id: uuidSchema,
+    lead_id: uuidSchema,
+    external_id: z.string().nullable().optional(),
+    status: docketwiseStatusSchema,
+    error_message: z.string().nullable().optional(),
+    last_synced_at: dateLikeSchema.nullable().optional(),
+    created_at: dateLikeSchema.optional(),
+  })
+  .passthrough();
+
+export const docketwiseSyncResponseSchema = z.object({
+  success: z.boolean(),
+  provider: z.string(),
+  message: z.string(),
+  sync: docketwiseSyncRecordResponseSchema,
 });
 
 export const siteSettingsResponseSchema = z.object({

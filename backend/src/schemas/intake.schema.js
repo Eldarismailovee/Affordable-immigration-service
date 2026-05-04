@@ -3,7 +3,7 @@ import {
   consultationTypeSchema,
   packageTypeSchema,
   paymentPreferenceSchema,
-} from "./domain.schema.js";
+} from "../domain/validators.js";
 
 export const pricingPreviewSchema = z.object({
   selectedPackage: packageTypeSchema,

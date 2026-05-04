@@ -32,6 +32,33 @@ function parseList(value) {
     .filter(Boolean);
 }
 
+function parseInteger(value, fallback) {
+  if (value === undefined || value === null || value === "") {
+    return fallback;
+  }
+
+  const parsed = Number.parseInt(String(value), 10);
+  return Number.isNaN(parsed) ? fallback : parsed;
+}
+
+function parseBoolean(value, fallback = false) {
+  if (value === undefined || value === null || value === "") {
+    return fallback;
+  }
+
+  const normalized = String(value).trim().toLowerCase();
+
+  if (["true", "1", "yes", "on"].includes(normalized)) {
+    return true;
+  }
+
+  if (["false", "0", "no", "off"].includes(normalized)) {
+    return false;
+  }
+
+  return fallback;
+}
+
 const explicitOrigins = parseList(process.env.CORS_ORIGINS);
 const fallbackOrigins = isProduction
   ? [process.env.CLIENT_URL].filter(Boolean)
@@ -57,6 +84,25 @@ const env = {
   ADMIN_EMAIL: process.env.ADMIN_EMAIL || "",
   ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || "",
   ADMIN_NAME: process.env.ADMIN_NAME || "System Administrator",
+  DB_POOL_MAX: parseInteger(process.env.DB_POOL_MAX, 10),
+  DB_POOL_MIN: parseInteger(process.env.DB_POOL_MIN, 0),
+  DB_POOL_IDLE_TIMEOUT_MS: parseInteger(process.env.DB_POOL_IDLE_TIMEOUT_MS, 10000),
+  DB_POOL_CONNECTION_TIMEOUT_MS: parseInteger(
+    process.env.DB_POOL_CONNECTION_TIMEOUT_MS,
+    5000
+  ),
+  DB_POOL_MAX_LIFETIME_SECONDS: parseInteger(
+    process.env.DB_POOL_MAX_LIFETIME_SECONDS,
+    0
+  ),
+  DB_POOL_MAX_USES: parseInteger(process.env.DB_POOL_MAX_USES, 0),
+  DB_POOL_ALLOW_EXIT_ON_IDLE: parseBoolean(process.env.DB_POOL_ALLOW_EXIT_ON_IDLE, false),
+  DB_APPLICATION_NAME: process.env.DB_APPLICATION_NAME || "affordable-immigration-service",
+  DB_SSL: parseBoolean(process.env.DB_SSL, isProduction),
+  DB_SSL_REJECT_UNAUTHORIZED: parseBoolean(
+    process.env.DB_SSL_REJECT_UNAUTHORIZED,
+    isProduction
+  ),
 };
 
 export default env;

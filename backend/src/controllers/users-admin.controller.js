@@ -3,31 +3,24 @@ import {
   userMutationResponseSchema,
   usersListResponseSchema,
 } from "../schemas/response.schema.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
 import { sendResponse } from "../utils/sendResponse.js";
 
-export async function listUsersController(_req, res, next) {
-  try {
-    const users = await listUsers();
-    sendResponse(res, usersListResponseSchema, { users });
-  } catch (error) {
-    next(error);
-  }
-}
+export const listUsersController = asyncHandler(async (req, res) => {
+  const users = await listUsers({ actor: req.user });
+  sendResponse(res, usersListResponseSchema, { users });
+});
 
-export async function updateUserRoleController(req, res, next) {
-  try {
-    const user = await updateUserRole(req.params.userId, req.body.role);
-    sendResponse(res, userMutationResponseSchema, { user });
-  } catch (error) {
-    next(error);
-  }
-}
+export const updateUserRoleController = asyncHandler(async (req, res) => {
+  const user = await updateUserRole({
+    userId: req.params.userId,
+    role: req.body.role,
+    actor: req.user,
+  });
+  sendResponse(res, userMutationResponseSchema, { user });
+});
 
-export async function deleteUserController(req, res, next) {
-  try {
-    const user = await deleteUser(req.params.userId);
-    sendResponse(res, userMutationResponseSchema, { user });
-  } catch (error) {
-    next(error);
-  }
-}
+export const deleteUserController = asyncHandler(async (req, res) => {
+  const user = await deleteUser({ userId: req.params.userId, actor: req.user });
+  sendResponse(res, userMutationResponseSchema, { user });
+});

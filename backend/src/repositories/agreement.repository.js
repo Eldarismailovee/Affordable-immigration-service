@@ -1,8 +1,4 @@
-import { randomUUID } from "crypto";
 import pool from "../db/pool.js";
-import { withTransaction } from "../db/transaction.js";
-import { GENERATED_DOCUMENT_STATUS } from "../constants/domain.js";
-import { updateIntakeAgreementStatusByLeadId } from "./lead.repository.js";
 
 export async function findLatestAgreementByLeadId(leadId, db = pool) {
   const { rows } = await db.query(
@@ -37,22 +33,4 @@ export async function createAgreement(
     `,
     [id, leadId, title, htmlContent, status]
   );
-}
-
-export async function createAgreementForLead({ leadId, title, htmlContent }) {
-  return withTransaction(async (client) => {
-    await createAgreement(
-      {
-        id: randomUUID(),
-        leadId,
-        title,
-        htmlContent,
-        status: GENERATED_DOCUMENT_STATUS,
-      },
-      client
-    );
-
-    await updateIntakeAgreementStatusByLeadId(leadId, GENERATED_DOCUMENT_STATUS, client);
-    return findLatestAgreementByLeadId(leadId, client);
-  });
 }

@@ -8,12 +8,16 @@ import {
 } from "../repositories/lead.repository.js";
 import { findLatestAgreementByLeadId } from "../repositories/agreement.repository.js";
 import { findLatestOnboardingPacketByLeadId } from "../repositories/onboarding.repository.js";
+import { AppError } from "../utils/appError.js";
+import { assertAdminAccess } from "./access.service.js";
 
-export async function getLeadDetail(leadId) {
+export async function getLeadDetail({ leadId, actor }) {
+  assertAdminAccess(actor);
+
   const lead = await findLeadById(leadId);
 
   if (!lead) {
-    return null;
+    throw new AppError("Lead not found", 404, "LEAD_NOT_FOUND");
   }
 
   return {
@@ -27,13 +31,13 @@ export async function getLeadDetail(leadId) {
   };
 }
 
-export async function deleteLead(leadId) {
+export async function deleteLead({ leadId, actor }) {
+  assertAdminAccess(actor);
+
   const lead = await softDeleteLeadById(leadId);
 
   if (!lead) {
-    const error = new Error("Lead not found");
-    error.statusCode = 404;
-    throw error;
+    throw new AppError("Lead not found", 404, "LEAD_NOT_FOUND");
   }
 
   return lead;

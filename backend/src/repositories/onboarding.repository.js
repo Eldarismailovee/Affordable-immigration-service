@@ -1,6 +1,4 @@
-import { randomUUID } from "crypto";
 import pool from "../db/pool.js";
-import { GENERATED_DOCUMENT_STATUS } from "../constants/domain.js";
 
 export async function findLatestOnboardingPacketByLeadId(leadId, db = pool) {
   const { rows } = await db.query(
@@ -35,16 +33,4 @@ export async function createOnboardingPacket(
     `,
     [id, leadId, title, htmlContent, status]
   );
-}
-
-export async function createOnboardingPacketForLead({ leadId, title, htmlContent }) {
-  await createOnboardingPacket({
-    id: randomUUID(),
-    leadId,
-    title,
-    htmlContent,
-    status: GENERATED_DOCUMENT_STATUS,
-  });
-
-  return findLatestOnboardingPacketByLeadId(leadId);
 }

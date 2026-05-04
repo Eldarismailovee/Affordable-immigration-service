@@ -1,7 +1,7 @@
 import env from "../config/env.js";
 import { ADMIN_ROLE } from "../constants/domain.js";
-import { hashPassword } from "../utils/auth.js";
 import { createUser, findUserByEmail } from "../repositories/user.repository.js";
+import { hashPassword } from "../utils/auth.js";
 
 export async function seedInitialAdmin() {
   if (!env.ADMIN_EMAIL || !env.ADMIN_PASSWORD) {

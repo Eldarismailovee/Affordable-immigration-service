@@ -1,6 +1,9 @@
 import { createBookingRequest } from "../services/booking.service.js";
+import { bookingCreateResponseSchema } from "../schemas/response.schema.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { sendResponse } from "../utils/sendResponse.js";
 
-export function createBookingController(req, res) {
+export const createBookingController = asyncHandler((req, res) => {
   const result = createBookingRequest(req.body);
-  res.status(201).json(result);
-}
+  sendResponse(res, bookingCreateResponseSchema, result, 201);
+});

@@ -10,9 +10,11 @@ test("requireAuth rejects unauthenticated requests with 401", () => {
 
   requireAuth(req, res, next);
 
-  assert.equal(res.statusCode, 401);
-  assert.equal(res.body.message, "Authentication required");
-  assert.equal(next.calls.length, 0);
+  assert.equal(next.calls.length, 1);
+  assert.equal(next.calls[0].statusCode, 401);
+  assert.equal(next.calls[0].message, "Authentication required");
+  assert.equal(next.calls[0].code, "AUTHENTICATION_REQUIRED");
+  assert.equal(res.body, null);
 });
 
 test("requireAuth allows authenticated requests through", () => {
@@ -35,8 +37,10 @@ test("requireRole rejects unauthenticated requests with 401", () => {
 
   middleware(req, res, next);
 
-  assert.equal(res.statusCode, 401);
-  assert.equal(res.body.message, "Authentication required");
+  assert.equal(next.calls.length, 1);
+  assert.equal(next.calls[0].statusCode, 401);
+  assert.equal(next.calls[0].message, "Authentication required");
+  assert.equal(next.calls[0].code, "AUTHENTICATION_REQUIRED");
 });
 
 test("requireRole rejects users without the required role with 403", () => {
@@ -47,9 +51,11 @@ test("requireRole rejects users without the required role with 403", () => {
 
   middleware(req, res, next);
 
-  assert.equal(res.statusCode, 403);
-  assert.equal(res.body.message, "Insufficient permissions");
-  assert.equal(next.calls.length, 0);
+  assert.equal(next.calls.length, 1);
+  assert.equal(next.calls[0].statusCode, 403);
+  assert.equal(next.calls[0].message, "Insufficient permissions");
+  assert.equal(next.calls[0].code, "INSUFFICIENT_PERMISSIONS");
+  assert.equal(res.body, null);
 });
 
 test("requireRole allows users matching one of the listed roles", () => {

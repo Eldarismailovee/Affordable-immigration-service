@@ -1,5 +1,7 @@
+import { AppError } from "../utils/appError.js";
+
 export function validateRequest(schema) {
-  return (req, res, next) => {
+  return (req, _res, next) => {
     const isBodyOnlySchema = typeof schema.safeParse === "function";
     const schemas = isBodyOnlySchema ? { body: schema } : schema;
     const parsedValues = {};
@@ -25,10 +27,10 @@ export function validateRequest(schema) {
     }
 
     if (errors.length > 0) {
-      return res.status(400).json({
-        message: "Validation failed",
-        errors,
-      });
+      const error = new AppError("Validation failed", 400, "VALIDATION_FAILED");
+      error.details = errors;
+      next(error);
+      return;
     }
 
     for (const [source, value] of Object.entries(parsedValues)) {

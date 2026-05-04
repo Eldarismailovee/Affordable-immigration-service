@@ -1,8 +1,5 @@
-import { randomUUID } from "crypto";
 import pool from "../db/pool.js";
-import { withTransaction } from "../db/transaction.js";
-import { NOT_SYNCED_STATUS, SYNCED_STATUS } from "../constants/domain.js";
-import { updateIntakeDocketwiseStatusByLeadId } from "./lead.repository.js";
+import { NOT_SYNCED_STATUS } from "../constants/domain.js";
 
 const SYNC_FIELDS = "id, lead_id, external_id, status, error_message, last_synced_at, created_at";
 
@@ -50,39 +47,4 @@ export async function updateDocketwiseSyncById(
   );
 
   return rows[0] || null;
-}
-
-export async function syncDocketwiseForLead({
-  leadId,
-  existingSync,
-  externalId,
-  lastSyncedAt,
-}) {
-  return withTransaction(async (client) => {
-    const syncRow = existingSync
-      ? await updateDocketwiseSyncById(
-          existingSync.id,
-          {
-            externalId,
-            status: SYNCED_STATUS,
-            errorMessage: null,
-            lastSyncedAt,
-          },
-          client
-        )
-      : await createDocketwiseSyncRecord(
-          {
-            id: randomUUID(),
-            leadId,
-            externalId,
-            status: SYNCED_STATUS,
-            errorMessage: null,
-            lastSyncedAt,
-          },
-          client
-        );
-
-    await updateIntakeDocketwiseStatusByLeadId(leadId, SYNCED_STATUS, client);
-    return syncRow;
-  });
 }

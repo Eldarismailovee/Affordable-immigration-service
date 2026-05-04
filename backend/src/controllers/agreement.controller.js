@@ -1,6 +1,9 @@
 import { generateAgreement } from "../services/agreement.service.js";
+import { agreementPreviewResponseSchema } from "../schemas/response.schema.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { sendResponse } from "../utils/sendResponse.js";
 
-export function generateAgreementController(req, res) {
+export const generateAgreementController = asyncHandler((req, res) => {
   const agreement = generateAgreement(req.body);
-  res.json(agreement);
-}
+  sendResponse(res, agreementPreviewResponseSchema, agreement);
+});

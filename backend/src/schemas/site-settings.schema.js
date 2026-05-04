@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { languageModeSchema } from "./domain.schema.js";
+import { languageModeSchema } from "../domain/validators.js";
 
 const textField = (max = 500) => z.string().trim().max(max);
 const imagePathField = z.string().trim().max(2048);

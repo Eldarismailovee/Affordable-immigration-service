@@ -1,12 +1,10 @@
 import { generateAgreementForLead } from "../services/agreement-admin.service.js";
+import { agreementGenerationResponseSchema } from "../schemas/response.schema.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { sendResponse } from "../utils/sendResponse.js";
 
-export async function generateAgreementForLeadController(req, res, next) {
-  try {
-    const { leadId } = req.params;
-    const result = await generateAgreementForLead(leadId);
-
-    res.status(result.alreadyExists ? 200 : 201).json(result);
-  } catch (error) {
-    next(error);
-  }
-}
+export const generateAgreementForLeadController = asyncHandler(async (req, res) => {
+  const { leadId } = req.params;
+  const result = await generateAgreementForLead({ leadId, actor: req.user });
+  sendResponse(res, agreementGenerationResponseSchema, result, result.alreadyExists ? 200 : 201);
+});

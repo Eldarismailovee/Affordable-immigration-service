@@ -5,40 +5,22 @@ import {
   leadMutationResponseSchema,
   leadsListResponseSchema,
 } from "../schemas/response.schema.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
 import { sendResponse } from "../utils/sendResponse.js";
 
-export async function listLeadsController(req, res, next) {
-  try {
-    const leads = await listLeads();
-    sendResponse(res, leadsListResponseSchema, { leads });
-  } catch (error) {
-    next(error);
-  }
-}
+export const listLeadsController = asyncHandler(async (req, res) => {
+  const leads = await listLeads({ actor: req.user });
+  sendResponse(res, leadsListResponseSchema, { leads });
+});
 
-export async function getLeadDetailController(req, res, next) {
-  try {
-    const { leadId } = req.params;
-    const detail = await getLeadDetail(leadId);
+export const getLeadDetailController = asyncHandler(async (req, res) => {
+  const { leadId } = req.params;
+  const detail = await getLeadDetail({ leadId, actor: req.user });
+  sendResponse(res, leadDetailResponseSchema, detail);
+});
 
-    if (!detail) {
-      return res.status(404).json({
-        message: "Lead not found",
-      });
-    }
-
-    sendResponse(res, leadDetailResponseSchema, detail);
-  } catch (error) {
-    next(error);
-  }
-}
-
-export async function deleteLeadController(req, res, next) {
-  try {
-    const { leadId } = req.params;
-    const lead = await deleteLead(leadId);
-    sendResponse(res, leadMutationResponseSchema, { lead });
-  } catch (error) {
-    next(error);
-  }
-}
+export const deleteLeadController = asyncHandler(async (req, res) => {
+  const { leadId } = req.params;
+  const lead = await deleteLead({ leadId, actor: req.user });
+  sendResponse(res, leadMutationResponseSchema, { lead });
+});

@@ -1,6 +1,6 @@
 import app from "./app.js";
+import { seedInitialAdmin } from "./bootstrap/seedInitialAdmin.js";
 import env from "./config/env.js";
-import { seedInitialAdmin } from "./db/init.js";
 import { runMigrations } from "./db/migrate.js";
 import { logger } from "./lib/logger.js";
 

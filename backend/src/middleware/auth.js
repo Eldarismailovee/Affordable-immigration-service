@@ -1,7 +1,6 @@
-import { sanitizeUser, verifyAuthToken } from "../utils/auth.js";
-import { ACTIVE_USER_STATUS, ADMIN_ROLE } from "../constants/domain.js";
-import { getLeadById } from "../services/lead.service.js";
-import { getUserById } from "../services/user.service.js";
+import { getUserFromAccessToken } from "../services/auth.service.js";
+import { AppError } from "../utils/appError.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
 
 function getBearerToken(req) {
   const header = req.get("authorization") || "";
@@ -13,83 +12,33 @@ function getBearerToken(req) {
   return header.slice(7).trim();
 }
 
-export async function optionalAuth(req, _res, next) {
-  try {
-    const token = getBearerToken(req);
-    const payload = token ? await verifyAuthToken(token) : null;
-
-    if (!payload?.sub) {
-      return next();
-    }
-
-    const user = await getUserById(payload.sub);
-
-    if (user?.status === ACTIVE_USER_STATUS) {
-      req.user = sanitizeUser(user);
-    }
-
-    next();
-  } catch (error) {
-    next(error);
-  }
-}
+export const optionalAuth = asyncHandler(async (req, _res, next) => {
+  const token = getBearerToken(req);
+  req.user = await getUserFromAccessToken(token);
+  next();
+});
 
 export function requireAuth(req, res, next) {
   if (!req.user) {
-    return res.status(401).json({
-      message: "Authentication required",
-    });
+    next(new AppError("Authentication required", 401, "AUTHENTICATION_REQUIRED"));
+    return;
   }
 
   next();
 }
 
 export function requireRole(...roles) {
-  return (req, res, next) => {
+  return (req, _res, next) => {
     if (!req.user) {
-      return res.status(401).json({
-        message: "Authentication required",
-      });
+      next(new AppError("Authentication required", 401, "AUTHENTICATION_REQUIRED"));
+      return;
     }
 
     if (!roles.includes(req.user.role)) {
-      return res.status(403).json({
-        message: "Insufficient permissions",
-      });
+      next(new AppError("Insufficient permissions", 403, "INSUFFICIENT_PERMISSIONS"));
+      return;
     }
 
     next();
   };
-}
-
-export async function requireLeadAccess(req, res, next) {
-  try {
-    if (!req.user) {
-      return res.status(401).json({
-        message: "Authentication required",
-      });
-    }
-
-    const lead = await getLeadById(req.params.leadId);
-
-    if (!lead) {
-      return res.status(404).json({
-        message: "Lead not found",
-      });
-    }
-
-    if (req.user.role === ADMIN_ROLE) {
-      return next();
-    }
-
-    if (lead.user_id !== req.user.id) {
-      return res.status(403).json({
-        message: "You do not have access to this lead",
-      });
-    }
-
-    next();
-  } catch (error) {
-    next(error);
-  }
 }

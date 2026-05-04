@@ -7,24 +7,28 @@ import {
   softDeleteUserById,
   updateUserRoleById,
 } from "../repositories/user.repository.js";
-import { userRoleSchema } from "../schemas/domain.schema.js";
+import { userRoleSchema } from "../domain/validators.js";
+import { AppError } from "../utils/appError.js";
+import { assertAdminAccess } from "./access.service.js";
 
 export async function getUserById(userId) {
   return findUserById(userId);
 }
 
-export async function listUsers() {
+export async function listUsers({ actor }) {
+  assertAdminAccess(actor);
+
   const users = await listUserRows();
   return users.map(sanitizeUser);
 }
 
-export async function updateUserRole(userId, role) {
+export async function updateUserRole({ userId, role, actor }) {
+  assertAdminAccess(actor);
+
   const result = userRoleSchema.safeParse(role);
 
   if (!result.success) {
-    const error = new Error("Invalid role");
-    error.statusCode = 400;
-    throw error;
+    throw new AppError("Invalid role", 400, "INVALID_ROLE");
   }
 
   const nextRole = result.data;
@@ -32,40 +36,42 @@ export async function updateUserRole(userId, role) {
   const currentUser = await findUserById(userId);
 
   if (!currentUser) {
-    const error = new Error("User not found");
-    error.statusCode = 404;
-    throw error;
+    throw new AppError("User not found", 404, "USER_NOT_FOUND");
   }
 
   if (currentUser.role === ADMIN_ROLE && nextRole !== ADMIN_ROLE) {
     const activeAdminCount = await countActiveAdmins();
 
     if (activeAdminCount <= 1) {
-      const error = new Error("At least one active administrator is required");
-      error.statusCode = 400;
-      throw error;
+      throw new AppError(
+        "At least one active administrator is required",
+        400,
+        "LAST_ACTIVE_ADMIN"
+      );
     }
   }
 
   return sanitizeUser(await updateUserRoleById(userId, nextRole));
 }
 
-export async function deleteUser(userId) {
+export async function deleteUser({ userId, actor }) {
+  assertAdminAccess(actor);
+
   const currentUser = await findUserById(userId);
 
   if (!currentUser) {
-    const error = new Error("User not found");
-    error.statusCode = 404;
-    throw error;
+    throw new AppError("User not found", 404, "USER_NOT_FOUND");
   }
 
   if (currentUser.role === ADMIN_ROLE) {
     const activeAdminCount = await countActiveAdmins();
 
     if (activeAdminCount <= 1) {
-      const error = new Error("At least one active administrator is required");
-      error.statusCode = 400;
-      throw error;
+      throw new AppError(
+        "At least one active administrator is required",
+        400,
+        "LAST_ACTIVE_ADMIN"
+      );
     }
   }
 

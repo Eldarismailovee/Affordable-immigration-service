@@ -14,6 +14,7 @@ import {
   hashPassword,
   hashToken,
   sanitizeUser,
+  verifyAuthToken,
   verifyPassword,
 } from "../utils/auth.js";
 import {
@@ -135,6 +136,22 @@ export async function loginUser(payload, requestContext) {
   const safeUser = sanitizeUser(user);
 
   return createAuthSession(safeUser, requestContext);
+}
+
+export async function getUserFromAccessToken(token) {
+  const payload = token ? await verifyAuthToken(token) : null;
+
+  if (!payload?.sub) {
+    return null;
+  }
+
+  const user = await findUserById(payload.sub);
+
+  if (user?.status !== ACTIVE_USER_STATUS) {
+    return null;
+  }
+
+  return sanitizeUser(user);
 }
 
 export async function refreshAuthSession(refreshToken, requestContext) {

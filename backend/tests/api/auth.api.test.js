@@ -235,7 +235,7 @@ test("an active session's refresh token is invalidated after a password reset", 
   });
 });
 
-test("error responses always carry {message, requestId}", async () => {
+test("error responses always carry the standard envelope fields", async () => {
   await withApp(app, async (client) => {
     const res = await client.post("/api/auth/login", {
       email: "ghost@example.com",
@@ -243,7 +243,11 @@ test("error responses always carry {message, requestId}", async () => {
     });
 
     assert.equal(res.status, 401);
+    assert.equal(res.body.success, false);
     assert.equal(typeof res.body.message, "string");
+    assert.equal(typeof res.body.code, "string");
+    assert.equal(typeof res.body.traceId, "string");
     assert.equal(typeof res.body.requestId, "string");
+    assert.equal(res.body.traceId, res.body.requestId);
   });
 });

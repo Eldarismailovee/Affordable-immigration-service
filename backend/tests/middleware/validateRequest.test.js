@@ -22,7 +22,7 @@ test("validateRequest passes through a valid body and overwrites req.body with p
   assert.deepEqual(req.body, { name: "Ari", age: 30 });
 });
 
-test("validateRequest returns 400 with errors[] for an invalid body", () => {
+test("validateRequest forwards a 400 VALIDATION_FAILED error for an invalid body", () => {
   const schema = z.object({
     email: z.email(),
     password: z.string().min(8),
@@ -35,15 +35,18 @@ test("validateRequest returns 400 with errors[] for an invalid body", () => {
 
   middleware(req, res, next);
 
-  assert.equal(next.calls.length, 0);
-  assert.equal(res.statusCode, 400);
-  assert.equal(res.body.message, "Validation failed");
-  assert.ok(Array.isArray(res.body.errors));
-  assert.equal(res.body.errors.length, 2);
-  for (const issue of res.body.errors) {
+  assert.equal(next.calls.length, 1);
+  const error = next.calls[0];
+  assert.equal(error.statusCode, 400);
+  assert.equal(error.code, "VALIDATION_FAILED");
+  assert.equal(error.message, "Validation failed");
+  assert.ok(Array.isArray(error.details));
+  assert.equal(error.details.length, 2);
+  for (const issue of error.details) {
     assert.ok(["email", "password"].includes(issue.path));
     assert.equal(typeof issue.message, "string");
   }
+  assert.equal(res.body, null);
 });
 
 test("validateRequest validates multiple sources (body, params, query) and aggregates errors", () => {
@@ -63,9 +66,12 @@ test("validateRequest validates multiple sources (body, params, query) and aggre
 
   middleware(req, res, next);
 
-  assert.equal(res.statusCode, 400);
-  assert.equal(res.body.errors.length, 3);
-  const paths = res.body.errors.map((issue) => issue.path).sort();
+  assert.equal(next.calls.length, 1);
+  const error = next.calls[0];
+  assert.equal(error.statusCode, 400);
+  assert.equal(error.code, "VALIDATION_FAILED");
+  assert.equal(error.details.length, 3);
+  const paths = error.details.map((issue) => issue.path).sort();
   assert.deepEqual(paths, ["body.name", "params.id", "query.flag"]);
 });
 

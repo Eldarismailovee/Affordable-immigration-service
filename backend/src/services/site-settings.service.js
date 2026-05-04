@@ -4,6 +4,7 @@ import {
   findLatestSiteSettings,
   updateSiteSettingsById,
 } from "../repositories/site-settings.repository.js";
+import { assertAdminAccess } from "./access.service.js";
 
 const DEFAULT_SETTINGS = {
   firmName: "Immigration Law Firm",
@@ -31,7 +32,9 @@ export async function getSiteSettings() {
   });
 }
 
-export async function updateSiteSettings(payload) {
+export async function updateSiteSettings(payload, actor) {
+  assertAdminAccess(actor);
+
   const current = await getSiteSettings();
 
   return updateSiteSettingsById(current.id, {

@@ -1,6 +1,19 @@
 import env from "../config/env.js";
 import { logger } from "../lib/logger.js";
 
+function getErrorCode(err, statusCode) {
+  if (typeof err.code === "string" && err.code.length > 0) {
+    return err.code;
+  }
+
+  if (statusCode === 400) return "BAD_REQUEST";
+  if (statusCode === 401) return "AUTHENTICATION_REQUIRED";
+  if (statusCode === 403) return "INSUFFICIENT_PERMISSIONS";
+  if (statusCode === 404) return "NOT_FOUND";
+  if (statusCode === 409) return "CONFLICT";
+  return "INTERNAL_SERVER_ERROR";
+}
+
 export function errorHandler(err, req, res, _next) {
   const isUploadError = err.name === "MulterError";
   const statusCode =
@@ -18,11 +31,22 @@ export function errorHandler(err, req, res, _next) {
     "Request error"
   );
 
+  const traceId = req.requestId || req.id;
+  const code = getErrorCode(err, statusCode);
   const exposeMessage = statusCode < 500 || !env.isProduction;
   const message = exposeMessage ? err.message || "Server error" : "Server error";
 
-  res.status(statusCode).json({
+  const payload = {
+    success: false,
     message,
-    requestId: req.id,
-  });
+    code,
+    traceId,
+    requestId: traceId,
+  };
+
+  if (Array.isArray(err.details) && err.details.length > 0) {
+    payload.errors = err.details;
+  }
+
+  res.status(statusCode).json(payload);
 }

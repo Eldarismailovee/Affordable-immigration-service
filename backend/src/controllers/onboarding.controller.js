@@ -1,18 +1,10 @@
 import { getOnboardingPacketByLeadId } from "../services/onboarding-document.service.js";
+import { onboardingPacketResponseSchema } from "../schemas/response.schema.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { sendResponse } from "../utils/sendResponse.js";
 
-export async function getOnboardingPacketController(req, res, next) {
-  try {
-    const { leadId } = req.params;
-    const onboarding = await getOnboardingPacketByLeadId(leadId);
-
-    if (!onboarding) {
-      return res.status(404).json({
-        message: "Onboarding packet not found",
-      });
-    }
-
-    res.json({ onboarding });
-  } catch (error) {
-    next(error);
-  }
-}
+export const getOnboardingPacketController = asyncHandler(async (req, res) => {
+  const { leadId } = req.params;
+  const onboarding = await getOnboardingPacketByLeadId(leadId, req.user);
+  sendResponse(res, onboardingPacketResponseSchema, { onboarding });
+});

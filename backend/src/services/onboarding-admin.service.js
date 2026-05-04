@@ -1,24 +1,30 @@
+import { randomUUID } from "crypto";
+import { GENERATED_DOCUMENT_STATUS } from "../constants/domain.js";
 import {
   findLatestIntakeByLeadId,
   findLeadById,
 } from "../repositories/lead.repository.js";
 import {
-  createOnboardingPacketForLead,
+  createOnboardingPacket,
   findLatestOnboardingPacketByLeadId,
 } from "../repositories/onboarding.repository.js";
+import { AppError } from "../utils/appError.js";
 import { generateOnboardingPacket } from "./onboarding.service.js";
+import { assertAdminAccess } from "./access.service.js";
 
-export async function generateOnboardingPacketForLead(leadId) {
+export async function generateOnboardingPacketForLead({ leadId, actor }) {
+  assertAdminAccess(actor);
+
   const lead = await findLeadById(leadId);
 
   if (!lead) {
-    throw new Error("Lead not found");
+    throw new AppError("Lead not found", 404, "LEAD_NOT_FOUND");
   }
 
   const intake = await findLatestIntakeByLeadId(leadId);
 
   if (!intake) {
-    throw new Error("Intake record not found for this lead");
+    throw new AppError("Intake record not found for this lead", 404, "INTAKE_NOT_FOUND");
   }
 
   const existing = await findLatestOnboardingPacketByLeadId(leadId);
@@ -42,11 +48,14 @@ export async function generateOnboardingPacketForLead(leadId) {
     expedited: Boolean(intake.expedited),
   });
 
-  const created = await createOnboardingPacketForLead({
+  await createOnboardingPacket({
+    id: randomUUID(),
     leadId,
     title: packet.title,
     htmlContent: packet.html,
+    status: GENERATED_DOCUMENT_STATUS,
   });
+  const created = await findLatestOnboardingPacketByLeadId(leadId);
 
   return {
     alreadyExists: false,

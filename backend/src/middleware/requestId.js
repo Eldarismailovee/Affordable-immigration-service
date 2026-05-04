@@ -8,6 +8,7 @@ export function requestId(req, res, next) {
   const id = incoming && incoming.length <= MAX_LEN ? incoming : randomUUID();
 
   req.id = id;
+  req.requestId = id;
   res.setHeader("X-Request-Id", id);
   next();
 }
