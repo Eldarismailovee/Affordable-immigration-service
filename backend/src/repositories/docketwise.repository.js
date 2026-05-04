@@ -1,4 +1,5 @@
 import pool from "../db/pool.js";
+import { query } from "../db/query.js";
 import { NOT_SYNCED_STATUS } from "../constants/domain.js";
 
 const SYNC_FIELDS = "id, lead_id, external_id, status, error_message, last_synced_at, created_at";
@@ -14,7 +15,7 @@ export async function createDocketwiseSyncRecord(
   },
   db = pool
 ) {
-  const { rows } = await db.query(
+  const { rows } = await query(db, 
     `
     INSERT INTO docketwise_sync (
       id, lead_id, external_id, status, error_message, last_synced_at
@@ -32,7 +33,7 @@ export async function updateDocketwiseSyncById(
   { externalId, status, errorMessage, lastSyncedAt },
   db = pool
 ) {
-  const { rows } = await db.query(
+  const { rows } = await query(db, 
     `
     UPDATE docketwise_sync
     SET

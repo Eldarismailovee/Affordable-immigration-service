@@ -345,7 +345,7 @@ cd backend
 npm run migrate
 ```
 
-Migrations are applied in filename order and recorded in the `schema_migrations` table. New database changes should be added as a new SQL file, not by editing runtime initialization code.
+Migrations are applied in filename order and recorded in the `schema_migrations` table (`name`, `checksum`, `applied_at`, `execution_ms`). The migration runner acquires a PostgreSQL advisory lock (`app:schema_migrations`) to prevent concurrent instances from applying the same migration at the same time, and it validates SHA-256 checksums of already-applied files on startup (startup fails if an applied migration file was changed). New database changes should be added as a new SQL file, not by editing runtime initialization code.
 
 ### Frontend
 Key variable:

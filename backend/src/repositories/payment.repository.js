@@ -1,4 +1,5 @@
 import pool from "../db/pool.js";
+import { query } from "../db/query.js";
 
 export async function createPaymentRecord(
   {
@@ -16,7 +17,7 @@ export async function createPaymentRecord(
   },
   db = pool
 ) {
-  await db.query(
+  await query(db, 
     `
     INSERT INTO payments (
       id,
@@ -50,7 +51,7 @@ export async function createPaymentRecord(
 }
 
 export async function updatePaymentStatusByLeadId(leadId, status, db = pool) {
-  const { rows } = await db.query(
+  const { rows } = await query(db, 
     `
     UPDATE payments
     SET status = $2, updated_at = NOW()
@@ -77,7 +78,7 @@ export async function updatePaymentStatusByLeadId(leadId, status, db = pool) {
 }
 
 export async function updateIntakePaymentStatusByLeadId(leadId, status, db = pool) {
-  await db.query(
+  await query(db, 
     `
     UPDATE intakes
     SET payment_status = $2

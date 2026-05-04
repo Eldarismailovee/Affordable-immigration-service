@@ -1,7 +1,8 @@
 import pool from "../db/pool.js";
+import { query } from "../db/query.js";
 
 export async function findLatestSiteSettings(db = pool) {
-  const { rows } = await db.query(
+  const { rows } = await query(db, 
     `
     SELECT *
     FROM site_settings
@@ -29,7 +30,7 @@ export async function createSiteSettings(
   },
   db = pool
 ) {
-  const { rows } = await db.query(
+  const { rows } = await query(db, 
     `
     INSERT INTO site_settings (
       id,
@@ -83,7 +84,7 @@ export async function updateSiteSettingsById(
   },
   db = pool
 ) {
-  const { rows } = await db.query(
+  const { rows } = await query(db, 
     `
     UPDATE site_settings
     SET

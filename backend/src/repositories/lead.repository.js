@@ -1,4 +1,5 @@
 import pool from "../db/pool.js";
+import { query } from "../db/query.js";
 
 export async function listLeadSummaries({ userId } = {}, db = pool) {
   const params = [];
@@ -11,7 +12,7 @@ export async function listLeadSummaries({ userId } = {}, db = pool) {
 
   const whereClause = `WHERE ${filters.join(" AND ")}`;
 
-  const { rows } = await db.query(
+  const { rows } = await query(db, 
     `
     SELECT
       l.id,
@@ -72,7 +73,7 @@ export async function listLeadSummaries({ userId } = {}, db = pool) {
 }
 
 export async function findLeadById(leadId, db = pool) {
-  const { rows } = await db.query(
+  const { rows } = await query(db, 
     `
     SELECT id, user_id, first_name, last_name, email, phone, status, created_at, updated_at
     FROM leads
@@ -87,7 +88,7 @@ export async function findLeadById(leadId, db = pool) {
 }
 
 export async function softDeleteLeadById(leadId, db = pool) {
-  const { rows } = await db.query(
+  const { rows } = await query(db, 
     `
     UPDATE leads
     SET
@@ -116,7 +117,7 @@ export async function createLead(
   },
   db = pool
 ) {
-  await db.query(
+  await query(db, 
     `
     INSERT INTO leads (
       id, user_id, first_name, last_name, email, phone, status
@@ -144,7 +145,7 @@ export async function createIntakeRecord(
   },
   db = pool
 ) {
-  await db.query(
+  await query(db, 
     `
     INSERT INTO intakes (
       id,
@@ -192,7 +193,7 @@ export async function createBookingRecord(
   },
   db = pool
 ) {
-  await db.query(
+  await query(db, 
     `
     INSERT INTO bookings (
       id, lead_id, consultation_type, preferred_date_time, status
@@ -203,7 +204,7 @@ export async function createBookingRecord(
 }
 
 export async function findLatestIntakeByLeadId(leadId, db = pool) {
-  const { rows } = await db.query(
+  const { rows } = await query(db, 
     `
     SELECT
       id,
@@ -233,7 +234,7 @@ export async function findLatestIntakeByLeadId(leadId, db = pool) {
 }
 
 export async function findLatestBookingByLeadId(leadId, db = pool) {
-  const { rows } = await db.query(
+  const { rows } = await query(db, 
     `
     SELECT
       id,
@@ -254,7 +255,7 @@ export async function findLatestBookingByLeadId(leadId, db = pool) {
 }
 
 export async function findLatestPaymentByLeadId(leadId, db = pool) {
-  const { rows } = await db.query(
+  const { rows } = await query(db, 
     `
     SELECT
       id,
@@ -282,7 +283,7 @@ export async function findLatestPaymentByLeadId(leadId, db = pool) {
 }
 
 export async function updateIntakeAgreementStatusByLeadId(leadId, status, db = pool) {
-  await db.query(
+  await query(db, 
     `
     UPDATE intakes
     SET agreement_status = $2
@@ -293,7 +294,7 @@ export async function updateIntakeAgreementStatusByLeadId(leadId, status, db = p
 }
 
 export async function updateIntakeDocketwiseStatusByLeadId(leadId, status, db = pool) {
-  await db.query(
+  await query(db, 
     `
     UPDATE intakes
     SET docketwise_status = $2
@@ -304,7 +305,7 @@ export async function updateIntakeDocketwiseStatusByLeadId(leadId, status, db = 
 }
 
 export async function findLatestDocketwiseSyncByLeadId(leadId, db = pool) {
-  const { rows } = await db.query(
+  const { rows } = await query(db, 
     `
     SELECT
       id,

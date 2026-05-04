@@ -1,12 +1,13 @@
 import { randomUUID } from "crypto";
 import pool from "../db/pool.js";
+import { query } from "../db/query.js";
 
 const SAFE_USER_FIELDS =
   "id, email, full_name, role, status, email_verified_at, created_at, updated_at";
 const AUTH_USER_FIELDS = `${SAFE_USER_FIELDS}, password_hash`;
 
 export async function findUserByEmail(email, db = pool) {
-  const { rows } = await db.query(
+  const { rows } = await query(db, 
     `
     SELECT ${AUTH_USER_FIELDS}
     FROM users
@@ -21,7 +22,7 @@ export async function findUserByEmail(email, db = pool) {
 }
 
 export async function findUserById(userId, db = pool) {
-  const { rows } = await db.query(
+  const { rows } = await query(db, 
     `
     SELECT ${SAFE_USER_FIELDS}
     FROM users
@@ -36,14 +37,14 @@ export async function findUserById(userId, db = pool) {
 }
 
 export async function countUsers(db = pool) {
-  const { rows } = await db.query(
+  const { rows } = await query(db, 
     "SELECT COUNT(*)::int AS total FROM users WHERE deleted_at IS NULL"
   );
   return rows[0]?.total || 0;
 }
 
 export async function countActiveAdmins(db = pool) {
-  const { rows } = await db.query(
+  const { rows } = await query(db, 
     `
     SELECT COUNT(*)::int AS total
     FROM users
@@ -57,7 +58,7 @@ export async function countActiveAdmins(db = pool) {
 }
 
 export async function createUser({ email, passwordHash, fullName, role }, db = pool) {
-  const { rows } = await db.query(
+  const { rows } = await query(db, 
     `
     INSERT INTO users (
       id,
@@ -76,7 +77,7 @@ export async function createUser({ email, passwordHash, fullName, role }, db = p
 }
 
 export async function listUsers(db = pool) {
-  const { rows } = await db.query(
+  const { rows } = await query(db, 
     `
     SELECT ${SAFE_USER_FIELDS}
     FROM users
@@ -89,7 +90,7 @@ export async function listUsers(db = pool) {
 }
 
 export async function updateUserRoleById(userId, role, db = pool) {
-  const { rows } = await db.query(
+  const { rows } = await query(db, 
     `
     UPDATE users
     SET role = $2, updated_at = NOW()
@@ -104,7 +105,7 @@ export async function updateUserRoleById(userId, role, db = pool) {
 }
 
 export async function updateUserPasswordById(userId, passwordHash, db = pool) {
-  const { rows } = await db.query(
+  const { rows } = await query(db, 
     `
     UPDATE users
     SET
@@ -121,7 +122,7 @@ export async function updateUserPasswordById(userId, passwordHash, db = pool) {
 }
 
 export async function markUserEmailVerifiedById(userId, db = pool) {
-  const { rows } = await db.query(
+  const { rows } = await query(db, 
     `
     UPDATE users
     SET
@@ -138,7 +139,7 @@ export async function markUserEmailVerifiedById(userId, db = pool) {
 }
 
 export async function softDeleteUserById(userId, db = pool) {
-  const { rows } = await db.query(
+  const { rows } = await query(db, 
     `
     UPDATE users
     SET

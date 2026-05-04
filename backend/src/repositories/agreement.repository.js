@@ -1,7 +1,8 @@
 import pool from "../db/pool.js";
+import { query } from "../db/query.js";
 
 export async function findLatestAgreementByLeadId(leadId, db = pool) {
-  const { rows } = await db.query(
+  const { rows } = await query(db, 
     `
     SELECT id, lead_id, title, html_content, status, generated_at
     FROM agreements
@@ -25,7 +26,7 @@ export async function createAgreement(
   },
   db = pool
 ) {
-  await db.query(
+  await query(db, 
     `
     INSERT INTO agreements (
       id, lead_id, title, html_content, status

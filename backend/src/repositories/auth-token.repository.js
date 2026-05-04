@@ -1,4 +1,5 @@
 import pool from "../db/pool.js";
+import { query } from "../db/query.js";
 import { withTransaction } from "../db/transaction.js";
 
 const REFRESH_TOKEN_FIELDS = `
@@ -27,7 +28,7 @@ export async function createRefreshToken(
   { id, userId, tokenHash, expiresAt, userAgent = "", ipAddress = "" },
   db = pool
 ) {
-  const { rows } = await db.query(
+  const { rows } = await query(db, 
     `
     INSERT INTO auth_refresh_tokens (
       id,
@@ -46,7 +47,7 @@ export async function createRefreshToken(
 }
 
 export async function findRefreshTokenByHash(tokenHash, db = pool) {
-  const { rows } = await db.query(
+  const { rows } = await query(db, 
     `
     SELECT ${REFRESH_TOKEN_FIELDS}
     FROM auth_refresh_tokens
@@ -76,7 +77,7 @@ export async function rotateRefreshToken(
       client
     );
 
-    await client.query(
+    await query(client, 
       `
       UPDATE auth_refresh_tokens
       SET
@@ -93,7 +94,7 @@ export async function rotateRefreshToken(
 }
 
 export async function revokeRefreshTokenByHash(tokenHash, db = pool) {
-  const { rows } = await db.query(
+  const { rows } = await query(db, 
     `
     UPDATE auth_refresh_tokens
     SET revoked_at = COALESCE(revoked_at, NOW())
@@ -107,7 +108,7 @@ export async function revokeRefreshTokenByHash(tokenHash, db = pool) {
 }
 
 export async function revokeUserRefreshTokens(userId, db = pool) {
-  await db.query(
+  await query(db, 
     `
     UPDATE auth_refresh_tokens
     SET revoked_at = COALESCE(revoked_at, NOW())
@@ -122,7 +123,7 @@ export async function createEmailVerificationToken(
   { id, userId, tokenHash, expiresAt },
   db = pool
 ) {
-  const { rows } = await db.query(
+  const { rows } = await query(db, 
     `
     INSERT INTO email_verification_tokens (
       id,
@@ -139,7 +140,7 @@ export async function createEmailVerificationToken(
 }
 
 export async function consumeEmailVerificationToken(tokenHash, db = pool) {
-  const { rows } = await db.query(
+  const { rows } = await query(db, 
     `
     UPDATE email_verification_tokens
     SET consumed_at = NOW()
@@ -155,7 +156,7 @@ export async function consumeEmailVerificationToken(tokenHash, db = pool) {
 }
 
 export async function createPasswordResetToken({ id, userId, tokenHash, expiresAt }, db = pool) {
-  const { rows } = await db.query(
+  const { rows } = await query(db, 
     `
     INSERT INTO password_reset_tokens (
       id,
@@ -172,7 +173,7 @@ export async function createPasswordResetToken({ id, userId, tokenHash, expiresA
 }
 
 export async function consumePasswordResetToken(tokenHash, db = pool) {
-  const { rows } = await db.query(
+  const { rows } = await query(db, 
     `
     UPDATE password_reset_tokens
     SET consumed_at = NOW()
