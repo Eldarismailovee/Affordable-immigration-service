@@ -343,9 +343,17 @@ Key variables:
 ```bash
 cd backend
 npm run migrate
+npm run migrate:check
 ```
 
-Migrations are applied in filename order and recorded in the `schema_migrations` table (`name`, `checksum`, `applied_at`, `execution_ms`). The migration runner acquires a PostgreSQL advisory lock (`app:schema_migrations`) to prevent concurrent instances from applying the same migration at the same time, and it validates SHA-256 checksums of already-applied files on startup (startup fails if an applied migration file was changed). New database changes should be added as a new SQL file, not by editing runtime initialization code.
+Migrations are applied in filename order and recorded in the `schema_migrations` table (`name`, `checksum`, `applied_at`, `execution_ms`). The migration runner acquires a PostgreSQL advisory lock (`app:schema_migrations`) to prevent concurrent instances from applying the same migration at the same time, and it validates SHA-256 checksums of already-applied files on startup (startup fails if an applied migration file was changed). By default each migration is wrapped in `BEGIN/COMMIT`, but you can opt out for PostgreSQL statements that cannot run in a transaction block by adding this marker in the SQL file:
+
+```sql
+-- migrate: no-transaction
+CREATE INDEX CONCURRENTLY idx_leads_email ON leads(email);
+```
+
+New database changes should be added as a new SQL file, not by editing runtime initialization code.
 
 ### Frontend
 Key variable:
@@ -357,7 +365,8 @@ This repo should expose real, visible engineering proof:
 
 - pricing calculation tests
 - intake validation tests
-- CI running install + test + build
+- CI running `npm ci`, dependency audit, tests, frontend lint/build,
+  migration apply/check, Docker image builds, and Compose validation
 - changelog
 - demo seed data
 
@@ -391,7 +400,9 @@ Deployment path:
 ## Limitations / next steps
 
 - Docketwise is currently a stub flow, not a production API integration
-- media uploads use local disk storage, not object storage
+- media uploads are served through controlled API routes with MIME and magic-byte checks;
+  S3/R2/GCS object storage is still the recommended production next step
+- production upload virus scanning expects a configured scanner such as ClamAV
 - audit logging currently covers admin mutations, but not every user-facing action
 - legal text should be reviewed by counsel before public launch
 - live demo hosting and polished video walkthrough should be added next

@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import { promisify } from "util";
 import { SignJWT, jwtVerify } from "jose";
-import env from "../config/env.js";
+import { securityConfig } from "../config/security.js";
 
 const scryptAsync = promisify(crypto.scrypt);
 export const ACCESS_TOKEN_TTL_SECONDS = 15 * 60;
@@ -9,7 +9,7 @@ export const REFRESH_TOKEN_TTL_DAYS = 30;
 export const EMAIL_VERIFICATION_TOKEN_TTL_HOURS = 24;
 export const PASSWORD_RESET_TOKEN_TTL_MINUTES = 30;
 
-const authSecret = new TextEncoder().encode(env.AUTH_TOKEN_SECRET);
+const authSecret = new TextEncoder().encode(securityConfig.authTokenSecret);
 
 export async function hashPassword(password) {
   const salt = crypto.randomBytes(16).toString("hex");

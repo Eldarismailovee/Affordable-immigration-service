@@ -1,5 +1,4 @@
 import { sanitizeUser } from "../utils/auth.js";
-import { ADMIN_ROLE } from "../constants/domain.js";
 import {
   countActiveAdmins,
   findUserById,
@@ -7,9 +6,15 @@ import {
   softDeleteUserById,
   updateUserRoleById,
 } from "../repositories/user.repository.js";
-import { userRoleSchema } from "../domain/validators.js";
-import { AppError } from "../utils/appError.js";
 import { assertAdminAccess } from "./access.service.js";
+import { userNotFoundError } from "../domain/errors.js";
+import {
+  assertCanDeleteUser,
+  assertCanRemoveAdminRole,
+  isAdmin,
+  isRemovingAdminRole,
+  parseUserRole,
+} from "../domain/user.policy.js";
 
 export async function getUserById(userId) {
   return findUserById(userId);
@@ -25,30 +30,17 @@ export async function listUsers({ actor }) {
 export async function updateUserRole({ userId, role, actor }) {
   assertAdminAccess(actor);
 
-  const result = userRoleSchema.safeParse(role);
-
-  if (!result.success) {
-    throw new AppError("Invalid role", 400, "INVALID_ROLE");
-  }
-
-  const nextRole = result.data;
+  const nextRole = parseUserRole(role);
 
   const currentUser = await findUserById(userId);
 
   if (!currentUser) {
-    throw new AppError("User not found", 404, "USER_NOT_FOUND");
+    throw userNotFoundError();
   }
 
-  if (currentUser.role === ADMIN_ROLE && nextRole !== ADMIN_ROLE) {
+  if (isRemovingAdminRole(currentUser, nextRole)) {
     const activeAdminCount = await countActiveAdmins();
-
-    if (activeAdminCount <= 1) {
-      throw new AppError(
-        "At least one active administrator is required",
-        400,
-        "LAST_ACTIVE_ADMIN"
-      );
-    }
+    assertCanRemoveAdminRole({ user: currentUser, nextRole, activeAdminCount });
   }
 
   return sanitizeUser(await updateUserRoleById(userId, nextRole));
@@ -60,19 +52,12 @@ export async function deleteUser({ userId, actor }) {
   const currentUser = await findUserById(userId);
 
   if (!currentUser) {
-    throw new AppError("User not found", 404, "USER_NOT_FOUND");
+    throw userNotFoundError();
   }
 
-  if (currentUser.role === ADMIN_ROLE) {
+  if (isAdmin(currentUser)) {
     const activeAdminCount = await countActiveAdmins();
-
-    if (activeAdminCount <= 1) {
-      throw new AppError(
-        "At least one active administrator is required",
-        400,
-        "LAST_ACTIVE_ADMIN"
-      );
-    }
+    assertCanDeleteUser({ user: currentUser, activeAdminCount });
   }
 
   return sanitizeUser(await softDeleteUserById(userId));

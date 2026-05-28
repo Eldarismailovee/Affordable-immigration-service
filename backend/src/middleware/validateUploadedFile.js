@@ -1,30 +1,32 @@
-import fs from "fs";
-
-function removeRejectedUpload(file) {
-  if (!file?.path) {
-    return;
-  }
-
-  fs.unlink(file.path, () => {});
-}
+import { removeUploadFile } from "../services/upload-storage.service.js";
+import { AppError } from "../utils/appError.js";
 
 export function validateUploadedFile(schema) {
-  return (req, res, next) => {
-    const result = schema.safeParse(req.file);
+  return async (req, _res, next) => {
+    try {
+      const result = schema.safeParse(req.file);
 
-    if (!result.success) {
-      removeRejectedUpload(req.file);
+      if (!result.success) {
+        await removeUploadFile(req.file);
 
-      return res.status(400).json({
-        message: "Upload validation failed",
-        errors: result.error.issues.map((issue) => ({
+        const error = new AppError(
+          "Upload validation failed",
+          400,
+          "UPLOAD_VALIDATION_FAILED"
+        );
+        error.details = result.error.issues.map((issue) => ({
           path: issue.path.join("."),
           message: issue.message,
-        })),
-      });
-    }
+        }));
 
-    req.file = result.data;
-    next();
+        next(error);
+        return;
+      }
+
+      req.file = result.data;
+      next();
+    } catch (error) {
+      next(error);
+    }
   };
 }

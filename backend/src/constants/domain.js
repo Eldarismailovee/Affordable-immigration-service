@@ -33,4 +33,11 @@ export const NOT_SYNCED_STATUS = "not_synced";
 export const SYNCED_STATUS = "synced";
 
 export const IMAGE_UPLOAD_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+export const IMAGE_UPLOAD_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp", ".gif"];
+export const IMAGE_UPLOAD_EXTENSION_BY_MIME_TYPE = {
+  "image/jpeg": ".jpg",
+  "image/png": ".png",
+  "image/webp": ".webp",
+  "image/gif": ".gif",
+};
 export const MAX_IMAGE_UPLOAD_BYTES = 5 * 1024 * 1024;

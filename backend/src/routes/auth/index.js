@@ -1,57 +1,17 @@
 import { Router } from "express";
-import {
-  confirmEmailVerificationController,
-  confirmPasswordResetController,
-  loginController,
-  logoutController,
-  meController,
-  refreshController,
-  registerController,
-  requestEmailVerificationController,
-  requestPasswordResetController,
-} from "../../controllers/auth.controller.js";
-import { requireAuth } from "../../middleware/auth.js";
+import { registerController } from "../../controllers/auth.controller.js";
 import { authRateLimit } from "../../middleware/rateLimit.js";
 import { validateRequest } from "../../middleware/validateRequest.js";
-import {
-  confirmEmailVerificationSchema,
-  confirmPasswordResetSchema,
-  loginSchema,
-  logoutSchema,
-  refreshTokenSchema,
-  registerSchema,
-  requestPasswordResetSchema,
-} from "../../schemas/auth.schema.js";
+import { registerSchema } from "../../schemas/auth.schema.js";
+import emailVerificationRoutes from "./email-verification.routes.js";
+import passwordResetRoutes from "./password-reset.routes.js";
+import sessionRoutes from "./session.routes.js";
 
 const router = Router();
 
 router.post("/register", authRateLimit, validateRequest(registerSchema), registerController);
-router.post("/login", authRateLimit, validateRequest(loginSchema), loginController);
-router.post("/refresh", authRateLimit, validateRequest(refreshTokenSchema), refreshController);
-router.post("/logout", validateRequest(logoutSchema), logoutController);
-router.post(
-  "/password-reset/request",
-  authRateLimit,
-  validateRequest(requestPasswordResetSchema),
-  requestPasswordResetController
-);
-router.post(
-  "/password-reset/confirm",
-  authRateLimit,
-  validateRequest(confirmPasswordResetSchema),
-  confirmPasswordResetController
-);
-router.post(
-  "/email-verification/request",
-  requireAuth,
-  requestEmailVerificationController
-);
-router.post(
-  "/email-verification/confirm",
-  authRateLimit,
-  validateRequest(confirmEmailVerificationSchema),
-  confirmEmailVerificationController
-);
-router.get("/me", requireAuth, meController);
+router.use(sessionRoutes);
+router.use(passwordResetRoutes);
+router.use(emailVerificationRoutes);
 
 export default router;

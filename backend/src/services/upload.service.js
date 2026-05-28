@@ -7,6 +7,7 @@ export function buildUploadedImageResponse(file, { requestOrigin } = {}) {
   }
 
   const baseUrl = env.BASE_URL || requestOrigin;
+  const publicPath = `/api/public/uploads/images/${file.filename}`;
 
   return {
     message: "Image uploaded successfully",
@@ -14,8 +15,10 @@ export function buildUploadedImageResponse(file, { requestOrigin } = {}) {
       filename: file.filename,
       originalName: file.originalname,
       mimeType: file.mimetype,
+      detectedMimeType: file.detectedMimeType,
       size: file.size,
-      url: `${baseUrl}/uploads/${file.filename}`,
+      url: `${baseUrl}${publicPath}`,
+      path: publicPath,
     },
   };
 }

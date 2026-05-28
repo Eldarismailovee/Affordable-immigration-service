@@ -1,7 +1,8 @@
 import puppeteer from "puppeteer-core";
+import env from "../config/env.js";
 import { escapeHtml } from "../utils/htmlEscape.js";
 
-const CHROMIUM_PATH = process.env.CHROMIUM_PATH || "/usr/bin/chromium";
+const CHROMIUM_PATH = env.CHROMIUM_PATH;
 
 export async function renderHtmlToPdfBuffer({ title, html }) {
   const browser = await puppeteer.launch({

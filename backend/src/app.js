@@ -1,9 +1,8 @@
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
-import path from "path";
-import { fileURLToPath } from "url";
-import env from "./config/env.js";
+import { corsConfig } from "./config/cors.js";
+import { checkDatabaseReadiness } from "./db/health.js";
 import publicRoutes from "./routes/public/index.js";
 import authRoutes from "./routes/auth/index.js";
 import accountRoutes from "./routes/account/index.js";
@@ -18,29 +17,30 @@ import { requestId } from "./middleware/requestId.js";
 
 const app = express();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const uploadsDir = path.resolve(__dirname, "../uploads");
-
 app.set("trust proxy", 1);
 
 app.use(requestId);
 app.use(httpLogger);
 app.use(helmet());
-app.use(
-  cors({
-    origin: env.CORS_ORIGINS,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  })
-);
+app.use(cors(corsConfig));
 
 app.use(express.json({ limit: "1mb" }));
-app.use("/uploads", express.static(uploadsDir));
 app.use(optionalAuth);
 app.use("/api", generalRateLimit);
 
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true, message: "Backend is running" });
+});
+
+app.get("/api/ready", async (_req, res) => {
+  const readiness = await checkDatabaseReadiness();
+  const statusCode = readiness.ok ? 200 : 503;
+
+  res.status(statusCode).json({
+    ok: readiness.ok,
+    database: readiness.database,
+    migrations: readiness.migrations,
+  });
 });
 
 app.use("/api/public", publicRoutes);

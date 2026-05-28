@@ -1,3 +1,4 @@
+import { databaseConfig } from "../config/database.js";
 import { logger } from "../lib/logger.js";
 
 function getStatementType(sql) {
@@ -37,17 +38,21 @@ export async function query(db, text, params = [], options = {}) {
   try {
     const result = await db.query(text, params);
 
-    logger.trace(
-      {
-        queryName,
-        statementType,
-        target,
-        durationMs: toDurationMs(startTimeNs),
-        rowCount: result?.rowCount ?? null,
-        paramCount,
-      },
-      "Database query completed"
-    );
+    const durationMs = toDurationMs(startTimeNs);
+    const payload = {
+      queryName,
+      statementType,
+      target,
+      durationMs,
+      rowCount: result?.rowCount ?? null,
+      paramCount,
+    };
+
+    if (durationMs >= databaseConfig.slowQueryThresholdMs) {
+      logger.warn(payload, "Slow database query completed");
+    } else {
+      logger.trace(payload, "Database query completed");
+    }
 
     return result;
   } catch (error) {

@@ -1,31 +1,32 @@
 import pg from "pg";
-import env from "../config/env.js";
+import { databaseConfig } from "../config/database.js";
+import { logger } from "../lib/logger.js";
 
 const { Pool } = pg;
 
 const poolConfig = {
-  connectionString: env.DATABASE_URL,
-  max: Math.max(1, env.DB_POOL_MAX),
-  min: Math.max(0, env.DB_POOL_MIN),
-  idleTimeoutMillis: Math.max(0, env.DB_POOL_IDLE_TIMEOUT_MS),
-  connectionTimeoutMillis: Math.max(0, env.DB_POOL_CONNECTION_TIMEOUT_MS),
-  allowExitOnIdle: env.DB_POOL_ALLOW_EXIT_ON_IDLE,
-  application_name: env.DB_APPLICATION_NAME,
-  ssl: env.DB_SSL
-    ? {
-        rejectUnauthorized: env.DB_SSL_REJECT_UNAUTHORIZED,
-      }
-    : false,
+  connectionString: databaseConfig.connectionString,
+  max: databaseConfig.pool.max,
+  min: databaseConfig.pool.min,
+  idleTimeoutMillis: databaseConfig.pool.idleTimeoutMillis,
+  connectionTimeoutMillis: databaseConfig.pool.connectionTimeoutMillis,
+  allowExitOnIdle: databaseConfig.pool.allowExitOnIdle,
+  application_name: databaseConfig.applicationName,
+  ssl: databaseConfig.ssl,
 };
 
-if (env.DB_POOL_MAX_USES > 0) {
-  poolConfig.maxUses = env.DB_POOL_MAX_USES;
+if (databaseConfig.pool.maxUses > 0) {
+  poolConfig.maxUses = databaseConfig.pool.maxUses;
 }
 
-if (env.DB_POOL_MAX_LIFETIME_SECONDS > 0) {
-  poolConfig.maxLifetimeSeconds = env.DB_POOL_MAX_LIFETIME_SECONDS;
+if (databaseConfig.pool.maxLifetimeSeconds > 0) {
+  poolConfig.maxLifetimeSeconds = databaseConfig.pool.maxLifetimeSeconds;
 }
 
 const pool = new Pool(poolConfig);
+
+pool.on("error", (error) => {
+  logger.error({ err: error }, "Unexpected database pool error");
+});
 
 export default pool;

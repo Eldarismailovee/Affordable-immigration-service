@@ -3,9 +3,11 @@ import {
   updatePaymentStatusByLeadId,
 } from "../repositories/payment.repository.js";
 import { withUnitOfWork } from "../repositories/unit-of-work.repository.js";
-import { paymentStatusSchema } from "../domain/validators.js";
-import { AppError } from "../utils/appError.js";
-import { assertAdminAccess } from "./access.service.js";
+import { paymentNotFoundError } from "../domain/errors.js";
+import {
+  assertCanUpdatePaymentStatus,
+  parsePaymentStatus,
+} from "../domain/payment.policy.js";
 
 export function createManualPaymentRecord(payload) {
   return {
@@ -17,15 +19,8 @@ export function createManualPaymentRecord(payload) {
 }
 
 export async function updateLeadPaymentStatus({ leadId, status, actor }) {
-  assertAdminAccess(actor);
-
-  const result = paymentStatusSchema.safeParse(status);
-
-  if (!result.success) {
-    throw new AppError("Invalid payment status", 400, "INVALID_PAYMENT_STATUS");
-  }
-
-  const nextStatus = result.data;
+  assertCanUpdatePaymentStatus(actor);
+  const nextStatus = parsePaymentStatus(status);
 
   const payment = await withUnitOfWork(async (client) => {
     const updatedPayment = await updatePaymentStatusByLeadId(leadId, nextStatus, client);
@@ -39,7 +34,7 @@ export async function updateLeadPaymentStatus({ leadId, status, actor }) {
   });
 
   if (!payment) {
-    throw new AppError("Payment record not found", 404, "PAYMENT_NOT_FOUND");
+    throw paymentNotFoundError();
   }
 
   return payment;
