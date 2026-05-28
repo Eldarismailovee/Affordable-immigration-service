@@ -1,9 +1,15 @@
-import crypto from "crypto";
-import { promisify } from "util";
+import {
+  createHash,
+  randomBytes,
+  randomUUID,
+  scrypt,
+  timingSafeEqual,
+} from "node:crypto";
+import { promisify } from "node:util";
 import { SignJWT, jwtVerify } from "jose";
 import { securityConfig } from "../config/security.js";
 
-const scryptAsync = promisify(crypto.scrypt);
+const scryptAsync = promisify(scrypt);
 export const ACCESS_TOKEN_TTL_SECONDS = 15 * 60;
 export const REFRESH_TOKEN_TTL_DAYS = 30;
 export const EMAIL_VERIFICATION_TOKEN_TTL_HOURS = 24;
@@ -12,7 +18,7 @@ export const PASSWORD_RESET_TOKEN_TTL_MINUTES = 30;
 const authSecret = new TextEncoder().encode(securityConfig.authTokenSecret);
 
 export async function hashPassword(password) {
-  const salt = crypto.randomBytes(16).toString("hex");
+  const salt = randomBytes(16).toString("hex");
   const key = await scryptAsync(password, salt, 64);
 
   return `scrypt:${salt}:${key.toString("hex")}`;
@@ -32,7 +38,7 @@ export async function verifyPassword(password, passwordHash) {
     return false;
   }
 
-  return crypto.timingSafeEqual(storedBuffer, key);
+  return timingSafeEqual(storedBuffer, key);
 }
 
 export async function createAccessToken(user, { sessionId } = {}) {
@@ -44,7 +50,7 @@ export async function createAccessToken(user, { sessionId } = {}) {
     .setProtectedHeader({ alg: "HS256", typ: "JWT" })
     .setSubject(user.id)
     .setIssuedAt()
-    .setJti(crypto.randomUUID())
+    .setJti(randomUUID())
     .setExpirationTime(`${ACCESS_TOKEN_TTL_SECONDS}s`)
     .sign(authSecret);
 }
@@ -67,11 +73,11 @@ export async function verifyAuthToken(token) {
 }
 
 export function createOpaqueToken() {
-  return crypto.randomBytes(48).toString("base64url");
+  return randomBytes(48).toString("base64url");
 }
 
 export function hashToken(token) {
-  return crypto.createHash("sha256").update(String(token)).digest("hex");
+  return createHash("sha256").update(String(token)).digest("hex");
 }
 
 export function addMinutes(date, minutes) {

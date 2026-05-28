@@ -1,7 +1,8 @@
+import { promisify } from "node:util";
 import { getPublicUploadedImage } from "../services/upload-storage.service.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
-export const servePublicUploadedImageController = asyncHandler(async (req, res, next) => {
+export const servePublicUploadedImageController = asyncHandler(async (req, res) => {
   const image = await getPublicUploadedImage(req.params.filename);
 
   res.set({
@@ -10,9 +11,5 @@ export const servePublicUploadedImageController = asyncHandler(async (req, res, 
     "Content-Length": image.size,
   });
   res.type(image.mimeType);
-  res.sendFile(image.path, (error) => {
-    if (error) {
-      next(error);
-    }
-  });
+  await promisify(res.sendFile.bind(res))(image.path);
 });

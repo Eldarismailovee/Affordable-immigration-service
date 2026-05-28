@@ -14,7 +14,7 @@ const storage = multer.diskStorage({
     try {
       cb(null, buildSafeImageFilename(file));
     } catch (error) {
-      cb(error);
+      return cb(error);
     }
   },
 });
@@ -30,7 +30,7 @@ function fileFilter(_req, file, cb) {
     400,
     "INVALID_UPLOAD_MIME_TYPE"
   );
-  cb(error);
+  return cb(error);
 }
 
 const upload = multer({

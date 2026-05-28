@@ -26,7 +26,7 @@ export function validateUploadedFile(schema) {
       req.file = result.data;
       next();
     } catch (error) {
-      next(error);
+      return next(error);
     }
   };
 }
