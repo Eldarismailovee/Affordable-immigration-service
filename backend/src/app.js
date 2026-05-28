@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import { corsConfig } from "./config/cors.js";
-import { checkDatabaseReadiness } from "./db/health.js";
+import { getCachedReadiness } from "./services/readiness.service.js";
 import publicRoutes from "./routes/public/index.js";
 import authRoutes from "./routes/auth/index.js";
 import accountRoutes from "./routes/account/index.js";
@@ -33,7 +33,7 @@ app.get("/api/health", (_req, res) => {
 });
 
 app.get("/api/ready", async (_req, res) => {
-  const readiness = await checkDatabaseReadiness();
+  const readiness = await getCachedReadiness();
   const statusCode = readiness.ok ? 200 : 503;
 
   res.status(statusCode).json({

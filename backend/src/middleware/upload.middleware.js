@@ -2,12 +2,9 @@ import multer from "multer";
 import { IMAGE_UPLOAD_MIME_TYPES, MAX_IMAGE_UPLOAD_BYTES } from "../constants/domain.js";
 import {
   buildSafeImageFilename,
-  ensureUploadDirectory,
   uploadsDir,
 } from "../services/upload-storage.service.js";
 import { AppError } from "../utils/appError.js";
-
-ensureUploadDirectory();
 
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => {

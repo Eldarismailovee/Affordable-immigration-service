@@ -1,5 +1,4 @@
 import { randomUUID } from "crypto";
-import fs from "fs";
 import { promises as fsPromises } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -15,10 +14,8 @@ const __dirname = path.dirname(__filename);
 
 export const uploadsDir = path.resolve(__dirname, "../../uploads");
 
-export function ensureUploadDirectory() {
-  if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
-  }
+export async function ensureUploadDirectory() {
+  await fsPromises.mkdir(uploadsDir, { recursive: true });
 }
 
 function extensionFromOriginalName(originalName = "") {

@@ -1,10 +1,16 @@
 import puppeteer from "puppeteer-core";
 import env from "../config/env.js";
+import { createAsyncLimiter } from "../utils/asyncLimiter.js";
 import { escapeHtml } from "../utils/htmlEscape.js";
 
 const CHROMIUM_PATH = env.CHROMIUM_PATH;
+const limitPdfGeneration = createAsyncLimiter(1);
 
-export async function renderHtmlToPdfBuffer({ title, html }) {
+export function renderHtmlToPdfBuffer(payload) {
+  return limitPdfGeneration(() => renderHtmlToPdfBufferUnsafe(payload));
+}
+
+async function renderHtmlToPdfBufferUnsafe({ title, html }) {
   const browser = await puppeteer.launch({
     executablePath: CHROMIUM_PATH,
     headless: true,
