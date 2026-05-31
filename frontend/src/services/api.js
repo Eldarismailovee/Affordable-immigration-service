@@ -276,6 +276,14 @@ export async function getSiteSettings() {
   return request("/public/site-settings");
 }
 
+export async function logCookieConsent(payload) {
+  return request("/public/cookie-consent", {
+    method: "POST",
+    body: JSON.stringify(payload),
+    skipRefresh: true,
+  });
+}
+
 export async function updateSiteSettings(payload) {
   return request("/admin/site-settings", {
     method: "PUT",

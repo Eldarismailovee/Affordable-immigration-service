@@ -1,6 +1,8 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
+import CookieConsentBanner from "./components/CookieConsentBanner";
 import { AuthProvider } from "./context/AuthContext";
+import { CookieConsentProvider } from "./context/CookieConsentContext";
 import { IntakeProvider } from "./context/IntakeContext";
 import { SiteSettingsProvider } from "./context/SiteSettingsContext";
 
@@ -15,6 +17,7 @@ import LeadDetailPage from "./pages/LeadDetailPage";
 import AgreementPage from "./pages/AgreementPage";
 import TermsPage from "./pages/TermsPage";
 import PrivacyPage from "./pages/PrivacyPage";
+import CookiePreferencesPage from "./pages/CookiePreferencesPage";
 import DisclaimerPage from "./pages/DisclaimerPage";
 import OnboardingPacketPage from "./pages/OnboardingPacketPage";
 import SiteSettingsPage from "./pages/SiteSettingsPage";
@@ -33,8 +36,9 @@ export default function App() {
     <BrowserRouter>
       <SiteSettingsProvider>
         <AuthProvider>
-          <IntakeProvider>
-            <Routes>
+          <CookieConsentProvider>
+            <IntakeProvider>
+              <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
@@ -123,9 +127,12 @@ export default function App() {
               />
               <Route path="/terms" element={<TermsPage />} />
               <Route path="/privacy" element={<PrivacyPage />} />
+              <Route path="/cookie-preferences" element={<CookiePreferencesPage />} />
               <Route path="/disclaimer" element={<DisclaimerPage />} />
             </Routes>
+            <CookieConsentBanner />
           </IntakeProvider>
+        </CookieConsentProvider>
         </AuthProvider>
       </SiteSettingsProvider>
     </BrowserRouter>

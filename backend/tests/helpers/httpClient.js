@@ -41,7 +41,10 @@ function parseSetCookieHeaders(setCookieHeader) {
 
 function makeRequest({ port, method, path, body, token, cookies = {} }) {
   return new Promise((resolve, reject) => {
-    const headers = { "content-type": "application/json" };
+    const headers = {
+      "content-type": "application/json",
+      "user-agent": "affordable-immigration-service-test/1.0",
+    };
 
     if (token) {
       headers.authorization = `Bearer ${token}`;

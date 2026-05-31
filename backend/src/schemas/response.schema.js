@@ -29,4 +29,5 @@ export {
   dsarExportResponseSchema,
   adminDsarRequestListResponseSchema,
   adminDsarRequestMutationResponseSchema,
+  cookieConsentLogResponseSchema,
 } from "./responses/index.js";

@@ -17,6 +17,7 @@ export function createInMemoryStore() {
     auditLog: [],
     dsarRequests: new Map(),
     dsarEvents: [],
+    cookieConsentLogs: [],
   };
 }
 
@@ -446,6 +447,29 @@ export function buildAuditRepo(store) {
   return {
     createAdminAuditLog: async (entry) => {
       store.auditLog.push(entry);
+    },
+  };
+}
+
+export function buildCookieConsentRepo(store) {
+  return {
+    createCookieConsentLog: async (entry) => {
+      const row = {
+        id: randomUUID(),
+        user_id: entry.userId ?? null,
+        anonymous_id: entry.anonymousId ?? null,
+        consent_version: entry.consentVersion,
+        strictly_necessary: entry.strictlyNecessary,
+        analytics: entry.analytics,
+        marketing: entry.marketing,
+        source: entry.source,
+        region_hint: entry.regionHint ?? null,
+        user_agent_hash: entry.userAgentHash ?? null,
+        ip_hash: entry.ipHash ?? null,
+        created_at: new Date(),
+      };
+      store.cookieConsentLogs.push(row);
+      return row;
     },
   };
 }

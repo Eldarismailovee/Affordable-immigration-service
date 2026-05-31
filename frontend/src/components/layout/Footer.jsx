@@ -59,6 +59,7 @@ export default function Footer() {
               <div className="pt-2 flex flex-col gap-2">
                 <Link to="/privacy" className="transition hover:text-amber-300">Privacy Policy</Link>
                 <Link to="/terms" className="transition hover:text-amber-300">Terms of Service</Link>
+                <Link to="/cookie-preferences" className="transition hover:text-amber-300">Cookie Preferences</Link>
                 <Link to="/disclaimer" className="transition hover:text-amber-300">Legal Disclaimer</Link>
               </div>
             </div>

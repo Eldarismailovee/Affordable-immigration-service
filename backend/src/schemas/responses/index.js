@@ -40,3 +40,4 @@ export {
   dsarRequestListResponseSchema,
   dsarRequestMutationResponseSchema,
 } from "./dsar.response.schema.js";
+export { cookieConsentLogResponseSchema } from "./cookie-consent.response.schema.js";

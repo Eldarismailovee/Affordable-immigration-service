@@ -4,6 +4,7 @@ import {
   buildAgreementRepo,
   buildAuditRepo,
   buildAuthTokenRepo,
+  buildCookieConsentRepo,
   buildLeadRepo,
   buildOnboardingRepo,
   buildDsarExportRepo,
@@ -67,6 +68,10 @@ export async function setupTestEnvironment() {
 
   mock.module("../../src/repositories/dsar-export.repository.js", {
     namedExports: buildDsarExportRepo(store),
+  });
+
+  mock.module("../../src/repositories/cookie-consent.repository.js", {
+    namedExports: buildCookieConsentRepo(store),
   });
 
   mock.module("../../src/middleware/rateLimit.js", {
