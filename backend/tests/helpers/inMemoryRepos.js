@@ -15,6 +15,8 @@ export function createInMemoryStore() {
     emailVerificationTokens: new Map(),
     passwordResetTokens: new Map(),
     auditLog: [],
+    dsarRequests: new Map(),
+    dsarEvents: [],
   };
 }
 
@@ -54,6 +56,8 @@ export function buildUserRepo(store) {
         role,
         status: "active",
         email_verified_at: null,
+        processing_restricted_at: null,
+        processing_restriction_reason: null,
         created_at: new Date(),
         updated_at: new Date(),
       };
@@ -87,6 +91,30 @@ export function buildUserRepo(store) {
       user.status = "disabled";
       return safeUser(user);
     },
+    updateUserFullNameById: async (userId, fullName) => {
+      const user = store.users.get(userId);
+      if (!user) return null;
+      user.full_name = fullName;
+      return safeUser(user);
+    },
+    setUserProcessingRestriction: async ({ userId, reason, restricted }) => {
+      const user = store.users.get(userId);
+      if (!user) return null;
+      user.processing_restricted_at = restricted ? new Date() : null;
+      user.processing_restriction_reason = restricted ? reason : null;
+      return safeUser(user);
+    },
+    anonymizeUserById: async (userId) => {
+      const user = store.users.get(userId);
+      if (!user) return null;
+      user.email = `anonymized+${userId}@deleted.local`;
+      user.full_name = "Deleted User";
+      user.password_hash = "";
+      user.status = "disabled";
+      user.deleted_at = new Date();
+      return user;
+    },
+    findUserByIdIncludingDeleted: async (id) => safeUser(store.users.get(id)),
   };
 }
 
@@ -284,6 +312,133 @@ export function buildLeadRepo(store) {
       lead.updated_at = new Date();
       return lead;
     },
+    updateLeadContactById: async ({ leadId, firstName, lastName, phone, email }) => {
+      const lead = store.leads.get(leadId);
+      if (!lead || lead.deleted_at) return null;
+      if (firstName) lead.first_name = firstName;
+      if (lastName) lead.last_name = lastName;
+      if (phone) lead.phone = phone;
+      if (email) lead.email = email;
+      lead.updated_at = new Date();
+      return lead;
+    },
+    anonymizeLeadsForUserId: async (userId) => {
+      for (const lead of store.leads.values()) {
+        if (lead.user_id === userId && !lead.deleted_at) {
+          lead.first_name = "Deleted";
+          lead.last_name = "User";
+          lead.email = `anonymized+${lead.id}@deleted.local`;
+          lead.phone = "0000000000";
+        }
+      }
+    },
+    findLatestLeadByUserId: async (userId) => {
+      let latest = null;
+      for (const lead of store.leads.values()) {
+        if (lead.user_id === userId && !lead.deleted_at) {
+          if (!latest || lead.created_at > latest.created_at) latest = lead;
+        }
+      }
+      return latest;
+    },
+  };
+}
+
+export function buildDsarRepo(store) {
+  if (!store.dsarRequests) store.dsarRequests = new Map();
+  if (!store.dsarEvents) store.dsarEvents = [];
+
+  return {
+    createDsarRequest: async (payload) => {
+      const id = randomUUID();
+      const row = {
+        id,
+        requester_user_id: payload.requesterUserId,
+        requester_email: payload.requesterEmail,
+        request_type: payload.requestType,
+        status: payload.status,
+        identity_verification_status: payload.identityVerificationStatus,
+        identity_verified_at: null,
+        identity_verified_by: null,
+        legal_hold: false,
+        legal_hold_reason: null,
+        legal_hold_applied_by: null,
+        legal_hold_applied_at: null,
+        admin_notes: null,
+        user_message: payload.userMessage ?? null,
+        requested_changes: payload.requestedChanges ?? null,
+        export_payload_json: null,
+        completed_at: null,
+        completed_by: null,
+        created_at: new Date(),
+        updated_at: new Date(),
+      };
+      store.dsarRequests.set(id, row);
+      return row;
+    },
+    findDsarRequestById: async (id) => store.dsarRequests.get(id) || null,
+    listDsarRequestsByUserId: async (userId) =>
+      [...store.dsarRequests.values()].filter((r) => r.requester_user_id === userId),
+    listAllDsarRequests: async () => [...store.dsarRequests.values()],
+    updateDsarRequest: async (id, fields) => {
+      const row = store.dsarRequests.get(id);
+      if (!row) return null;
+      if (fields.status !== undefined) row.status = fields.status;
+      if (fields.identityVerificationStatus !== undefined) {
+        row.identity_verification_status = fields.identityVerificationStatus;
+      }
+      if (fields.identityVerifiedAt !== undefined) row.identity_verified_at = fields.identityVerifiedAt;
+      if (fields.identityVerifiedBy !== undefined) row.identity_verified_by = fields.identityVerifiedBy;
+      if (fields.legalHold !== undefined) row.legal_hold = fields.legalHold;
+      if (fields.legalHoldReason !== undefined) row.legal_hold_reason = fields.legalHoldReason;
+      if (fields.legalHoldAppliedBy !== undefined) row.legal_hold_applied_by = fields.legalHoldAppliedBy;
+      if (fields.legalHoldAppliedAt !== undefined) row.legal_hold_applied_at = fields.legalHoldAppliedAt;
+      if (fields.exportPayloadJson !== undefined) row.export_payload_json = fields.exportPayloadJson;
+      if (fields.completedAt !== undefined) row.completed_at = fields.completedAt;
+      if (fields.completedBy !== undefined) row.completed_by = fields.completedBy;
+      row.updated_at = new Date();
+      return row;
+    },
+    appendAdminNotes: async (id, note) => {
+      const row = store.dsarRequests.get(id);
+      if (!row) return null;
+      row.admin_notes = row.admin_notes ? `${row.admin_notes}\n${note}` : note;
+      return row;
+    },
+    createDsarEvent: async ({ dsarRequestId, actorUserId, eventType, metadata }) => {
+      const row = {
+        id: randomUUID(),
+        dsar_request_id: dsarRequestId,
+        actor_user_id: actorUserId ?? null,
+        event_type: eventType,
+        metadata_json: metadata ?? null,
+        created_at: new Date(),
+      };
+      store.dsarEvents.push(row);
+      return row;
+    },
+    listDsarEventsByRequestId: async (requestId) =>
+      store.dsarEvents.filter((e) => e.dsar_request_id === requestId),
+  };
+}
+
+export function buildDsarExportRepo(store) {
+  return {
+    findUserExportRow: async (userId) => {
+      const user = store.users.get(userId);
+      if (!user) return null;
+      return { ...user };
+    },
+    listLeadsForUserExport: async (userId) =>
+      [...store.leads.values()].filter((l) => l.user_id === userId),
+    listIntakesForUserLeads: async () => [],
+    listAgreementsForUserLeads: async () => [],
+    listOnboardingForUserLeads: async () => [],
+    listBookingsForUserLeads: async () => [],
+    listPaymentsForUserLeads: async () => [],
+    listDocketwiseForUserLeads: async () => [],
+    listDsarRequestsForUserExport: async (userId) =>
+      [...(store.dsarRequests?.values() || [])].filter((r) => r.requester_user_id === userId),
   };
 }
 

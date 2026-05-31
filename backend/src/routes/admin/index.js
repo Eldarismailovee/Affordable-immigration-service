@@ -7,6 +7,7 @@ import docketwiseRoutes from "./docketwise.routes.js";
 import paymentsRoutes from "./payments.routes.js";
 import siteSettingsRoutes from "./site-settings.routes.js";
 import uploadsRoutes from "./uploads.routes.js";
+import dsarRoutes from "./dsar.routes.js";
 import { requireRole } from "../../middleware/auth.js";
 
 const router = Router();
@@ -21,5 +22,6 @@ router.use("/docketwise", adminOnly, docketwiseRoutes);
 router.use("/payments", adminOnly, paymentsRoutes);
 router.use("/site-settings", adminOnly, siteSettingsRoutes);
 router.use("/uploads", adminOnly, uploadsRoutes);
+router.use("/dsar", dsarRoutes);
 
 export default router;

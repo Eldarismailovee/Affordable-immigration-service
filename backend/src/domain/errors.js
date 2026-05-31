@@ -82,3 +82,43 @@ export function packetNotApprovedError() {
     "PACKET_NOT_APPROVED"
   );
 }
+
+export function dsarRequestNotFoundError() {
+  return new AppError("DSAR request not found", 404, "DSAR_REQUEST_NOT_FOUND");
+}
+
+export function dsarAccessDeniedError() {
+  return new AppError("You do not have access to this DSAR request", 403, "DSAR_ACCESS_DENIED");
+}
+
+export function dsarIdentityNotVerifiedError() {
+  return new AppError(
+    "Identity verification is required before this action",
+    403,
+    "DSAR_IDENTITY_NOT_VERIFIED"
+  );
+}
+
+export function dsarLegalHoldError() {
+  return new AppError(
+    "Request is under legal hold and cannot be processed for deletion or anonymization",
+    409,
+    "DSAR_LEGAL_HOLD"
+  );
+}
+
+export function dsarInvalidStatusTransitionError() {
+  return new AppError("Invalid DSAR request status transition", 400, "DSAR_INVALID_STATUS");
+}
+
+export function dsarExportNotAvailableError() {
+  return new AppError("Export is not available for this request", 404, "DSAR_EXPORT_NOT_AVAILABLE");
+}
+
+export function processingRestrictedError() {
+  return new AppError(
+    "Processing is restricted for this account",
+    403,
+    "PROCESSING_RESTRICTED"
+  );
+}

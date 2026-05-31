@@ -15,6 +15,7 @@ import { withUnitOfWork } from "../repositories/unit-of-work.repository.js";
 import { calculatePricing } from "../utils/pricingCalculator.js";
 import { buildIntakeResponse } from "../utils/intakeResponse.js";
 import { generateAgreement } from "./agreement.service.js";
+import { assertProcessingNotRestricted } from "../domain/processing.policy.js";
 import { assertStaffAccess } from "./access.service.js";
 import { generateOnboardingPacket } from "./onboarding.service.js";
 
@@ -118,6 +119,10 @@ async function persistIntakeSubmission({ payload, userId, pricing, agreement, on
 }
 
 export async function createIntake(payload, user) {
+  if (user) {
+    assertProcessingNotRestricted(user);
+  }
+
   const pricing = calculatePricing(payload);
   const agreement = generateAgreement(payload);
   const onboarding = generateOnboardingPacket(payload);

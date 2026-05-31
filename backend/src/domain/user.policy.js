@@ -37,6 +37,16 @@ export function assertAdmin(user) {
   return user;
 }
 
+export function assertAttorneyAccess(user) {
+  assertAuthenticated(user);
+
+  if (!isStaff(user)) {
+    throw insufficientPermissionsError();
+  }
+
+  return user;
+}
+
 export function parseUserRole(role) {
   const result = userRoleSchema.safeParse(role);
 

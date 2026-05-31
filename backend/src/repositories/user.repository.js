@@ -3,7 +3,7 @@ import pool from "../db/pool.js";
 import { query } from "../db/query.js";
 
 const SAFE_USER_FIELDS =
-  "id, email, full_name, role, status, email_verified_at, created_at, updated_at";
+  "id, email, full_name, role, status, email_verified_at, processing_restricted_at, processing_restriction_reason, created_at, updated_at";
 const AUTH_USER_FIELDS = `${SAFE_USER_FIELDS}, password_hash`;
 
 export async function findUserByEmail(email, db = pool) {
@@ -149,6 +149,86 @@ export async function softDeleteUserById(userId, db = pool) {
     WHERE id = $1
       AND deleted_at IS NULL
     RETURNING ${SAFE_USER_FIELDS}
+    `,
+    [userId]
+  );
+
+  return rows[0] || null;
+}
+
+export async function updateUserFullNameById(userId, fullName, db = pool) {
+  const { rows } = await query(
+    db,
+    `
+    UPDATE users
+    SET full_name = $2, updated_at = NOW()
+    WHERE id = $1
+      AND deleted_at IS NULL
+    RETURNING ${SAFE_USER_FIELDS}
+    `,
+    [userId, fullName]
+  );
+
+  return rows[0] || null;
+}
+
+export async function setUserProcessingRestriction(
+  { userId, reason, restricted },
+  db = pool
+) {
+  const { rows } = await query(
+    db,
+    `
+    UPDATE users
+    SET
+      processing_restricted_at = CASE WHEN $2 THEN COALESCE(processing_restricted_at, NOW()) ELSE NULL END,
+      processing_restriction_reason = CASE WHEN $2 THEN $3 ELSE NULL END,
+      updated_at = NOW()
+    WHERE id = $1
+      AND deleted_at IS NULL
+    RETURNING ${SAFE_USER_FIELDS}
+    `,
+    [userId, restricted, reason ?? null]
+  );
+
+  return rows[0] || null;
+}
+
+export async function anonymizeUserById(userId, db = pool) {
+  const email = `anonymized+${userId}@deleted.local`;
+  const { rows } = await query(
+    db,
+    `
+    UPDATE users
+    SET
+      email = $2,
+      full_name = 'Deleted User',
+      password_hash = '',
+      status = 'disabled',
+      deleted_at = COALESCE(deleted_at, NOW()),
+      processing_restricted_at = COALESCE(processing_restricted_at, NOW()),
+      processing_restriction_reason = COALESCE(
+        processing_restriction_reason,
+        'Account anonymized per DSAR request'
+      ),
+      updated_at = NOW()
+    WHERE id = $1
+    RETURNING id, email, full_name, role, status, deleted_at, created_at, updated_at
+    `,
+    [userId, email]
+  );
+
+  return rows[0] || null;
+}
+
+export async function findUserByIdIncludingDeleted(userId, db = pool) {
+  const { rows } = await query(
+    db,
+    `
+    SELECT ${SAFE_USER_FIELDS}, deleted_at
+    FROM users
+    WHERE id = $1
+    LIMIT 1
     `,
     [userId]
   );

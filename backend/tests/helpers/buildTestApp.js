@@ -6,6 +6,8 @@ import {
   buildAuthTokenRepo,
   buildLeadRepo,
   buildOnboardingRepo,
+  buildDsarExportRepo,
+  buildDsarRepo,
   buildUserRepo,
   createInMemoryStore,
 } from "./inMemoryRepos.js";
@@ -57,6 +59,14 @@ export async function setupTestEnvironment() {
 
   mock.module("../../src/repositories/onboarding.repository.js", {
     namedExports: buildOnboardingRepo(store),
+  });
+
+  mock.module("../../src/repositories/dsar.repository.js", {
+    namedExports: buildDsarRepo(store),
+  });
+
+  mock.module("../../src/repositories/dsar-export.repository.js", {
+    namedExports: buildDsarExportRepo(store),
   });
 
   mock.module("../../src/middleware/rateLimit.js", {

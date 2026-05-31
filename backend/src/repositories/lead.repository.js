@@ -349,3 +349,62 @@ export async function updateLeadStateById(leadId, state, db = pool) {
 
   return rows[0] || null;
 }
+
+export async function updateLeadContactById(
+  { leadId, firstName, lastName, phone, email },
+  db = pool
+) {
+  const { rows } = await query(
+    db,
+    `
+    UPDATE leads
+    SET
+      first_name = COALESCE($2, first_name),
+      last_name = COALESCE($3, last_name),
+      phone = COALESCE($4, phone),
+      email = COALESCE($5, email),
+      updated_at = NOW()
+    WHERE id = $1
+      AND deleted_at IS NULL
+    RETURNING id, user_id, first_name, last_name, email, phone, status, created_at, updated_at
+    `,
+    [leadId, firstName ?? null, lastName ?? null, phone ?? null, email ?? null]
+  );
+
+  return rows[0] || null;
+}
+
+export async function anonymizeLeadsForUserId(userId, db = pool) {
+  await query(
+    db,
+    `
+    UPDATE leads
+    SET
+      first_name = 'Deleted',
+      last_name = 'User',
+      email = 'anonymized+' || id::text || '@deleted.local',
+      phone = '0000000000',
+      updated_at = NOW()
+    WHERE user_id = $1
+      AND deleted_at IS NULL
+    `,
+    [userId]
+  );
+}
+
+export async function findLatestLeadByUserId(userId, db = pool) {
+  const { rows } = await query(
+    db,
+    `
+    SELECT id, user_id, first_name, last_name, email, phone, status, created_at, updated_at
+    FROM leads
+    WHERE user_id = $1
+      AND deleted_at IS NULL
+    ORDER BY created_at DESC
+    LIMIT 1
+    `,
+    [userId]
+  );
+
+  return rows[0] || null;
+}

@@ -102,6 +102,8 @@ export function sanitizeUser(user) {
     role: user.role,
     status: user.status,
     emailVerifiedAt: user.email_verified_at,
+    processingRestrictedAt: user.processing_restricted_at ?? null,
+    processingRestrictionReason: user.processing_restriction_reason ?? null,
     createdAt: user.created_at,
     updatedAt: user.updated_at,
   };

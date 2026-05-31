@@ -33,3 +33,10 @@ export {
   userResponseSchema,
   usersListResponseSchema,
 } from "./user.response.schema.js";
+export {
+  adminDsarRequestListResponseSchema,
+  adminDsarRequestMutationResponseSchema,
+  dsarExportResponseSchema,
+  dsarRequestListResponseSchema,
+  dsarRequestMutationResponseSchema,
+} from "./dsar.response.schema.js";

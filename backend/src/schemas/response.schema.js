@@ -24,4 +24,9 @@ export {
   userMutationResponseSchema,
   userResponseSchema,
   usersListResponseSchema,
+  dsarRequestListResponseSchema,
+  dsarRequestMutationResponseSchema,
+  dsarExportResponseSchema,
+  adminDsarRequestListResponseSchema,
+  adminDsarRequestMutationResponseSchema,
 } from "./responses/index.js";

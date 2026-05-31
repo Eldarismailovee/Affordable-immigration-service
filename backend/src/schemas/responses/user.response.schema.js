@@ -10,6 +10,8 @@ export const userResponseSchema = z
     role: userRoleSchema,
     status: userStatusSchema,
     emailVerifiedAt: dateLikeSchema.nullable().optional(),
+    processingRestrictedAt: dateLikeSchema.nullable().optional(),
+    processingRestrictionReason: z.string().nullable().optional(),
     createdAt: dateLikeSchema.optional(),
     updatedAt: dateLikeSchema.optional(),
   })
