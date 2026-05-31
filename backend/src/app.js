@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import { corsConfig } from "./config/cors.js";
+import env from "./config/env.js";
 import { getCachedReadiness } from "./services/readiness.service.js";
 import publicRoutes from "./routes/public/index.js";
 import authRoutes from "./routes/auth/index.js";
@@ -21,7 +22,28 @@ app.set("trust proxy", 1);
 
 app.use(requestId);
 app.use(httpLogger);
-app.use(helmet());
+app.use(
+  helmet({
+    contentSecurityPolicy: env.isProduction
+      ? {
+          useDefaults: true,
+          directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'"],
+            styleSrc: ["'self'"],
+            imgSrc: ["'self'", "data:", "blob:"],
+            fontSrc: ["'self'", "data:"],
+            connectSrc: ["'self'", ...env.CORS_ORIGINS],
+            objectSrc: ["'none'"],
+            baseUri: ["'self'"],
+            frameAncestors: ["'none'"],
+            formAction: ["'self'"],
+            upgradeInsecureRequests: [],
+          },
+        }
+      : false,
+  })
+);
 app.use(cors(corsConfig));
 
 app.use(express.json({ limit: "1mb" }));

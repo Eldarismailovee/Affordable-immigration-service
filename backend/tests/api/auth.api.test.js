@@ -2,6 +2,10 @@ import { before, beforeEach, test } from "node:test";
 import assert from "node:assert/strict";
 import { clearStore, setupTestEnvironment } from "../helpers/buildTestApp.js";
 import { withApp } from "../helpers/httpClient.js";
+import {
+  getRefreshCookieOptions,
+  REFRESH_TOKEN_COOKIE_NAME,
+} from "../../src/utils/authCookies.js";
 
 let app;
 let store;
@@ -13,6 +17,23 @@ before(async () => {
 beforeEach(() => {
   clearStore(store);
 });
+
+function getRefreshCookie(res) {
+  return res.cookies[REFRESH_TOKEN_COOKIE_NAME];
+}
+
+function assertRefreshCookie(res) {
+  const cookieValue = getRefreshCookie(res);
+  assert.ok(cookieValue, "refresh token cookie should be set");
+
+  const setCookie = res.headers["set-cookie"];
+  const header = Array.isArray(setCookie) ? setCookie.join("; ") : setCookie || "";
+  assert.match(header, /HttpOnly/i);
+  assert.match(header, /SameSite=Lax/i);
+  assert.match(header, /Path=\//);
+
+  return cookieValue;
+}
 
 test("POST /api/auth/register creates a user and returns a session", async () => {
   await withApp(app, async (client) => {
@@ -26,7 +47,8 @@ test("POST /api/auth/register creates a user and returns a session", async () =>
     assert.equal(res.body.user.email, "demo@example.com");
     assert.equal(res.body.user.role, "admin");
     assert.ok(res.body.token);
-    assert.ok(res.body.refreshToken);
+    assert.equal(res.body.refreshToken, undefined);
+    assertRefreshCookie(res);
     assert.equal(store.users.size, 1);
   });
 });
@@ -91,6 +113,8 @@ test("POST /api/auth/login accepts good credentials and returns a token", async 
       password: "correct-password-123",
     });
 
+    client.clearCookies();
+
     const res = await client.post("/api/auth/login", {
       email: "demo@example.com",
       password: "correct-password-123",
@@ -98,7 +122,8 @@ test("POST /api/auth/login accepts good credentials and returns a token", async 
 
     assert.equal(res.status, 200);
     assert.ok(res.body.token);
-    assert.ok(res.body.refreshToken);
+    assert.equal(res.body.refreshToken, undefined);
+    assertRefreshCookie(res);
   });
 });
 
@@ -124,7 +149,7 @@ test("GET /api/auth/me returns the authenticated user when given a valid token",
   });
 });
 
-test("POST /api/auth/refresh rotates the refresh token (the old one stops working)", async () => {
+test("POST /api/auth/refresh rotates the refresh token cookie (the old one stops working)", async () => {
   await withApp(app, async (client) => {
     const register = await client.post("/api/auth/register", {
       fullName: "Demo",
@@ -132,14 +157,17 @@ test("POST /api/auth/refresh rotates the refresh token (the old one stops workin
       password: "longenough1",
     });
 
-    const oldRefresh = register.body.refreshToken;
+    const oldRefresh = getRefreshCookie(register);
+    client.clearCookies();
 
-    const refresh = await client.post("/api/auth/refresh", { refreshToken: oldRefresh });
+    const refresh = await client.post("/api/auth/refresh", {}, { cookies: { [REFRESH_TOKEN_COOKIE_NAME]: oldRefresh } });
     assert.equal(refresh.status, 200);
     assert.ok(refresh.body.token);
-    assert.notEqual(refresh.body.refreshToken, oldRefresh);
+    assert.equal(refresh.body.refreshToken, undefined);
+    const newRefresh = assertRefreshCookie(refresh);
+    assert.notEqual(newRefresh, oldRefresh);
 
-    const reuse = await client.post("/api/auth/refresh", { refreshToken: oldRefresh });
+    const reuse = await client.post("/api/auth/refresh", {}, { cookies: { [REFRESH_TOKEN_COOKIE_NAME]: oldRefresh } });
     assert.equal(reuse.status, 401);
   });
 });
@@ -152,14 +180,21 @@ test("POST /api/auth/logout revokes the refresh token (cannot be reused)", async
       password: "longenough1",
     });
 
-    const refreshToken = register.body.refreshToken;
+    const refreshToken = getRefreshCookie(register);
 
-    const logout = await client.post("/api/auth/logout", { refreshToken });
+    const logout = await client.post("/api/auth/logout");
     assert.equal(logout.status, 200);
 
-    const reuse = await client.post("/api/auth/refresh", { refreshToken });
+    const reuse = await client.post("/api/auth/refresh", {}, { cookies: { [REFRESH_TOKEN_COOKIE_NAME]: refreshToken } });
     assert.equal(reuse.status, 401);
   });
+});
+
+test("refresh cookie options include HttpOnly, SameSite, and Path", () => {
+  const options = getRefreshCookieOptions();
+  assert.equal(options.httpOnly, true);
+  assert.equal(options.sameSite, "lax");
+  assert.equal(options.path, "/");
 });
 
 test("POST /api/auth/password-reset/request returns the same generic message regardless of email existence", async () => {
@@ -219,6 +254,8 @@ test("an active session's refresh token is invalidated after a password reset", 
       password: "old-password-1",
     });
 
+    const refreshToken = getRefreshCookie(register);
+
     const reqRes = await client.post("/api/auth/password-reset/request", {
       email: "demo@example.com",
     });
@@ -228,9 +265,9 @@ test("an active session's refresh token is invalidated after a password reset", 
       password: "brand-new-password-1",
     });
 
-    const refresh = await client.post("/api/auth/refresh", {
-      refreshToken: register.body.refreshToken,
-    });
+    client.clearCookies();
+
+    const refresh = await client.post("/api/auth/refresh", {}, { cookies: { [REFRESH_TOKEN_COOKIE_NAME]: refreshToken } });
     assert.equal(refresh.status, 401);
   });
 });

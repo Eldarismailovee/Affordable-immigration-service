@@ -1,49 +1,23 @@
 const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:5000/api";
-const AUTH_TOKEN_KEY = "immigration-auth-token";
-const REFRESH_TOKEN_KEY = "immigration-refresh-token";
+
+let accessToken = null;
 
 export function getAuthToken() {
-  return localStorage.getItem(AUTH_TOKEN_KEY);
+  return accessToken;
 }
 
 export function setAuthToken(token) {
-  if (token) {
-    localStorage.setItem(AUTH_TOKEN_KEY, token);
-    return;
-  }
-
-  localStorage.removeItem(AUTH_TOKEN_KEY);
+  accessToken = token || null;
 }
 
-export function getRefreshToken() {
-  return localStorage.getItem(REFRESH_TOKEN_KEY);
-}
-
-export function setRefreshToken(token) {
-  if (token) {
-    localStorage.setItem(REFRESH_TOKEN_KEY, token);
-    return;
-  }
-
-  localStorage.removeItem(REFRESH_TOKEN_KEY);
-}
-
-export function setAuthTokens({ token, refreshToken }) {
-  setAuthToken(token);
-  setRefreshToken(refreshToken);
-}
-
-export function clearAuthTokens() {
-  setAuthToken("");
-  setRefreshToken("");
+export function clearAuthToken() {
+  accessToken = null;
 }
 
 function buildJsonHeaders(options = {}) {
-  const token = getAuthToken();
-
   return {
     "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
     ...(options.headers || {}),
   };
 }
@@ -52,35 +26,35 @@ async function parseJsonResponse(response) {
   return response.json().catch(() => ({}));
 }
 
-async function refreshAuthTokens() {
-  const refreshToken = getRefreshToken();
-
-  if (!refreshToken) {
-    return null;
-  }
-
+export async function refreshSession() {
   const response = await fetch(`${API_URL}/auth/refresh`, {
     method: "POST",
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ refreshToken }),
   });
 
   const data = await parseJsonResponse(response);
 
   if (!response.ok) {
-    clearAuthTokens();
+    clearAuthToken();
     return null;
   }
 
-  setAuthTokens(data);
-  return data.token;
+  setAuthToken(data.token);
+  return data;
+}
+
+async function refreshAuthTokens() {
+  const result = await refreshSession();
+  return result?.token ?? null;
 }
 
 async function request(path, options = {}) {
   const { skipRefresh = false, ...fetchOptions } = options;
   const response = await fetch(`${API_URL}${path}`, {
+    credentials: "include",
     headers: buildJsonHeaders(fetchOptions),
     ...fetchOptions,
   });
@@ -135,10 +109,9 @@ export async function login(payload) {
   });
 }
 
-export async function logout(refreshToken) {
+export async function logout() {
   return request("/auth/logout", {
     method: "POST",
-    body: JSON.stringify({ refreshToken }),
     skipRefresh: true,
   });
 }
@@ -251,9 +224,9 @@ async function openAuthenticatedPdf(path) {
   const popup = window.open("", "_blank");
 
   async function fetchPdf() {
-    const token = getAuthToken();
     return fetch(`${API_URL}${path}`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      credentials: "include",
+      headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
     });
   }
 
@@ -315,10 +288,10 @@ export async function uploadImage(file) {
   formData.append("image", file);
 
   async function sendUpload() {
-    const token = getAuthToken();
     return fetch(`${API_URL}/admin/uploads/image`, {
       method: "POST",
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      credentials: "include",
+      headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
       body: formData,
     });
   }

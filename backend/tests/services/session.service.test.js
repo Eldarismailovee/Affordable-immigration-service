@@ -33,6 +33,7 @@ async function loadSessionService(t, { userRepo = {}, authTokenRepo = {} } = {})
       createRefreshToken: async () => null,
       findRefreshTokenByHash: async () => null,
       revokeRefreshTokenByHash: async () => null,
+      revokeUserRefreshTokens: async () => null,
       rotateRefreshToken: async () => null,
       ...authTokenRepo,
     },
@@ -63,7 +64,8 @@ test("refreshAuthSession rejects an unknown refresh token with 401", async (t) =
   );
 });
 
-test("refreshAuthSession rejects a revoked refresh token with 401", async (t) => {
+test("refreshAuthSession rejects a revoked refresh token with 401 and revokes all user tokens", async (t) => {
+  const revokedUsers = [];
   const { refreshAuthSession } = await loadSessionService(t, {
     authTokenRepo: {
       findRefreshTokenByHash: async () => ({
@@ -72,6 +74,9 @@ test("refreshAuthSession rejects a revoked refresh token with 401", async (t) =>
         revoked_at: new Date(),
         expires_at: new Date(Date.now() + 60_000),
       }),
+      revokeUserRefreshTokens: async (userId) => {
+        revokedUsers.push(userId);
+      },
     },
   });
 
@@ -81,6 +86,7 @@ test("refreshAuthSession rejects a revoked refresh token with 401", async (t) =>
       code: "AUTHENTICATION_REQUIRED",
     })
   );
+  assert.deepEqual(revokedUsers, ["user-1"]);
 });
 
 test("refreshAuthSession rejects an expired refresh token with 401", async (t) => {

@@ -1,62 +1,59 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import {
-  clearAuthTokens,
-  getAuthToken,
-  getRefreshToken,
+  clearAuthToken,
   getCurrentUser,
   login as loginRequest,
   logout as logoutRequest,
   register as registerRequest,
-  setAuthTokens,
+  refreshSession,
+  setAuthToken,
 } from "../services/api";
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(Boolean(getAuthToken() || getRefreshToken()));
+  const [loading, setLoading] = useState(true);
 
   const logout = useCallback(async () => {
-    const refreshToken = getRefreshToken();
-    clearAuthTokens();
+    clearAuthToken();
     setUser(null);
-
-    if (refreshToken) {
-      await logoutRequest(refreshToken).catch(() => {});
-    }
+    await logoutRequest().catch(() => {});
   }, []);
 
   const refreshUser = useCallback(async () => {
-    if (!getAuthToken() && !getRefreshToken()) {
-      setUser(null);
-      setLoading(false);
-      return null;
-    }
-
     setLoading(true);
 
     try {
+      const refreshed = await refreshSession();
+
+      if (!refreshed?.token) {
+        setUser(null);
+        return null;
+      }
+
       const result = await getCurrentUser();
       setUser(result.user);
       return result.user;
     } catch {
-      logout();
+      clearAuthToken();
+      setUser(null);
       return null;
     } finally {
       setLoading(false);
     }
-  }, [logout]);
+  }, []);
 
   const login = useCallback(async (payload) => {
     const result = await loginRequest(payload);
-    setAuthTokens(result);
+    setAuthToken(result.token);
     setUser(result.user);
     return result.user;
   }, []);
 
   const register = useCallback(async (payload) => {
     const result = await registerRequest(payload);
-    setAuthTokens(result);
+    setAuthToken(result.token);
     setUser(result.user);
     return result.user;
   }, []);

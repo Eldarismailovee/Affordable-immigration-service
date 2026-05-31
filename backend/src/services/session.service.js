@@ -14,10 +14,12 @@ import {
   findRefreshTokenByHash,
   RefreshTokenRotationError,
   revokeRefreshTokenByHash,
+  revokeUserRefreshTokens,
   rotateRefreshToken,
 } from "../repositories/auth-token.repository.js";
 import { findUserById } from "../repositories/user.repository.js";
 import { AppError } from "../utils/appError.js";
+import { logger } from "../lib/logger.js";
 
 function getRequestMetadata(requestContext = {}) {
   return {
@@ -64,7 +66,24 @@ export async function refreshAuthSession(refreshToken, requestContext) {
   const tokenHash = hashToken(refreshToken);
   const tokenRow = await findRefreshTokenByHash(tokenHash);
 
-  if (!tokenRow || tokenRow.revoked_at || new Date(tokenRow.expires_at) <= new Date()) {
+  if (!tokenRow) {
+    throw invalidRefreshTokenError();
+  }
+
+  if (tokenRow.revoked_at) {
+    await revokeUserRefreshTokens(tokenRow.user_id);
+    logger.warn(
+      {
+        userId: tokenRow.user_id,
+        tokenId: tokenRow.id,
+        event: "refresh_token_reuse_detected",
+      },
+      "Revoked refresh token reuse detected; revoked all user refresh tokens"
+    );
+    throw invalidRefreshTokenError();
+  }
+
+  if (new Date(tokenRow.expires_at) <= new Date()) {
     throw invalidRefreshTokenError();
   }
 

@@ -4,11 +4,13 @@ import {
   confirmEmailVerificationSchema,
   confirmPasswordResetSchema,
   loginSchema,
-  logoutSchema,
-  refreshTokenSchema,
   registerSchema,
   requestPasswordResetSchema,
 } from "../../src/schemas/auth.schema.js";
+import {
+  readCookie,
+  REFRESH_TOKEN_COOKIE_NAME,
+} from "../../src/utils/authCookies.js";
 
 const validRegister = {
   fullName: "Arina Demo",
@@ -53,22 +55,6 @@ test("loginSchema rejects empty password", () => {
   assert.equal(result.success, false);
 });
 
-test("refreshTokenSchema requires a 32+ character token", () => {
-  const result = refreshTokenSchema.safeParse({ refreshToken: "short" });
-  assert.equal(result.success, false);
-});
-
-test("refreshTokenSchema accepts a token of correct length", () => {
-  const result = refreshTokenSchema.safeParse({
-    refreshToken: "a".repeat(48),
-  });
-  assert.equal(result.success, true);
-});
-
-test("logoutSchema mirrors refreshTokenSchema", () => {
-  assert.equal(logoutSchema, refreshTokenSchema);
-});
-
 test("requestPasswordResetSchema rejects bad email", () => {
   const result = requestPasswordResetSchema.safeParse({ email: "nope" });
   assert.equal(result.success, false);
@@ -101,4 +87,30 @@ test("confirmEmailVerificationSchema requires a long enough token", () => {
     confirmEmailVerificationSchema.safeParse({ token: "a".repeat(48) }).success,
     true
   );
+});
+
+test("readCookie parses a single cookie value", () => {
+  const req = {
+    headers: {
+      cookie: `${REFRESH_TOKEN_COOKIE_NAME}=abc123; other=value`,
+    },
+  };
+
+  assert.equal(readCookie(req, REFRESH_TOKEN_COOKIE_NAME), "abc123");
+  assert.equal(readCookie(req, "other"), "value");
+  assert.equal(readCookie(req, "missing"), undefined);
+});
+
+test("readCookie decodes URI-encoded values", () => {
+  const req = {
+    headers: {
+      cookie: "token=hello%20world",
+    },
+  };
+
+  assert.equal(readCookie(req, "token"), "hello world");
+});
+
+test("readCookie returns undefined when cookie header is missing", () => {
+  assert.equal(readCookie({ headers: {} }, "token"), undefined);
 });
