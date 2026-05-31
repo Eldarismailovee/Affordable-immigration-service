@@ -1,31 +1,26 @@
+import { assertPacketApprovedForDownload } from "../domain/packet.policy.js";
 import { findLatestAgreementByLeadId } from "../repositories/agreement.repository.js";
-import { AppError } from "../utils/appError.js";
-import { assertLeadAccess } from "./access.service.js";
-import { renderHtmlToPdfBuffer } from "./pdf.service.js";
+import { agreementNotFoundError } from "../domain/errors.js";
+import { loadLeadDocument, renderLeadDocumentPdf } from "../utils/leadDocument.js";
 
 export async function getAgreementByLeadId(leadId, user) {
-  await assertLeadAccess(user, leadId);
-  const agreement = await findLatestAgreementByLeadId(leadId);
-
-  if (!agreement) {
-    throw new AppError("Agreement not found", 404, "AGREEMENT_NOT_FOUND");
-  }
-
-  return agreement;
+  return loadLeadDocument(
+    leadId,
+    user,
+    findLatestAgreementByLeadId,
+    agreementNotFoundError
+  );
 }
 
 export async function renderAgreementPdfByLeadId(leadId, user) {
-  await assertLeadAccess(user, leadId);
-  const agreement = await findLatestAgreementByLeadId(leadId);
-
-  if (!agreement) {
-    throw new AppError("Agreement not found", 404, "AGREEMENT_NOT_FOUND");
-  }
-
-  const pdfBuffer = await renderHtmlToPdfBuffer({
-    title: agreement.title || "Agreement",
-    html: agreement.html_content,
-  });
+  const agreement = await loadLeadDocument(
+    leadId,
+    user,
+    findLatestAgreementByLeadId,
+    agreementNotFoundError
+  );
+  assertPacketApprovedForDownload(agreement);
+  const pdfBuffer = await renderLeadDocumentPdf(agreement, "Agreement");
 
   return {
     agreement,

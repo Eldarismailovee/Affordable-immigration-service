@@ -11,6 +11,7 @@ export {
   agreementResponseSchema,
   onboardingGenerationResponseSchema,
   onboardingPacketResponseSchema,
+  packetApprovalResponseSchema,
 } from "./document.response.schema.js";
 export {
   docketwiseStubResponseSchema,

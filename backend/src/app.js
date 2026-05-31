@@ -7,7 +7,7 @@ import publicRoutes from "./routes/public/index.js";
 import authRoutes from "./routes/auth/index.js";
 import accountRoutes from "./routes/account/index.js";
 import adminRoutes from "./routes/admin/index.js";
-import { optionalAuth, requireAuth, requireRole } from "./middleware/auth.js";
+import { optionalAuth, requireAuth } from "./middleware/auth.js";
 import { auditAdminAction } from "./middleware/auditAdminAction.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { httpLogger } from "./middleware/httpLogger.js";
@@ -46,7 +46,7 @@ app.get("/api/ready", async (_req, res) => {
 app.use("/api/public", publicRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/account", requireAuth, accountRoutes);
-app.use("/api/admin", requireRole("admin"), auditAdminAction, adminRoutes);
+app.use("/api/admin", requireAuth, auditAdminAction, adminRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

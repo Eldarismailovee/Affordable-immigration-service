@@ -15,6 +15,7 @@ export {
   messageResponseSchema,
   onboardingGenerationResponseSchema,
   onboardingPacketResponseSchema,
+  packetApprovalResponseSchema,
   paymentMutationResponseSchema,
   pricingResponseSchema,
   siteSettingsResponseSchema,

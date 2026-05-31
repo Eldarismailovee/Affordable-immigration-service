@@ -60,6 +60,13 @@ export async function findRefreshTokenByHash(tokenHash, db = pool) {
   return rows[0] || null;
 }
 
+export class RefreshTokenRotationError extends Error {
+  constructor() {
+    super("Refresh token rotation failed");
+    this.name = "RefreshTokenRotationError";
+  }
+}
+
 export async function rotateRefreshToken(
   { currentTokenId, nextTokenId, userId, tokenHash, expiresAt, userAgent, ipAddress },
   db = pool
@@ -77,7 +84,8 @@ export async function rotateRefreshToken(
       client
     );
 
-    await query(client, 
+    const result = await query(
+      client,
       `
       UPDATE auth_refresh_tokens
       SET
@@ -85,9 +93,14 @@ export async function rotateRefreshToken(
         replaced_by_token_id = $2,
         last_used_at = NOW()
       WHERE id = $1
+        AND revoked_at IS NULL
       `,
       [currentTokenId, nextTokenId]
     );
+
+    if ((result.rowCount ?? 0) === 0) {
+      throw new RefreshTokenRotationError();
+    }
 
     return nextToken;
   });

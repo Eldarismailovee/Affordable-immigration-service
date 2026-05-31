@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { GENERATED_DOCUMENT_STATUS } from "../constants/domain.js";
+import { DRAFT_PACKET_STATUS } from "../constants/domain.js";
 import {
   findLatestIntakeByLeadId,
   findLeadById,
@@ -10,7 +10,8 @@ import {
   findLatestAgreementByLeadId,
 } from "../repositories/agreement.repository.js";
 import { withUnitOfWork } from "../repositories/unit-of-work.repository.js";
-import { AppError } from "../utils/appError.js";
+import { isUniqueViolation } from "../db/errors.js";
+import { intakeNotFoundError, leadNotFoundError } from "../domain/errors.js";
 import { generateAgreement } from "./agreement.service.js";
 import { assertAdminAccess } from "./access.service.js";
 
@@ -20,13 +21,13 @@ export async function generateAgreementForLead({ leadId, actor }) {
   const lead = await findLeadById(leadId);
 
   if (!lead) {
-    throw new AppError("Lead not found", 404, "LEAD_NOT_FOUND");
+    throw leadNotFoundError();
   }
 
   const intake = await findLatestIntakeByLeadId(leadId);
 
   if (!intake) {
-    throw new AppError("Intake record not found for this lead", 404, "INTAKE_NOT_FOUND");
+    throw intakeNotFoundError();
   }
 
   const existing = await findLatestAgreementByLeadId(leadId);
@@ -50,24 +51,34 @@ export async function generateAgreementForLead({ leadId, actor }) {
     expedited: Boolean(intake.expedited),
   });
 
-  const created = await withUnitOfWork(async (client) => {
-    await createAgreement(
-      {
-        id: randomUUID(),
-        leadId,
-        title: agreement.agreementTitle,
-        htmlContent: agreement.html,
-        status: GENERATED_DOCUMENT_STATUS,
-      },
-      client
-    );
+  let createdNew = false;
 
-    await updateIntakeAgreementStatusByLeadId(leadId, GENERATED_DOCUMENT_STATUS, client);
+  const agreementRow = await withUnitOfWork(async (client) => {
+    try {
+      await createAgreement(
+        {
+          id: randomUUID(),
+          leadId,
+          title: agreement.agreementTitle,
+          htmlContent: agreement.html,
+          status: DRAFT_PACKET_STATUS,
+        },
+        client
+      );
+
+      await updateIntakeAgreementStatusByLeadId(leadId, "generated", client);
+      createdNew = true;
+    } catch (error) {
+      if (!isUniqueViolation(error)) {
+        throw error;
+      }
+    }
+
     return findLatestAgreementByLeadId(leadId, client);
   });
 
   return {
-    alreadyExists: false,
-    agreement: created,
+    alreadyExists: !createdNew,
+    agreement: agreementRow,
   };
 }

@@ -11,7 +11,7 @@ import {
   updateDocketwiseSyncById,
 } from "../repositories/docketwise.repository.js";
 import { withUnitOfWork } from "../repositories/unit-of-work.repository.js";
-import { AppError } from "../utils/appError.js";
+import { intakeNotFoundError, leadNotFoundError } from "../domain/errors.js";
 import { assertAdminAccess } from "./access.service.js";
 
 export async function syncLeadToDocketwise({ leadId, actor }) {
@@ -20,13 +20,13 @@ export async function syncLeadToDocketwise({ leadId, actor }) {
   const lead = await findLeadById(leadId);
 
   if (!lead) {
-    throw new AppError("Lead not found", 404, "LEAD_NOT_FOUND");
+    throw leadNotFoundError();
   }
 
   const intake = await findLatestIntakeByLeadId(leadId);
 
   if (!intake) {
-    throw new AppError("Intake record not found for this lead", 404, "INTAKE_NOT_FOUND");
+    throw intakeNotFoundError();
   }
 
   const existingSync = await findLatestDocketwiseSyncByLeadId(leadId);

@@ -1,10 +1,13 @@
-import { randomUUID } from "crypto";
 import {
   createSiteSettings,
   findLatestSiteSettings,
+  findSiteSettingsById,
   updateSiteSettingsById,
 } from "../repositories/site-settings.repository.js";
+import { isUniqueViolation } from "../db/errors.js";
 import { assertAdminAccess } from "./access.service.js";
+
+const DEFAULT_SITE_SETTINGS_ID = "00000000-0000-0000-0000-000000000001";
 
 const DEFAULT_SETTINGS = {
   firmName: "Immigration Law Firm",
@@ -20,16 +23,33 @@ const DEFAULT_SETTINGS = {
 };
 
 export async function getSiteSettings() {
+  const existingById = await findSiteSettingsById(DEFAULT_SITE_SETTINGS_ID);
+
+  if (existingById) {
+    return existingById;
+  }
+
   const existing = await findLatestSiteSettings();
 
   if (existing) {
     return existing;
   }
 
-  return createSiteSettings({
-    id: randomUUID(),
-    ...DEFAULT_SETTINGS,
-  });
+  try {
+    return await createSiteSettings({
+      id: DEFAULT_SITE_SETTINGS_ID,
+      ...DEFAULT_SETTINGS,
+    });
+  } catch (error) {
+    if (isUniqueViolation(error)) {
+      return (
+        (await findSiteSettingsById(DEFAULT_SITE_SETTINGS_ID)) ??
+        (await findLatestSiteSettings())
+      );
+    }
+
+    throw error;
+  }
 }
 
 export async function updateSiteSettings(payload, actor) {

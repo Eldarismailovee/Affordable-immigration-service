@@ -8,16 +8,23 @@ import {
 } from "../repositories/lead.repository.js";
 import { findLatestAgreementByLeadId } from "../repositories/agreement.repository.js";
 import { findLatestOnboardingPacketByLeadId } from "../repositories/onboarding.repository.js";
+import { leadNotFoundError } from "../domain/errors.js";
+import { isLeadVisibleToAttorney } from "../domain/lead-state.policy.js";
+import { isAttorney } from "../domain/user.policy.js";
 import { AppError } from "../utils/appError.js";
-import { assertAdminAccess } from "./access.service.js";
+import { assertAdminAccess, assertStaffAccess } from "./access.service.js";
 
 export async function getLeadDetail({ leadId, actor }) {
-  assertAdminAccess(actor);
+  assertStaffAccess(actor);
 
   const lead = await findLeadById(leadId);
 
   if (!lead) {
-    throw new AppError("Lead not found", 404, "LEAD_NOT_FOUND");
+    throw leadNotFoundError();
+  }
+
+  if (isAttorney(actor) && !isLeadVisibleToAttorney(lead)) {
+    throw new AppError("Insufficient permissions", 403, "INSUFFICIENT_PERMISSIONS");
   }
 
   return {
@@ -37,7 +44,7 @@ export async function deleteLead({ leadId, actor }) {
   const lead = await softDeleteLeadById(leadId);
 
   if (!lead) {
-    throw new AppError("Lead not found", 404, "LEAD_NOT_FOUND");
+    throw leadNotFoundError();
   }
 
   return lead;

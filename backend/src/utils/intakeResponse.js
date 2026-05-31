@@ -1,5 +1,5 @@
 import {
-  GENERATED_DOCUMENT_STATUS,
+  DRAFT_PACKET_STATUS,
   NEW_LEAD_STATUS,
   NOT_SYNCED_STATUS,
   PENDING_PAYMENT_STATUS,
@@ -26,8 +26,8 @@ export function buildIntakeResponse({ payload, pricing, leadId }) {
     consentManualProcessing: Boolean(payload.consentManualProcessing),
     paymentNotes: payload.paymentNotes || "",
     pricing,
-    agreementStatus: GENERATED_DOCUMENT_STATUS,
-    onboardingStatus: GENERATED_DOCUMENT_STATUS,
+    agreementStatus: "generated",
+    onboardingStatus: DRAFT_PACKET_STATUS,
     bookingStatus: REQUESTED_BOOKING_STATUS,
     paymentStatus: PENDING_PAYMENT_STATUS,
     docketwiseStatus: NOT_SYNCED_STATUS,

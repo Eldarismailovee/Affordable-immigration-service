@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { RefreshTokenRotationError } from "../../src/repositories/auth-token.repository.js";
 import { AppError } from "../../src/utils/appError.js";
 import { hashToken } from "../../src/utils/auth.js";
 
@@ -28,6 +29,7 @@ async function loadSessionService(t, { userRepo = {}, authTokenRepo = {} } = {})
 
   t.mock.module("../../src/repositories/auth-token.repository.js", {
     namedExports: {
+      RefreshTokenRotationError,
       createRefreshToken: async () => null,
       findRefreshTokenByHash: async () => null,
       revokeRefreshTokenByHash: async () => null,
@@ -90,6 +92,32 @@ test("refreshAuthSession rejects an expired refresh token with 401", async (t) =
         revoked_at: null,
         expires_at: new Date(Date.now() - 60_000),
       }),
+    },
+  });
+
+  await assert.rejects(refreshAuthSession("any-refresh", {}), (err) =>
+    assertAppError(err, {
+      statusCode: 401,
+      code: "AUTHENTICATION_REQUIRED",
+    })
+  );
+});
+
+test("refreshAuthSession rejects concurrent refresh rotation with 401", async (t) => {
+  const { refreshAuthSession } = await loadSessionService(t, {
+    userRepo: {
+      findUserById: async () => createUserRow(),
+    },
+    authTokenRepo: {
+      findRefreshTokenByHash: async () => ({
+        id: "rt-1",
+        user_id: "user-1",
+        revoked_at: null,
+        expires_at: new Date(Date.now() + 60_000),
+      }),
+      rotateRefreshToken: async () => {
+        throw new RefreshTokenRotationError();
+      },
     },
   });
 

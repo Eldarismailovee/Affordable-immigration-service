@@ -33,6 +33,7 @@ test("isAdmin and assertAdmin enforce admin-only actions", () => {
 test("parseUserRole validates roles through domain validators", () => {
   assert.equal(parseUserRole("admin"), "admin");
   assert.equal(parseUserRole("user"), "user");
+  assert.equal(parseUserRole("attorney"), "attorney");
 
   assert.throws(() => parseUserRole("superadmin"), {
     name: "AppError",

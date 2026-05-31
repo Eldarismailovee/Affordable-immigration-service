@@ -7,16 +7,19 @@ import docketwiseRoutes from "./docketwise.routes.js";
 import paymentsRoutes from "./payments.routes.js";
 import siteSettingsRoutes from "./site-settings.routes.js";
 import uploadsRoutes from "./uploads.routes.js";
+import { requireRole } from "../../middleware/auth.js";
 
 const router = Router();
+const adminOnly = requireRole("admin");
+const staff = requireRole("admin", "attorney");
 
-router.use("/leads", leadsRoutes);
-router.use("/users", usersRoutes);
+router.use("/leads", staff, leadsRoutes);
+router.use("/users", adminOnly, usersRoutes);
 router.use("/agreement", agreementRoutes);
 router.use("/onboarding", onboardingRoutes);
-router.use("/docketwise", docketwiseRoutes);
-router.use("/payments", paymentsRoutes);
-router.use("/site-settings", siteSettingsRoutes);
-router.use("/uploads", uploadsRoutes);
+router.use("/docketwise", adminOnly, docketwiseRoutes);
+router.use("/payments", adminOnly, paymentsRoutes);
+router.use("/site-settings", adminOnly, siteSettingsRoutes);
+router.use("/uploads", adminOnly, uploadsRoutes);
 
 export default router;

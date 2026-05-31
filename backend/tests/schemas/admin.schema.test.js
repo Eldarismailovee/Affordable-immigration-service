@@ -6,9 +6,10 @@ import {
   updateUserRoleSchema,
 } from "../../src/schemas/admin.schema.js";
 
-test("updateUserRoleSchema accepts admin and user roles", () => {
+test("updateUserRoleSchema accepts admin, user, and attorney roles", () => {
   assert.equal(updateUserRoleSchema.safeParse({ role: "admin" }).success, true);
   assert.equal(updateUserRoleSchema.safeParse({ role: "user" }).success, true);
+  assert.equal(updateUserRoleSchema.safeParse({ role: "attorney" }).success, true);
 });
 
 test("updateUserRoleSchema rejects unknown roles", () => {

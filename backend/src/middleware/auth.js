@@ -1,5 +1,8 @@
+import {
+  authenticationRequiredError,
+  insufficientPermissionsError,
+} from "../domain/errors.js";
 import { getUserFromAccessToken } from "../services/auth.service.js";
-import { AppError } from "../utils/appError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
 function getBearerToken(req) {
@@ -20,7 +23,7 @@ export const optionalAuth = asyncHandler(async (req, _res, next) => {
 
 export function requireAuth(req, res, next) {
   if (!req.user) {
-    next(new AppError("Authentication required", 401, "AUTHENTICATION_REQUIRED"));
+    next(authenticationRequiredError());
     return;
   }
 
@@ -30,12 +33,12 @@ export function requireAuth(req, res, next) {
 export function requireRole(...roles) {
   return (req, _res, next) => {
     if (!req.user) {
-      next(new AppError("Authentication required", 401, "AUTHENTICATION_REQUIRED"));
+      next(authenticationRequiredError());
       return;
     }
 
     if (!roles.includes(req.user.role)) {
-      next(new AppError("Insufficient permissions", 403, "INSUFFICIENT_PERMISSIONS"));
+      next(insufficientPermissionsError());
       return;
     }
 

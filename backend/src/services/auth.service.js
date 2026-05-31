@@ -10,6 +10,7 @@ import {
   verifyAuthToken,
   verifyPassword,
 } from "../utils/auth.js";
+import { isUniqueViolation } from "../db/errors.js";
 import { createEmailVerificationToken } from "../repositories/auth-token.repository.js";
 import {
   countUsers,
@@ -52,14 +53,24 @@ export async function registerUser(payload, requestContext) {
   const role = await getInitialRole();
   const passwordHash = await hashPassword(payload.password);
 
-  const user = sanitizeUser(
-    await createUser({
+  let createdUser;
+
+  try {
+    createdUser = await createUser({
       email,
       passwordHash,
       fullName: payload.fullName,
       role,
-    })
-  );
+    });
+  } catch (error) {
+    if (isUniqueViolation(error)) {
+      throw duplicateEmailError();
+    }
+
+    throw error;
+  }
+
+  const user = sanitizeUser(createdUser);
 
   const verificationToken = createOpaqueToken();
 

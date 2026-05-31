@@ -12,6 +12,7 @@ import {
 import {
   createRefreshToken,
   findRefreshTokenByHash,
+  RefreshTokenRotationError,
   revokeRefreshTokenByHash,
   rotateRefreshToken,
 } from "../repositories/auth-token.repository.js";
@@ -77,15 +78,23 @@ export async function refreshAuthSession(refreshToken, requestContext) {
   const nextRefreshTokenId = randomUUID();
   const metadata = getRequestMetadata(requestContext);
 
-  await rotateRefreshToken({
-    currentTokenId: tokenRow.id,
-    nextTokenId: nextRefreshTokenId,
-    userId: user.id,
-    tokenHash: hashToken(nextRefreshToken),
-    expiresAt: addDays(new Date(), REFRESH_TOKEN_TTL_DAYS),
-    userAgent: metadata.userAgent,
-    ipAddress: metadata.ipAddress,
-  });
+  try {
+    await rotateRefreshToken({
+      currentTokenId: tokenRow.id,
+      nextTokenId: nextRefreshTokenId,
+      userId: user.id,
+      tokenHash: hashToken(nextRefreshToken),
+      expiresAt: addDays(new Date(), REFRESH_TOKEN_TTL_DAYS),
+      userAgent: metadata.userAgent,
+      ipAddress: metadata.ipAddress,
+    });
+  } catch (error) {
+    if (error instanceof RefreshTokenRotationError) {
+      throw invalidRefreshTokenError();
+    }
+
+    throw error;
+  }
 
   return {
     token: await createAccessToken(sanitizeUser(user), { sessionId: nextRefreshTokenId }),

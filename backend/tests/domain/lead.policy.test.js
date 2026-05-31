@@ -7,10 +7,21 @@ import {
 
 const ADMIN = { id: "admin-1", role: "admin" };
 const USER = { id: "user-1", role: "user" };
+const ATTORNEY = { id: "attorney-1", role: "attorney" };
 
 test("canAccessLead allows admins to read any lead", () => {
-  assert.equal(canAccessLead(ADMIN, { id: "lead-1", user_id: "other" }), true);
-  assert.equal(canAccessLead(ADMIN, { id: "lead-2", user_id: null }), true);
+  assert.equal(canAccessLead(ADMIN, { id: "lead-1", user_id: "other", status: "prospective" }), true);
+});
+
+test("canAccessLead allows attorneys to read workflow leads only", () => {
+  assert.equal(
+    canAccessLead(ATTORNEY, { id: "lead-1", user_id: "other", status: "attorney_review" }),
+    true
+  );
+  assert.equal(
+    canAccessLead(ATTORNEY, { id: "lead-2", user_id: "other", status: "prospective" }),
+    false
+  );
 });
 
 test("canAccessLead allows users to read only their own leads", () => {

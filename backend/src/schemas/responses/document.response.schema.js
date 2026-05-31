@@ -1,6 +1,15 @@
 import { z } from "zod";
 import { documentStatusSchema, uuidSchema } from "../../domain/validators.js";
-import { dateLikeSchema } from "./shared.schema.js";
+import { dateLikeSchema, nullableStringSchema } from "./shared.schema.js";
+
+const packetApprovalFields = {
+  status: documentStatusSchema.optional(),
+  generated_at: dateLikeSchema.optional(),
+  approved_by: uuidSchema.nullable().optional(),
+  approved_at: dateLikeSchema.nullable().optional(),
+  review_notes: nullableStringSchema.optional(),
+  updated_at: dateLikeSchema.optional(),
+};
 
 const agreementDocumentSchema = z
   .object({
@@ -8,8 +17,7 @@ const agreementDocumentSchema = z
     lead_id: uuidSchema,
     title: z.string(),
     html_content: z.string(),
-    status: documentStatusSchema.optional(),
-    generated_at: dateLikeSchema.optional(),
+    ...packetApprovalFields,
   })
   .passthrough();
 
@@ -19,8 +27,7 @@ const onboardingDocumentSchema = z
     lead_id: uuidSchema,
     title: z.string(),
     html_content: z.string(),
-    status: documentStatusSchema.optional(),
-    generated_at: dateLikeSchema.optional(),
+    ...packetApprovalFields,
   })
   .passthrough();
 
@@ -45,4 +52,9 @@ export const onboardingPacketResponseSchema = z.object({
 export const onboardingGenerationResponseSchema = z.object({
   alreadyExists: z.boolean(),
   onboarding: onboardingDocumentSchema,
+});
+
+export const packetApprovalResponseSchema = z.object({
+  agreement: agreementDocumentSchema.optional(),
+  onboarding: onboardingDocumentSchema.optional(),
 });

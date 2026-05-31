@@ -2,6 +2,7 @@ import { randomUUID } from "crypto";
 import { NEW_LEAD_STATUS } from "../constants/domain.js";
 import { createAgreement } from "../repositories/agreement.repository.js";
 import { createDocketwiseSyncRecord } from "../repositories/docketwise.repository.js";
+import { isAttorney } from "../domain/user.policy.js";
 import {
   createBookingRecord,
   createIntakeRecord,
@@ -14,7 +15,7 @@ import { withUnitOfWork } from "../repositories/unit-of-work.repository.js";
 import { calculatePricing } from "../utils/pricingCalculator.js";
 import { buildIntakeResponse } from "../utils/intakeResponse.js";
 import { generateAgreement } from "./agreement.service.js";
-import { assertAdminAccess } from "./access.service.js";
+import { assertStaffAccess } from "./access.service.js";
 import { generateOnboardingPacket } from "./onboarding.service.js";
 
 const DEFAULT_PAYMENT_NOTE = "Payment to be processed manually by office";
@@ -133,6 +134,11 @@ export async function createIntake(payload, user) {
 }
 
 export async function listLeads({ actor }) {
-  assertAdminAccess(actor);
+  assertStaffAccess(actor);
+
+  if (isAttorney(actor)) {
+    return listLeadSummaries({ attorneyVisibleOnly: true });
+  }
+
   return listLeadSummaries();
 }

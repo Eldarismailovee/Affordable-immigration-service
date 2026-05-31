@@ -92,7 +92,7 @@ test("DELETE /api/admin/leads/:leadId soft-deletes the lead and writes an audit 
       last_name: "Owner",
       email: "lead@example.com",
       phone: "555",
-      status: "new",
+      status: "prospective",
       deleted_at: null,
       created_at: new Date(),
       updated_at: new Date(),
@@ -104,7 +104,7 @@ test("DELETE /api/admin/leads/:leadId soft-deletes the lead and writes an audit 
     assert.equal(res.status, 200);
     assert.equal(res.body.lead.id, leadId);
 
-    assert.equal(store.leads.get(leadId).status, "closed");
+    assert.equal(store.leads.get(leadId).status, "declined");
     assert.ok(store.leads.get(leadId).deleted_at);
 
     await new Promise((resolve) => setImmediate(resolve));

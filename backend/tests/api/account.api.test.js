@@ -34,7 +34,7 @@ function seedLead(userId) {
     last_name: "Owner",
     email: `lead-${leadId}@example.com`,
     phone: "555",
-    status: "new",
+    status: "prospective",
     deleted_at: null,
     created_at: new Date(),
     updated_at: new Date(),

@@ -1,13 +1,20 @@
 import pool from "../db/pool.js";
 import { query } from "../db/query.js";
+import { DECLINED_LEAD_STATUS } from "../constants/domain.js";
+import { ATTORNEY_VISIBLE_LEAD_STATES } from "../domain/lead-state.policy.js";
 
-export async function listLeadSummaries({ userId } = {}, db = pool) {
+export async function listLeadSummaries({ userId, attorneyVisibleOnly = false } = {}, db = pool) {
   const params = [];
   const filters = ["l.deleted_at IS NULL"];
 
   if (userId) {
     params.push(userId);
     filters.push(`l.user_id = $${params.length}`);
+  }
+
+  if (attorneyVisibleOnly) {
+    params.push(ATTORNEY_VISIBLE_LEAD_STATES);
+    filters.push(`l.status = ANY($${params.length}::text[])`);
   }
 
   const whereClause = `WHERE ${filters.join(" AND ")}`;
@@ -92,14 +99,14 @@ export async function softDeleteLeadById(leadId, db = pool) {
     `
     UPDATE leads
     SET
-      status = 'closed',
+      status = $2,
       deleted_at = COALESCE(deleted_at, NOW()),
       updated_at = NOW()
     WHERE id = $1
       AND deleted_at IS NULL
     RETURNING id, user_id, first_name, last_name, email, phone, status, created_at, updated_at
     `,
-    [leadId]
+    [leadId, DECLINED_LEAD_STATUS]
   );
 
   return rows[0] || null;
@@ -113,7 +120,7 @@ export async function createLead(
     lastName,
     email,
     phone,
-    status = "new",
+    status = "prospective",
   },
   db = pool
 ) {
@@ -321,6 +328,23 @@ export async function findLatestDocketwiseSyncByLeadId(leadId, db = pool) {
     LIMIT 1
     `,
     [leadId]
+  );
+
+  return rows[0] || null;
+}
+
+export async function updateLeadStateById(leadId, state, db = pool) {
+  const { rows } = await query(db,
+    `
+    UPDATE leads
+    SET
+      status = $2,
+      updated_at = NOW()
+    WHERE id = $1
+      AND deleted_at IS NULL
+    RETURNING id, user_id, first_name, last_name, email, phone, status, created_at, updated_at
+    `,
+    [leadId, state]
   );
 
   return rows[0] || null;

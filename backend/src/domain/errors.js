@@ -50,3 +50,35 @@ export function invalidPaymentStatusError() {
 export function paymentNotFoundError() {
   return new AppError("Payment record not found", 404, "PAYMENT_NOT_FOUND");
 }
+
+export function intakeNotFoundError() {
+  return new AppError(
+    "Intake record not found for this lead",
+    404,
+    "INTAKE_NOT_FOUND"
+  );
+}
+
+export function agreementNotFoundError() {
+  return new AppError("Agreement not found", 404, "AGREEMENT_NOT_FOUND");
+}
+
+export function onboardingPacketNotFoundError() {
+  return new AppError("Onboarding packet not found", 404, "ONBOARDING_PACKET_NOT_FOUND");
+}
+
+export function invalidLeadStateTransitionError() {
+  return new AppError(
+    "Invalid lead state transition",
+    400,
+    "INVALID_LEAD_STATE_TRANSITION"
+  );
+}
+
+export function packetNotApprovedError() {
+  return new AppError(
+    "Document is not approved for download",
+    403,
+    "PACKET_NOT_APPROVED"
+  );
+}

@@ -1,5 +1,6 @@
 import { listLeads } from "../services/intake.service.js";
 import { deleteLead, getLeadDetail } from "../services/admin.service.js";
+import { updateLeadState } from "../services/lead-state.service.js";
 import {
   leadDetailResponseSchema,
   leadMutationResponseSchema,
@@ -22,5 +23,12 @@ export const getLeadDetailController = asyncHandler(async (req, res) => {
 export const deleteLeadController = asyncHandler(async (req, res) => {
   const { leadId } = req.params;
   const lead = await deleteLead({ leadId, actor: req.user });
+  sendResponse(res, leadMutationResponseSchema, { lead });
+});
+
+export const updateLeadStateController = asyncHandler(async (req, res) => {
+  const { leadId } = req.params;
+  const { state } = req.body;
+  const lead = await updateLeadState({ leadId, state, actor: req.user });
   sendResponse(res, leadMutationResponseSchema, { lead });
 });

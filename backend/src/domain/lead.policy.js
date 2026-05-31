@@ -1,4 +1,5 @@
-import { assertAuthenticated, isAdmin } from "./user.policy.js";
+import { isLeadVisibleToAttorney } from "./lead-state.policy.js";
+import { assertAuthenticated, isAdmin, isAttorney } from "./user.policy.js";
 import { leadAccessDeniedError } from "./errors.js";
 
 export function canAccessLead(user, lead) {
@@ -6,7 +7,15 @@ export function canAccessLead(user, lead) {
     return false;
   }
 
-  return isAdmin(user) || lead.user_id === user.id;
+  if (isAdmin(user)) {
+    return true;
+  }
+
+  if (isAttorney(user)) {
+    return isLeadVisibleToAttorney(lead);
+  }
+
+  return lead.user_id === user.id;
 }
 
 export function assertCanAccessLead(user, lead) {

@@ -1,4 +1,5 @@
 import { randomUUID } from "crypto";
+import { RefreshTokenRotationError } from "../../src/repositories/auth-token.repository.js";
 
 export function createInMemoryStore() {
   return {
@@ -129,6 +130,19 @@ export function buildAuthTokenRepo(store) {
       tokenHash,
       expiresAt,
     }) => {
+      let currentRow = null;
+
+      for (const row of store.refreshTokens.values()) {
+        if (row.id === currentTokenId) {
+          currentRow = row;
+          break;
+        }
+      }
+
+      if (!currentRow || currentRow.revoked_at) {
+        throw new RefreshTokenRotationError();
+      }
+
       const next = {
         id: nextTokenId,
         user_id: userId,
@@ -139,13 +153,9 @@ export function buildAuthTokenRepo(store) {
         created_at: new Date(),
       };
       store.refreshTokens.set(tokenHash, next);
-      for (const row of store.refreshTokens.values()) {
-        if (row.id === currentTokenId) {
-          row.revoked_at = new Date();
-          row.replaced_by_token_id = nextTokenId;
-          row.last_used_at = new Date();
-        }
-      }
+      currentRow.revoked_at = new Date();
+      currentRow.replaced_by_token_id = nextTokenId;
+      currentRow.last_used_at = new Date();
       return next;
     },
     createEmailVerificationToken: async ({ id, userId, tokenHash, expiresAt }) => {
@@ -193,11 +203,21 @@ export function buildAuthTokenRepo(store) {
 
 export function buildLeadRepo(store) {
   return {
-    listLeadSummaries: async ({ userId } = {}) => {
+    listLeadSummaries: async ({ userId, attorneyVisibleOnly = false } = {}) => {
       const rows = [];
       for (const lead of store.leads.values()) {
         if (lead.deleted_at) continue;
         if (userId && lead.user_id !== userId) continue;
+        if (attorneyVisibleOnly) {
+          const visible = [
+            "conflict_check",
+            "attorney_review",
+            "accepted",
+            "declined",
+            "filed",
+          ];
+          if (!visible.includes(lead.status)) continue;
+        }
         rows.push({
           id: lead.id,
           first_name: lead.first_name,
@@ -228,7 +248,7 @@ export function buildLeadRepo(store) {
     softDeleteLeadById: async (id) => {
       const lead = store.leads.get(id);
       if (!lead || lead.deleted_at) return null;
-      lead.status = "closed";
+      lead.status = "declined";
       lead.deleted_at = new Date();
       lead.updated_at = new Date();
       return lead;
@@ -257,6 +277,13 @@ export function buildLeadRepo(store) {
     updateIntakeAgreementStatusByLeadId: async () => {},
     updateIntakeDocketwiseStatusByLeadId: async () => {},
     findLatestDocketwiseSyncByLeadId: async () => null,
+    updateLeadStateById: async (leadId, state) => {
+      const lead = store.leads.get(leadId);
+      if (!lead || lead.deleted_at) return null;
+      lead.status = state;
+      lead.updated_at = new Date();
+      return lead;
+    },
   };
 }
 
@@ -268,16 +295,63 @@ export function buildAuditRepo(store) {
   };
 }
 
-export function buildAgreementRepo() {
+export function buildAgreementRepo(store) {
   return {
-    findLatestAgreementByLeadId: async () => null,
-    createAgreement: async () => {},
+    findLatestAgreementByLeadId: async (leadId) => store.agreements.get(leadId) || null,
+    createAgreement: async ({ id, leadId, title, htmlContent, status = "draft" }) => {
+      store.agreements.set(leadId, {
+        id,
+        lead_id: leadId,
+        title,
+        html_content: htmlContent,
+        status,
+        generated_at: new Date(),
+        approved_by: null,
+        approved_at: null,
+        review_notes: null,
+        updated_at: new Date(),
+      });
+    },
+    approveAgreementByLeadId: async ({ leadId, approvedBy, reviewNotes }) => {
+      const agreement = store.agreements.get(leadId);
+      if (!agreement || agreement.status !== "draft") return null;
+      agreement.status = "approved";
+      agreement.approved_by = approvedBy;
+      agreement.approved_at = new Date();
+      agreement.review_notes = reviewNotes || null;
+      agreement.updated_at = new Date();
+      return agreement;
+    },
   };
 }
 
-export function buildOnboardingRepo() {
+export function buildOnboardingRepo(store) {
   return {
-    findLatestOnboardingPacketByLeadId: async () => null,
-    createOnboardingPacket: async () => {},
+    findLatestOnboardingPacketByLeadId: async (leadId) =>
+      store.onboardingPackets.get(leadId) || null,
+    createOnboardingPacket: async ({ id, leadId, title, htmlContent, status = "draft" }) => {
+      store.onboardingPackets.set(leadId, {
+        id,
+        lead_id: leadId,
+        title,
+        html_content: htmlContent,
+        status,
+        generated_at: new Date(),
+        approved_by: null,
+        approved_at: null,
+        review_notes: null,
+        updated_at: new Date(),
+      });
+    },
+    approveOnboardingPacketByLeadId: async ({ leadId, approvedBy, reviewNotes }) => {
+      const packet = store.onboardingPackets.get(leadId);
+      if (!packet || packet.status !== "draft") return null;
+      packet.status = "approved";
+      packet.approved_by = approvedBy;
+      packet.approved_at = new Date();
+      packet.review_notes = reviewNotes || null;
+      packet.updated_at = new Date();
+      return packet;
+    },
   };
 }

@@ -1,6 +1,21 @@
 import pool from "../db/pool.js";
 import { query } from "../db/query.js";
 
+export async function findSiteSettingsById(id, db = pool) {
+  const { rows } = await query(
+    db,
+    `
+    SELECT *
+    FROM site_settings
+    WHERE id = $1
+    LIMIT 1
+    `,
+    [id]
+  );
+
+  return rows[0] || null;
+}
+
 export async function findLatestSiteSettings(db = pool) {
   const { rows } = await query(db, 
     `

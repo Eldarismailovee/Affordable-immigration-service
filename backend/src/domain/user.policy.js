@@ -1,4 +1,4 @@
-import { ADMIN_ROLE } from "../constants/domain.js";
+import { ADMIN_ROLE, ATTORNEY_ROLE } from "../constants/domain.js";
 import {
   authenticationRequiredError,
   insufficientPermissionsError,
@@ -9,6 +9,14 @@ import { userRoleSchema } from "./validators.js";
 
 export function isAdmin(user) {
   return user?.role === ADMIN_ROLE;
+}
+
+export function isAttorney(user) {
+  return user?.role === ATTORNEY_ROLE;
+}
+
+export function isStaff(user) {
+  return isAdmin(user) || isAttorney(user);
 }
 
 export function assertAuthenticated(user) {

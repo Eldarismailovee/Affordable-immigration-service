@@ -1,4 +1,5 @@
 import { mock } from "node:test";
+import { RefreshTokenRotationError } from "../../src/repositories/auth-token.repository.js";
 import {
   buildAgreementRepo,
   buildAuditRepo,
@@ -36,7 +37,10 @@ export async function setupTestEnvironment() {
   });
 
   mock.module("../../src/repositories/auth-token.repository.js", {
-    namedExports: buildAuthTokenRepo(store),
+    namedExports: {
+      RefreshTokenRotationError,
+      ...buildAuthTokenRepo(store),
+    },
   });
 
   mock.module("../../src/repositories/lead.repository.js", {

@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { GENERATED_DOCUMENT_STATUS } from "../constants/domain.js";
+import { DRAFT_PACKET_STATUS } from "../constants/domain.js";
 import {
   findLatestIntakeByLeadId,
   findLeadById,
@@ -8,7 +8,8 @@ import {
   createOnboardingPacket,
   findLatestOnboardingPacketByLeadId,
 } from "../repositories/onboarding.repository.js";
-import { AppError } from "../utils/appError.js";
+import { isUniqueViolation } from "../db/errors.js";
+import { intakeNotFoundError, leadNotFoundError } from "../domain/errors.js";
 import { generateOnboardingPacket } from "./onboarding.service.js";
 import { assertAdminAccess } from "./access.service.js";
 
@@ -18,13 +19,13 @@ export async function generateOnboardingPacketForLead({ leadId, actor }) {
   const lead = await findLeadById(leadId);
 
   if (!lead) {
-    throw new AppError("Lead not found", 404, "LEAD_NOT_FOUND");
+    throw leadNotFoundError();
   }
 
   const intake = await findLatestIntakeByLeadId(leadId);
 
   if (!intake) {
-    throw new AppError("Intake record not found for this lead", 404, "INTAKE_NOT_FOUND");
+    throw intakeNotFoundError();
   }
 
   const existing = await findLatestOnboardingPacketByLeadId(leadId);
@@ -48,17 +49,27 @@ export async function generateOnboardingPacketForLead({ leadId, actor }) {
     expedited: Boolean(intake.expedited),
   });
 
-  await createOnboardingPacket({
-    id: randomUUID(),
-    leadId,
-    title: packet.title,
-    htmlContent: packet.html,
-    status: GENERATED_DOCUMENT_STATUS,
-  });
+  let createdNew = false;
+
+  try {
+    await createOnboardingPacket({
+      id: randomUUID(),
+      leadId,
+      title: packet.title,
+      htmlContent: packet.html,
+      status: DRAFT_PACKET_STATUS,
+    });
+    createdNew = true;
+  } catch (error) {
+    if (!isUniqueViolation(error)) {
+      throw error;
+    }
+  }
+
   const created = await findLatestOnboardingPacketByLeadId(leadId);
 
   return {
-    alreadyExists: false,
+    alreadyExists: !createdNew,
     onboarding: created,
   };
 }
