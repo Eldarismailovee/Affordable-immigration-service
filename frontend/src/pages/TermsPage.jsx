@@ -1,141 +1,259 @@
-import { Link } from "react-router-dom";
+import LegalContactSection from "../components/legal/LegalContactSection";
+import LegalPageLayout from "../components/legal/LegalPageLayout";
+import LegalSection from "../components/legal/LegalSection";
+import { REFUND_TODO, RESPONSIBLE_ATTORNEY_TODO } from "../data/legalMeta";
 
 export default function TermsPage() {
   return (
-    <div className="min-h-screen bg-[#040816] px-4 py-10 text-white md:px-6 lg:px-8">
-      <div className="mx-auto max-w-5xl">
-        <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <div className="text-sm font-semibold uppercase tracking-[0.2em] text-amber-400">
-              Legal
-            </div>
-            <h1 className="mt-2 text-4xl font-semibold tracking-tight">
-              Terms of Use
-            </h1>
-            <p className="mt-3 text-slate-300">Effective date: March 31, 2026</p>
-          </div>
+    <LegalPageLayout title="Terms of Service">
+      <LegalSection title="1. Last Updated">
+        <p>
+          These Terms of Service were last updated on May 31, 2026. We may update these Terms as
+          described in Section 23.
+        </p>
+      </LegalSection>
 
-          <div className="flex gap-3">
-            <Link
-              to="/"
-              className="rounded-full border border-white/15 bg-white/5 px-5 py-3 font-semibold text-white hover:border-amber-400/40 hover:text-amber-300"
-            >
-              Back home
-            </Link>
-          </div>
-        </div>
+      <LegalSection title="2. Agreement to Terms">
+        <p>
+          By accessing or using this website, creating an account, or submitting information through
+          our intake workflows, you agree to these Terms of Service. If you do not agree, do not
+          use the website.
+        </p>
+      </LegalSection>
 
-        <div className="space-y-6 rounded-[2rem] border border-white/10 bg-white/5 p-8 text-slate-300">
-          <section>
-            <h2 className="text-2xl font-semibold text-white">1. Acceptance of Terms</h2>
-            <p className="mt-3 leading-8">
-              By accessing or using this website, you agree to be bound by these Terms of Use.
-              If you do not agree to these terms, you should not use the website.
-            </p>
-          </section>
+      <LegalSection title="3. Eligibility">
+        <p>
+          You must be at least 18 years old, or the age of majority in your jurisdiction, to use this
+          website for yourself. If you submit information on behalf of another person, you represent
+          that you have authority to do so.
+        </p>
+      </LegalSection>
 
-          <section>
-            <h2 className="text-2xl font-semibold text-white">2. Informational Purpose</h2>
-            <p className="mt-3 leading-8">
-              This website is provided for general informational and administrative purposes only.
-              Content on this site does not constitute legal advice and should not be relied upon
-              as a substitute for individualized legal counsel.
-            </p>
-          </section>
+      <LegalSection title="4. Scope of Services">
+        <p>
+          This website provides an online platform for immigration-related intake, account access,
+          pricing information, document collection, agreement preview, consultation booking
+          coordination, and related administrative workflows connected to {`the firm's`} services.
+        </p>
+        <p>
+          <strong>What may be included:</strong> online intake forms, account features, generated
+          engagement materials, document upload tools, administrative communications, and coordination
+          of attorney-reviewed or attorney-filed service packages as described on the site and in
+          final engagement documents.
+        </p>
+        <p>
+          <strong>What is not included unless expressly agreed:</strong> emergency legal services,
+          representation in every jurisdiction, guaranteed government outcomes, unlimited revisions,
+          work outside the agreed package scope, or services beyond what is stated in a signed
+          engagement agreement.
+        </p>
+        <p>
+          Website use alone is a platform and intake experience. Legal services, where provided, are
+          subject to separate engagement terms and attorney acceptance of the matter.
+        </p>
+      </LegalSection>
 
-          <section>
-            <h2 className="text-2xl font-semibold text-white">3. No Attorney-Client Relationship</h2>
-            <p className="mt-3 leading-8">
-              Use of this website, completion of any online intake form, submission of documents,
-              or communication through the site does not by itself create an attorney-client
-              relationship. Engagement is not formally initiated until the first consultation with
-              the lawyer confirms the adequacy of the submitted documents and the matter is accepted.
-            </p>
-          </section>
+      <LegalSection title="5. No Emergency Services">
+        <p>
+          This website is not for emergencies. Do not use the website or contact forms for urgent
+          immigration enforcement, detention, or time-critical matters requiring immediate legal
+          intervention. Contact appropriate emergency or legal resources directly.
+        </p>
+      </LegalSection>
 
-          <section>
-            <h2 className="text-2xl font-semibold text-white">4. Flat Fees and Filing Fees</h2>
-            <p className="mt-3 leading-8">
-              Legal fees presented on this site are flat-fee ranges for designated services.
-              Government filing fees, translation costs, mailing charges, and third-party expenses
-              are separate unless expressly stated otherwise.
-            </p>
-          </section>
+      <LegalSection title="6. Attorney-Client Relationship">
+        <p>
+          Use of this website, registration, intake submission, document upload, or payment-related
+          information does not by itself create an attorney-client relationship. Representation, if
+          any, begins only after the firm accepts the matter and any required consultation,
+          engagement agreement, and payment terms are satisfied, as applicable.
+        </p>
+      </LegalSection>
 
-          <section>
-            <h2 className="text-2xl font-semibold text-white">5. Package Scope</h2>
-            <p className="mt-3 leading-8">
-              Service packages are limited to the scope described on the website and in the final
-              engagement documents. Additional petitions, supplemental filings, expedited processing,
-              and work outside the agreed scope may require additional fees.
-            </p>
-          </section>
+      <LegalSection title="7. Attorney Review / Responsible Attorney">
+        <p>
+          Certain service packages described on this website involve attorney review, preparation, or
+          filing support. The responsible attorney and applicable licensing details will be
+          identified in engagement documents and on the Legal Disclaimer page before production
+          launch.
+        </p>
+        <p className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-amber-100">
+          {RESPONSIBLE_ATTORNEY_TODO}
+        </p>
+      </LegalSection>
 
-          <section>
-            <h2 className="text-2xl font-semibold text-white">6. User Responsibilities</h2>
-            <p className="mt-3 leading-8">
-              You agree to provide accurate, current, and complete information. You are responsible
-              for ensuring that all documents and information submitted through the site are truthful
-              and complete to the best of your knowledge.
-            </p>
-          </section>
+      <LegalSection title="8. User Responsibilities">
+        <p>You agree to:</p>
+        <ul className="list-disc space-y-2 pl-6">
+          <li>Provide accurate, current, and complete information</li>
+          <li>Maintain the security of your account credentials</li>
+          <li>Upload only documents you are authorized to share</li>
+          <li>Respond promptly to reasonable requests for information needed to evaluate or process a matter</li>
+          <li>Use the website only for lawful purposes</li>
+        </ul>
+      </LegalSection>
 
-          <section>
-            <h2 className="text-2xl font-semibold text-white">7. Payment Processing</h2>
-            <p className="mt-3 leading-8">
-              Payment details may be collected for administrative follow-up, but payments are
-              processed manually by the office or through approved payment channels. The website does
-              not promise immediate acceptance of representation based on payment-related activity
-              alone.
-            </p>
-          </section>
+      <LegalSection title="9. Accuracy of Information">
+        <p>
+          You remain responsible for the truthfulness and completeness of all information and
+          documents you submit. The firm relies on the information you provide when evaluating a
+          matter and preparing materials. Incomplete or inaccurate information may delay review,
+          change scope, or affect outcomes.
+        </p>
+      </LegalSection>
 
-          <section>
-            <h2 className="text-2xl font-semibold text-white">8. Timeline Statements</h2>
-            <p className="mt-3 leading-8">
-              Any filing timeline described on the website, including a two-week internal filing
-              timeline, is conditioned on the office receiving all required client documents and
-              information in complete and usable form.
-            </p>
-          </section>
+      <LegalSection title="10. Fees and Payment">
+        <p>
+          Pricing shown on the website describes flat-fee ranges for designated immigration service
+          packages. Government filing fees, translations, mailing, third-party costs, and work
+          outside the agreed scope are separate unless expressly stated otherwise in writing.
+        </p>
+        <p>
+          Payment details may be collected online for administrative follow-up. Unless a compliant
+          payment processor is disclosed and implemented, payments may be processed manually by the
+          office through approved channels.
+        </p>
+      </LegalSection>
 
-          <section>
-            <h2 className="text-2xl font-semibold text-white">9. Intellectual Property</h2>
-            <p className="mt-3 leading-8">
-              All text, branding, design elements, graphics, and content on this website are owned
-              by or licensed to the firm and may not be copied, reproduced, distributed, or reused
-              without written permission, except as allowed by law.
-            </p>
-          </section>
+      <LegalSection title="11. Refund and Cancellation Policy">
+        <p>
+          Cancellation and refund eligibility depend on the service stage, engagement agreement,
+          applicable law, and whether substantive attorney review, document preparation, or filing
+          work has begun.
+        </p>
+        <ul className="list-disc space-y-2 pl-6">
+          <li>
+            You may request cancellation before substantive work begins, subject to any disclosed
+            administrative or processing costs
+          </li>
+          <li>
+            After attorney review, document preparation, or filing work begins, fees may become
+            non-refundable in whole or in part, depending on work performed
+          </li>
+          <li>
+            Government filing fees paid to a government agency are generally non-refundable by the
+            firm once submitted to the agency
+          </li>
+          <li>
+            If subscriptions or recurring services are offered in the future, they must be
+            cancellable through a clear process disclosed at purchase
+          </li>
+        </ul>
+        <p className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-amber-100">
+          {REFUND_TODO}
+        </p>
+      </LegalSection>
 
-          <section>
-            <h2 className="text-2xl font-semibold text-white">10. Limitation of Liability</h2>
-            <p className="mt-3 leading-8">
-              To the fullest extent permitted by law, the firm disclaims liability for damages
-              arising from use of the website, technical interruptions, delays, reliance on general
-              information, or unauthorized access to user-submitted content.
-            </p>
-          </section>
+      <LegalSection title="12. No Guarantee of Outcome">
+        <p>
+          We do not guarantee any immigration result, government approval, visa issuance, processing
+          time, or agency action. Outcomes depend on facts, documentation, eligibility, government
+          discretion, policy changes, and circumstances outside our control.
+        </p>
+      </LegalSection>
 
-          <section>
-            <h2 className="text-2xl font-semibold text-white">11. Third-Party Services</h2>
-            <p className="mt-3 leading-8">
-              This website may connect with third-party services or platforms for intake, scheduling,
-              document management, communication, or workflow support. Use of such services may also
-              be subject to their own terms and privacy practices.
-            </p>
-          </section>
+      <LegalSection title="13. Immigration / Government Filing Disclaimer">
+        <p>
+          Only authorized government agencies make final decisions on immigration matters. Filing
+          timelines stated on the website, including internal filing targets, depend on receiving
+          complete documents, signatures, and information from you in usable form. Government
+          processing times are not controlled by the firm.
+        </p>
+      </LegalSection>
 
-          <section>
-            <h2 className="text-2xl font-semibold text-white">12. Modifications</h2>
-            <p className="mt-3 leading-8">
-              The firm may revise these Terms of Use at any time by posting an updated version on
-              this website. Continued use of the site after changes are posted constitutes acceptance
-              of the revised terms.
-            </p>
-          </section>
-        </div>
-      </div>
-    </div>
+      <LegalSection title="14. Electronic Communications and Signatures">
+        <p>
+          By using the website, you consent to receive communications electronically, including
+          email and in-app or account messages, where permitted by law. Electronic signatures or
+          acknowledgments may be used where appropriate and permitted for intake and administrative
+          workflows, subject to final engagement terms.
+        </p>
+      </LegalSection>
+
+      <LegalSection title="15. Documents and Uploads">
+        <p>
+          You are responsible for the documents you upload and for ensuring they are relevant,
+          accurate, and lawfully obtained. We may store uploaded files and generated documents in
+          systems used to operate intake, agreement, and onboarding workflows. Uploaded content must
+          not contain unlawful, malicious, or unauthorized material.
+        </p>
+      </LegalSection>
+
+      <LegalSection title="16. Consumer Rights">
+        <p>
+          Nothing in these Terms limits non-waivable consumer rights under applicable law. Depending
+          on your location, you may have additional rights under consumer protection, unfair
+          contract, or professional responsibility laws. Specific state, provincial, or country
+          rights may vary.
+        </p>
+      </LegalSection>
+
+      <LegalSection title="17. Prohibited Uses">
+        <p>You may not:</p>
+        <ul className="list-disc space-y-2 pl-6">
+          <li>Use the website to submit false, misleading, or fraudulent information</li>
+          <li>Attempt unauthorized access to accounts, systems, or data</li>
+          <li>Interfere with website security or functionality</li>
+          <li>Scrape, copy, or misuse site content except as permitted by law</li>
+          <li>Use the website in violation of applicable law or professional rules</li>
+        </ul>
+      </LegalSection>
+
+      <LegalSection title="18. Intellectual Property">
+        <p>
+          Website text, branding, design, graphics, and other content are owned by or licensed to
+          the firm and may not be copied, reproduced, distributed, or reused without written
+          permission, except as allowed by law.
+        </p>
+      </LegalSection>
+
+      <LegalSection title="19. Third-Party Services">
+        <p>
+          The website may rely on third-party infrastructure or tools for hosting, authentication,
+          document generation, email, or workflow support. Use of those services may be subject to
+          their own terms and privacy practices.
+        </p>
+      </LegalSection>
+
+      <LegalSection title="20. Disclaimers">
+        <p>
+          The website and its content are provided on an &ldquo;as available&rdquo; basis for
+          informational and administrative purposes. To the fullest extent permitted by law, we
+          disclaim warranties not required by applicable consumer protection law.
+        </p>
+      </LegalSection>
+
+      <LegalSection title="21. Limitation of Liability">
+        <p>
+          To the fullest extent permitted by applicable law, the firm is not liable for indirect,
+          incidental, special, consequential, or punitive damages arising from website use,
+          technical interruptions, reliance on general information, unauthorized access, or delays
+          outside our reasonable control. Nothing in these Terms excludes liability that cannot be
+          excluded under applicable law.
+        </p>
+      </LegalSection>
+
+      <LegalSection title="22. Dispute Resolution / Governing Law">
+        <p>
+          These Terms are governed by the laws applicable to the firm&rsquo;s principal place of
+          business, without regard to conflict-of-law rules, except where mandatory consumer or
+          professional responsibility rules require otherwise.
+        </p>
+        <p>
+          Dispute resolution procedures, venue, and arbitration terms, if any, will be specified in
+          engagement documents or updated in a future version of these Terms after legal review.
+        </p>
+      </LegalSection>
+
+      <LegalSection title="23. Changes to Terms">
+        <p>
+          We may revise these Terms by posting an updated version on this page with a revised last
+          updated date. Continued use after changes become effective may constitute acceptance where
+          permitted by law.
+        </p>
+      </LegalSection>
+
+      <LegalContactSection title="24. Contact" />
+    </LegalPageLayout>
   );
 }

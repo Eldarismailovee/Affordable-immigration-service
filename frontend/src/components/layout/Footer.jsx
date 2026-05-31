@@ -51,15 +51,15 @@ export default function Footer() {
           </div>
 
           <div>
-            <div className="text-lg font-semibold text-white">Terms / Disclaimer / Privacy</div>
+            <div className="text-lg font-semibold text-white">Legal</div>
             <div className="mt-5 space-y-3 text-sm leading-7 text-slate-300">
               <p>Website use does not create an attorney-client relationship.</p>
-              <p>Engagement starts only after the first lawyer consultation and confirmation that submitted documents are adequate.</p>
+              <p>Engagement starts only after the firm accepts the matter and applicable engagement requirements are met.</p>
               <p>Filing fees are separate from legal fees. Payment information may be collected online and processed manually by the office.</p>
               <div className="pt-2 flex flex-col gap-2">
-                <Link to="/terms" className="transition hover:text-amber-300">Terms</Link>
                 <Link to="/privacy" className="transition hover:text-amber-300">Privacy Policy</Link>
-                <Link to="/disclaimer" className="transition hover:text-amber-300">Disclaimer</Link>
+                <Link to="/terms" className="transition hover:text-amber-300">Terms of Service</Link>
+                <Link to="/disclaimer" className="transition hover:text-amber-300">Legal Disclaimer</Link>
               </div>
             </div>
           </div>

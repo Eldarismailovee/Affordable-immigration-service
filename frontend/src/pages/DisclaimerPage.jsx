@@ -1,121 +1,111 @@
-import { Link } from "react-router-dom";
+import LegalContactSection from "../components/legal/LegalContactSection";
+import LegalPageLayout from "../components/legal/LegalPageLayout";
+import LegalSection from "../components/legal/LegalSection";
+import { BAR_ADVERTISING_TODO, RESPONSIBLE_ATTORNEY_TODO } from "../data/legalMeta";
 
 export default function DisclaimerPage() {
   return (
-    <div className="min-h-screen bg-[#040816] px-4 py-10 text-white md:px-6 lg:px-8">
-      <div className="mx-auto max-w-5xl">
-        <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <div className="text-sm font-semibold uppercase tracking-[0.2em] text-amber-400">
-              Legal
-            </div>
-            <h1 className="mt-2 text-4xl font-semibold tracking-tight">
-              Disclaimer
-            </h1>
-            <p className="mt-3 text-slate-300">Effective date: March 31, 2026</p>
-          </div>
+    <LegalPageLayout title="Legal Disclaimer / Attorney Advertising Notice">
+      <LegalSection title="1. Last Updated">
+        <p>
+          This Legal Disclaimer and Attorney Advertising Notice was last updated on May 31, 2026.
+        </p>
+      </LegalSection>
 
-          <div className="flex gap-3">
-            <Link
-              to="/"
-              className="rounded-full border border-white/15 bg-white/5 px-5 py-3 font-semibold text-white hover:border-amber-400/40 hover:text-amber-300"
-            >
-              Back home
-            </Link>
-          </div>
-        </div>
+      <LegalSection title="2. No Legal Advice from General Website Content">
+        <p>
+          Information on this website is provided for general informational and administrative
+          purposes only. It does not constitute legal advice for any individual case. Immigration
+          matters are highly fact-specific, and website content should not be relied on as a
+          substitute for advice from a qualified attorney who knows your circumstances.
+        </p>
+      </LegalSection>
 
-        <div className="space-y-6 rounded-[2rem] border border-white/10 bg-white/5 p-8 text-slate-300">
-          <section>
-            <h2 className="text-2xl font-semibold text-white">1. No Legal Advice</h2>
-            <p className="mt-3 leading-8">
-              The information on this website is provided for general informational purposes only
-              and does not constitute legal advice. Immigration matters are highly fact-specific, and
-              no content on this website should be treated as legal advice for any individual case.
-            </p>
-          </section>
+      <LegalSection title="3. Attorney-Client Relationship Only After Engagement / Approval">
+        <p>
+          Contacting the firm, registering for an account, completing intake forms, uploading
+          documents, previewing agreements, or submitting payment-related information does not by
+          itself create an attorney-client relationship. Representation, if any, begins only after
+          the firm accepts the matter and applicable engagement requirements are met.
+        </p>
+      </LegalSection>
 
-          <section>
-            <h2 className="text-2xl font-semibold text-white">2. No Attorney-Client Relationship</h2>
-            <p className="mt-3 leading-8">
-              Contacting the firm, filling out online forms, uploading documents, or using any
-              feature of this site does not create an attorney-client relationship. Representation
-              begins only after the firm accepts the matter and the first lawyer consultation
-              confirms the adequacy of the submitted documents.
-            </p>
-          </section>
+      <LegalSection title="4. Responsible Attorney">
+        <p>
+          Legal services offered through this website, where provided, are delivered under the
+          supervision of a responsible attorney identified in engagement documents. Before public
+          launch, the following details should appear here:
+        </p>
+        <ul className="list-disc space-y-2 pl-6">
+          <li>Responsible attorney name</li>
+          <li>Licensed jurisdiction(s)</li>
+          <li>Bar number, if required by applicable rules</li>
+          <li>Office or contact information</li>
+        </ul>
+        <p className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-amber-100">
+          {RESPONSIBLE_ATTORNEY_TODO}
+        </p>
+      </LegalSection>
 
-          <section>
-            <h2 className="text-2xl font-semibold text-white">3. Results Not Guaranteed</h2>
-            <p className="mt-3 leading-8">
-              Past outcomes, examples, or descriptions of services do not guarantee any specific
-              result. Immigration adjudications depend on facts, documentation, agency review,
-              government processing times, and other circumstances outside the firm’s control.
-            </p>
-          </section>
+      <LegalSection title="5. Jurisdictional Limitations">
+        <p>
+          Legal services may be limited to jurisdictions where the responsible attorney is authorized
+          to practice. Laws and procedures vary by jurisdiction, agency, and case type. Accessing
+          this website from any location does not mean services are available in every jurisdiction
+          or for every matter.
+        </p>
+        <p>
+          You should not rely on general website content as jurisdiction-specific advice unless an
+          attorney engagement confirms that the firm can assist with your matter under applicable
+          professional responsibility rules.
+        </p>
+      </LegalSection>
 
-          <section>
-            <h2 className="text-2xl font-semibold text-white">4. Filing Fees and Third-Party Costs</h2>
-            <p className="mt-3 leading-8">
-              Government filing fees and other third-party costs are separate from legal fees unless
-              explicitly stated otherwise in a final written agreement.
-            </p>
-          </section>
+      <LegalSection title="6. Attorney Advertising Notice">
+        <p>
+          This website may be considered attorney advertising in some jurisdictions. Descriptions of
+          services, pricing ranges, process steps, and outcomes are intended to provide general
+          information about how the firm may assist prospective clients.
+        </p>
+        <p className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-amber-100">
+          {BAR_ADVERTISING_TODO}
+        </p>
+      </LegalSection>
 
-          <section>
-            <h2 className="text-2xl font-semibold text-white">5. Package and Scope Limitations</h2>
-            <p className="mt-3 leading-8">
-              Website package descriptions are summaries only. The precise scope of representation,
-              attorney responsibilities, client responsibilities, and exclusions are governed by the
-              final fee agreement and engagement documents.
-            </p>
-          </section>
+      <LegalSection title="7. No Guarantee of Results">
+        <p>
+          We do not guarantee any specific immigration outcome, approval, filing date, or government
+          processing time. Agency decisions depend on eligibility, documentation, policy, and factors
+          outside the firm&rsquo;s control.
+        </p>
+      </LegalSection>
 
-          <section>
-            <h2 className="text-2xl font-semibold text-white">6. Timeline Disclaimer</h2>
-            <p className="mt-3 leading-8">
-              Internal filing timelines, including any statement that a matter will be filed within
-              two weeks, depend on the firm receiving all required client documents, signatures, and
-              accurate information in complete form.
-            </p>
-          </section>
+      <LegalSection title="8. Prior Results, Testimonials, or Examples">
+        <p>
+          Any examples, descriptions, or references to prior outcomes are illustrative only and do
+          not guarantee similar results in your case. Each matter depends on its own facts and
+          applicable law.
+        </p>
+      </LegalSection>
 
-          <section>
-            <h2 className="text-2xl font-semibold text-white">7. Manual Payment Processing</h2>
-            <p className="mt-3 leading-8">
-              Payment-related information collected through this website is for manual office
-              coordination unless a separate secure payment provider is implemented. Submission of
-              payment preferences does not itself confirm engagement or representation.
-            </p>
-          </section>
+      <LegalSection title="9. Immigration / Government Agency Disclaimer">
+        <p>
+          Only U.S. government agencies and authorized decision-makers determine immigration
+          outcomes. The firm does not control agency processing times, requests for evidence, or
+          adjudication standards. Government filing fees and third-party costs are separate from
+          legal fees unless expressly stated otherwise in a signed agreement.
+        </p>
+      </LegalSection>
 
-          <section>
-            <h2 className="text-2xl font-semibold text-white">8. Communication Risk</h2>
-            <p className="mt-3 leading-8">
-              Internet communications may not always be secure. You should avoid sending highly
-              sensitive information unless and until the firm instructs you to do so through an
-              approved secure channel.
-            </p>
-          </section>
+      <LegalSection title="10. External Links Disclaimer">
+        <p>
+          This website may contain links to third-party websites or resources for convenience. We do
+          not control and are not responsible for the content, privacy practices, or availability of
+          third-party sites. Links do not imply endorsement unless expressly stated.
+        </p>
+      </LegalSection>
 
-          <section>
-            <h2 className="text-2xl font-semibold text-white">9. Jurisdictional Notice</h2>
-            <p className="mt-3 leading-8">
-              Website access from any location does not necessarily mean that legal services are
-              available in every jurisdiction or for every matter. Services remain subject to
-              applicable law, professional responsibility rules, and firm acceptance.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-semibold text-white">10. Professional Review Required</h2>
-            <p className="mt-3 leading-8">
-              This disclaimer, along with the Terms and Privacy Policy, should be reviewed and
-              finalized by qualified legal counsel before public launch.
-            </p>
-          </section>
-        </div>
-      </div>
-    </div>
+      <LegalContactSection title="11. Contact" />
+    </LegalPageLayout>
   );
 }
