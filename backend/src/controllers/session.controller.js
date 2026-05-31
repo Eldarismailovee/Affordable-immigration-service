@@ -7,6 +7,7 @@ import {
   clearRefreshTokenCookie,
   readRefreshTokenCookie,
 } from "../utils/authCookies.js";
+import { getAuditContext } from "../utils/auditContext.js";
 import { getRequestContext } from "../utils/requestContext.js";
 import {
   sendAuthSessionResponse,
@@ -51,7 +52,10 @@ export const logoutController = asyncHandler(async (req, res) => {
   const refreshToken = readRefreshTokenCookie(req);
 
   if (refreshToken) {
-    await logoutUser(refreshToken);
+    await logoutUser(refreshToken, {
+      actor: req.user,
+      auditContext: getAuditContext(req),
+    });
   }
 
   clearRefreshTokenCookie(res);

@@ -33,6 +33,22 @@ import {
 } from "../utils/dsar.js";
 import { anonymizeUserRecord } from "./dsar-anonymization.service.js";
 import { buildUserDataExport } from "./dsar-export.service.js";
+import { textForAdminStorage } from "./payment-notes.service.js";
+import {
+  AUDIT_CATEGORIES,
+  AUDIT_EVENT_TYPES,
+  AUDIT_RESULTS,
+} from "../constants/audit.js";
+import { recordAuditEvent } from "./audit.service.js";
+import { buildActor } from "../utils/auditContext.js";
+
+async function appendSanitizedAdminNotes(requestId, notes) {
+  if (!notes) {
+    return null;
+  }
+
+  return appendAdminNotes(requestId, textForAdminStorage(notes));
+}
 
 function initialStatusForType(type) {
   return DSAR_TYPES_REQUIRING_IDENTITY.includes(type)
@@ -49,6 +65,28 @@ async function logEvent(requestId, actorUserId, eventType, metadata) {
     dsarRequestId: requestId,
     actorUserId,
     eventType,
+    metadata,
+  });
+}
+
+async function auditDsar({
+  eventType,
+  action,
+  actor,
+  requestId,
+  auditContext,
+  metadata = {},
+  result = AUDIT_RESULTS.SUCCESS,
+}) {
+  await recordAuditEvent({
+    eventType,
+    category: AUDIT_CATEGORIES.DSAR,
+    action,
+    result,
+    ...buildActor(actor),
+    targetType: "dsar_request",
+    targetId: requestId,
+    request: auditContext,
     metadata,
   });
 }
@@ -85,7 +123,13 @@ async function loadAdminRequestDetail(request) {
   );
 }
 
-export async function createUserDsarRequest({ user, type, message, requestedChanges }) {
+export async function createUserDsarRequest({
+  user,
+  type,
+  message,
+  requestedChanges,
+  auditContext = null,
+}) {
   assertAuthenticated(user);
 
   const status = initialStatusForType(type);
@@ -100,6 +144,19 @@ export async function createUserDsarRequest({ user, type, message, requestedChan
   });
 
   await logEvent(row.id, user.id, "submitted", { type });
+
+  await auditDsar({
+    eventType: AUDIT_EVENT_TYPES.DSAR_REQUEST_SUBMIT,
+    action: "submit",
+    actor: user,
+    requestId: row.id,
+    auditContext,
+    metadata: {
+      requestType: type,
+      newStatus: status,
+      changedFields: requestedChanges ? Object.keys(requestedChanges) : [],
+    },
+  });
 
   if (status === "identity_verification_required") {
     await logEvent(row.id, user.id, "identity_verification_requested", { type });
@@ -154,7 +211,13 @@ export async function getAdminDsarRequest({ actor, requestId }) {
   return loadAdminRequestDetail(request);
 }
 
-export async function verifyDsarIdentity({ actor, requestId, status, notes }) {
+export async function verifyDsarIdentity({
+  actor,
+  requestId,
+  status,
+  notes,
+  auditContext = null,
+}) {
   assertAdmin(actor);
   const request = await getRequestForAdmin(requestId);
 
@@ -178,15 +241,30 @@ export async function verifyDsarIdentity({ actor, requestId, status, notes }) {
   }
 
   if (notes) {
-    await appendAdminNotes(requestId, notes);
+    await appendSanitizedAdminNotes(requestId, notes);
     await logEvent(requestId, actor.id, "admin_note_added", {});
   }
 
   const updated = await updateDsarRequest(requestId, updates);
+
+  await auditDsar({
+    eventType: AUDIT_EVENT_TYPES.DSAR_IDENTITY_VERIFY,
+    action: "verify_identity",
+    actor,
+    requestId,
+    auditContext,
+    metadata: {
+      requestType: request.request_type,
+      oldStatus: request.status,
+      newStatus: updated.status,
+      identityStatus,
+    },
+  });
+
   return loadAdminRequestDetail(updated);
 }
 
-export async function generateDsarExport({ actor, requestId }) {
+export async function generateDsarExport({ actor, requestId, auditContext = null }) {
   assertAdmin(actor);
   const request = await getRequestForAdmin(requestId);
   assertIdentityVerified(request);
@@ -202,10 +280,29 @@ export async function generateDsarExport({ actor, requestId }) {
     fieldNames: Object.keys(exportPayload),
   });
 
+  await auditDsar({
+    eventType: AUDIT_EVENT_TYPES.DSAR_EXPORT_GENERATE,
+    action: "generate_export",
+    actor,
+    requestId,
+    auditContext,
+    metadata: {
+      requestType: request.request_type,
+      recordCounts: { sections: Object.keys(exportPayload).length },
+    },
+  });
+
   return loadAdminRequestDetail(updated);
 }
 
-export async function applyDsarCorrection({ actor, requestId, userFields, leadFields, notes }) {
+export async function applyDsarCorrection({
+  actor,
+  requestId,
+  userFields,
+  leadFields,
+  notes,
+  auditContext = null,
+}) {
   assertAdmin(actor);
   const request = await getRequestForAdmin(requestId);
   assertIdentityVerified(request);
@@ -243,15 +340,34 @@ export async function applyDsarCorrection({ actor, requestId, userFields, leadFi
   await logEvent(requestId, actor.id, "correction_applied", { fieldNames: changedFields });
   await logEvent(requestId, actor.id, "completed", {});
 
+  await auditDsar({
+    eventType: AUDIT_EVENT_TYPES.DSAR_CORRECTION_APPLY,
+    action: "apply_correction",
+    actor,
+    requestId,
+    auditContext,
+    metadata: {
+      requestType: request.request_type,
+      changedFields,
+      oldStatus: request.status,
+      newStatus: updated.status,
+    },
+  });
+
   if (notes) {
-    await appendAdminNotes(requestId, notes);
+    await appendSanitizedAdminNotes(requestId, notes);
     await logEvent(requestId, actor.id, "admin_note_added", {});
   }
 
   return loadAdminRequestDetail(updated);
 }
 
-export async function applyDsarAnonymization({ actor, requestId, notes }) {
+export async function applyDsarAnonymization({
+  actor,
+  requestId,
+  notes,
+  auditContext = null,
+}) {
   assertAdmin(actor);
   const request = await getRequestForAdmin(requestId);
   assertIdentityVerified(request);
@@ -274,21 +390,39 @@ export async function applyDsarAnonymization({ actor, requestId, notes }) {
   });
   await logEvent(requestId, actor.id, "completed", {});
 
+  await auditDsar({
+    eventType: AUDIT_EVENT_TYPES.DSAR_ANONYMIZATION_APPLY,
+    action: "apply_anonymization",
+    actor,
+    requestId,
+    auditContext,
+    metadata: {
+      requestType: request.request_type,
+      oldStatus: request.status,
+      newStatus: updated.status,
+    },
+  });
+
   if (notes) {
-    await appendAdminNotes(requestId, notes);
+    await appendSanitizedAdminNotes(requestId, notes);
   }
 
   return loadAdminRequestDetail(updated);
 }
 
-export async function applyDsarRestriction({ actor, requestId, notes }) {
+export async function applyDsarRestriction({
+  actor,
+  requestId,
+  notes,
+  auditContext = null,
+}) {
   assertAdmin(actor);
   const request = await getRequestForAdmin(requestId);
   assertIdentityVerified(request);
 
   await setUserProcessingRestriction({
     userId: request.requester_user_id,
-    reason: notes || "DSAR restriction request",
+    reason: notes ? textForAdminStorage(notes) : "DSAR restriction request",
     restricted: true,
   });
 
@@ -301,14 +435,34 @@ export async function applyDsarRestriction({ actor, requestId, notes }) {
   await logEvent(requestId, actor.id, "restriction_applied", {});
   await logEvent(requestId, actor.id, "completed", {});
 
+  await auditDsar({
+    eventType: AUDIT_EVENT_TYPES.DSAR_RESTRICTION_APPLY,
+    action: "apply_restriction",
+    actor,
+    requestId,
+    auditContext,
+    metadata: {
+      requestType: request.request_type,
+      oldStatus: request.status,
+      newStatus: updated.status,
+    },
+  });
+
   if (notes) {
-    await appendAdminNotes(requestId, notes);
+    await appendSanitizedAdminNotes(requestId, notes);
   }
 
   return loadAdminRequestDetail(updated);
 }
 
-export async function updateDsarLegalHold({ actor, requestId, legalHold, reason, notes }) {
+export async function updateDsarLegalHold({
+  actor,
+  requestId,
+  legalHold,
+  reason,
+  notes,
+  auditContext = null,
+}) {
   assertAttorneyAccess(actor);
   const request = await getRequestForAdmin(requestId);
 
@@ -328,24 +482,57 @@ export async function updateDsarLegalHold({ actor, requestId, legalHold, reason,
     { reason: reason ?? null }
   );
 
+  await auditDsar({
+    eventType: AUDIT_EVENT_TYPES.DSAR_LEGAL_HOLD_APPLY,
+    action: legalHold ? "apply_legal_hold" : "remove_legal_hold",
+    actor,
+    requestId,
+    auditContext,
+    metadata: {
+      legalHold,
+      requestType: request.request_type,
+    },
+  });
+
   if (notes) {
-    await appendAdminNotes(requestId, notes);
+    await appendSanitizedAdminNotes(requestId, notes);
     await logEvent(requestId, actor.id, "admin_note_added", {});
   }
 
   return loadAdminRequestDetail(updated);
 }
 
-export async function updateDsarStatus({ actor, requestId, status, notes }) {
+export async function updateDsarStatus({
+  actor,
+  requestId,
+  status,
+  notes,
+  auditContext = null,
+}) {
   assertAdmin(actor);
   const request = await getRequestForAdmin(requestId);
   assertStatusTransition(request.status, status);
+
+  const oldStatus = request.status;
 
   const updated = await updateDsarRequest(requestId, {
     status,
     ...(status === "completed"
       ? { completedAt: new Date(), completedBy: actor.id }
       : {}),
+  });
+
+  await auditDsar({
+    eventType: AUDIT_EVENT_TYPES.DSAR_STATUS_CHANGE,
+    action: "update_status",
+    actor,
+    requestId,
+    auditContext,
+    metadata: {
+      requestType: request.request_type,
+      oldStatus,
+      newStatus: status,
+    },
   });
 
   if (status === "denied") {
@@ -357,7 +544,7 @@ export async function updateDsarStatus({ actor, requestId, status, notes }) {
   }
 
   if (notes) {
-    await appendAdminNotes(requestId, notes);
+    await appendSanitizedAdminNotes(requestId, notes);
     await logEvent(requestId, actor.id, "admin_note_added", {});
   }
 
@@ -367,7 +554,7 @@ export async function updateDsarStatus({ actor, requestId, status, notes }) {
 export async function addDsarAdminNote({ actor, requestId, note }) {
   assertAdmin(actor);
   await getRequestForAdmin(requestId);
-  const updated = await appendAdminNotes(requestId, note);
+  const updated = await appendSanitizedAdminNotes(requestId, note);
   await logEvent(requestId, actor.id, "admin_note_added", {});
   return loadAdminRequestDetail(updated);
 }

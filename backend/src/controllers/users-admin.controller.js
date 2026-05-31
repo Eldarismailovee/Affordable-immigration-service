@@ -4,6 +4,7 @@ import {
   usersListResponseSchema,
 } from "../schemas/response.schema.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { getAuditContext } from "../utils/auditContext.js";
 import { sendResponse } from "../utils/sendResponse.js";
 
 export const listUsersController = asyncHandler(async (req, res) => {
@@ -16,6 +17,7 @@ export const updateUserRoleController = asyncHandler(async (req, res) => {
     userId: req.params.userId,
     role: req.body.role,
     actor: req.user,
+    auditContext: getAuditContext(req),
   });
   sendResponse(res, userMutationResponseSchema, { user });
 });

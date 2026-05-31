@@ -1,6 +1,8 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import CookieConsentBanner from "./components/CookieConsentBanner";
+import DocumentTitle from "./components/layout/DocumentTitle";
+import SkipLink from "./components/layout/SkipLink";
 import { AuthProvider } from "./context/AuthContext";
 import { CookieConsentProvider } from "./context/CookieConsentContext";
 import { IntakeProvider } from "./context/IntakeContext";
@@ -19,6 +21,7 @@ import TermsPage from "./pages/TermsPage";
 import PrivacyPage from "./pages/PrivacyPage";
 import CookiePreferencesPage from "./pages/CookiePreferencesPage";
 import DisclaimerPage from "./pages/DisclaimerPage";
+import AvailabilityPage from "./pages/AvailabilityPage";
 import OnboardingPacketPage from "./pages/OnboardingPacketPage";
 import SiteSettingsPage from "./pages/SiteSettingsPage";
 
@@ -34,6 +37,8 @@ import SuccessPage from "./pages/intake/SuccessPage";
 export default function App() {
   return (
     <BrowserRouter>
+      <SkipLink />
+      <DocumentTitle />
       <SiteSettingsProvider>
         <AuthProvider>
           <CookieConsentProvider>
@@ -129,6 +134,7 @@ export default function App() {
               <Route path="/privacy" element={<PrivacyPage />} />
               <Route path="/cookie-preferences" element={<CookiePreferencesPage />} />
               <Route path="/disclaimer" element={<DisclaimerPage />} />
+              <Route path="/availability" element={<AvailabilityPage />} />
             </Routes>
             <CookieConsentBanner />
           </IntakeProvider>

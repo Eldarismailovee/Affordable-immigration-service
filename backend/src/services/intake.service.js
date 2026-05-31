@@ -18,8 +18,15 @@ import { generateAgreement } from "./agreement.service.js";
 import { assertProcessingNotRestricted } from "../domain/processing.policy.js";
 import { assertStaffAccess } from "./access.service.js";
 import { generateOnboardingPacket } from "./onboarding.service.js";
-
-const DEFAULT_PAYMENT_NOTE = "Payment to be processed manually by office";
+import { prepareUserPaymentNotes } from "./payment-notes.service.js";
+import {
+  AUDIT_CATEGORIES,
+  AUDIT_EVENT_TYPES,
+  AUDIT_RESULTS,
+} from "../constants/audit.js";
+import { recordAuditEvent } from "./audit.service.js";
+import { intakeSubmitMetadata } from "../utils/auditRedaction.js";
+import { buildActor } from "../utils/auditContext.js";
 
 async function persistIntakeSubmission({ payload, userId, pricing, agreement, onboarding }) {
   const ids = {
@@ -97,7 +104,8 @@ async function persistIntakeSubmission({ payload, userId, pricing, agreement, on
         leadId: ids.leadId,
         amountMin: pricing.minTotal,
         amountMax: pricing.maxTotal,
-        notes: payload.paymentNotes || DEFAULT_PAYMENT_NOTE,
+        notes: prepareUserPaymentNotes(payload.paymentNotes),
+        notesRedacted: false,
         billingName: payload.billingName,
         billingEmail: payload.billingEmail,
         paymentPreference: payload.paymentPreference,
@@ -118,7 +126,7 @@ async function persistIntakeSubmission({ payload, userId, pricing, agreement, on
   return ids;
 }
 
-export async function createIntake(payload, user) {
+export async function createIntake(payload, user, auditContext = null) {
   if (user) {
     assertProcessingNotRestricted(user);
   }
@@ -133,6 +141,18 @@ export async function createIntake(payload, user) {
     pricing,
     agreement,
     onboarding,
+  });
+
+  await recordAuditEvent({
+    eventType: AUDIT_EVENT_TYPES.INTAKE_SUBMIT,
+    category: AUDIT_CATEGORIES.INTAKE,
+    action: "submit",
+    result: AUDIT_RESULTS.SUCCESS,
+    ...buildActor(user),
+    targetType: "lead",
+    targetId: leadId,
+    request: auditContext,
+    metadata: intakeSubmitMetadata(payload),
   });
 
   return buildIntakeResponse({ payload, pricing, leadId });

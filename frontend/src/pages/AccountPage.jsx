@@ -56,7 +56,7 @@ export default function AccountPage() {
 
   return (
     <div className="min-h-screen bg-[#040816] px-4 py-10 text-white md:px-6 lg:px-8">
-      <div className="mx-auto max-w-6xl">
+      <main id="main-content" className="mx-auto max-w-6xl">
         <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
             <div className="text-sm font-semibold uppercase tracking-[0.2em] text-amber-400">
@@ -96,13 +96,13 @@ export default function AccountPage() {
         </div>
 
         {loading ? (
-          <div className="rounded-[2rem] border border-white/10 bg-white/5 p-8 text-slate-300">
+          <div role="status" className="rounded-[2rem] border border-white/10 bg-white/5 p-8 text-slate-300">
             Loading your matters...
           </div>
         ) : null}
 
         {error ? (
-          <div className="rounded-[2rem] border border-red-500/30 bg-red-500/10 p-8 text-red-300">
+          <div role="alert" className="rounded-[2rem] border border-red-500/30 bg-red-500/10 p-8 text-red-200">
             {error}
           </div>
         ) : null}
@@ -161,7 +161,7 @@ export default function AccountPage() {
             ))}
           </div>
         ) : null}
-      </div>
+      </main>
     </div>
   );
 }

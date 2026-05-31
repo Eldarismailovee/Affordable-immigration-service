@@ -21,6 +21,15 @@ import {
 import { sendEmailVerificationEmail } from "./email.service.js";
 import { createAuthSession } from "./session.service.js";
 import { AppError } from "../utils/appError.js";
+import {
+  AUDIT_AUTH_REASONS,
+  AUDIT_CATEGORIES,
+  AUDIT_EVENT_TYPES,
+  AUDIT_RESULTS,
+} from "../constants/audit.js";
+import { recordAuditEvent } from "./audit.service.js";
+import { emailDomainOnly } from "../utils/auditRedaction.js";
+import { buildActor } from "../utils/auditContext.js";
 
 async function getInitialRole() {
   return (await countUsers()) === 0 ? ADMIN_ROLE : USER_ROLE;
@@ -85,22 +94,80 @@ export async function registerUser(payload, requestContext) {
   return createAuthSession(user, requestContext);
 }
 
-export async function loginUser(payload, requestContext) {
-  const user = await findUserByEmail(payload.email);
+async function auditLoginFailure({ requestContext, user, reasonCode, email }) {
+  await recordAuditEvent({
+    eventType: AUDIT_EVENT_TYPES.AUTH_LOGIN_FAILURE,
+    category: AUDIT_CATEGORIES.AUTH,
+    action: "login",
+    result: AUDIT_RESULTS.FAILURE,
+    targetType: "user",
+    targetId: user?.id ?? null,
+    request: requestContext,
+    reasonCode,
+    metadata: {
+      emailDomain: emailDomainOnly(email),
+    },
+  });
+}
 
-  if (!user || user.status !== ACTIVE_USER_STATUS) {
+export async function loginUser(payload, requestContext) {
+  const email = payload.email.toLowerCase();
+  const user = await findUserByEmail(email);
+  const auditRequest = {
+    requestId: requestContext?.requestId,
+    userAgent: requestContext?.userAgent,
+    ipHash: requestContext?.ipHash,
+  };
+
+  if (!user) {
+    await auditLoginFailure({
+      requestContext: auditRequest,
+      user: null,
+      email,
+      reasonCode: AUDIT_AUTH_REASONS.INVALID_CREDENTIALS,
+    });
+    throw invalidCredentialsError();
+  }
+
+  if (user.status !== ACTIVE_USER_STATUS) {
+    await auditLoginFailure({
+      requestContext: auditRequest,
+      user,
+      email,
+      reasonCode: AUDIT_AUTH_REASONS.DISABLED_USER,
+    });
     throw invalidCredentialsError();
   }
 
   const passwordOk = await verifyPassword(payload.password, user.password_hash);
 
   if (!passwordOk) {
+    await auditLoginFailure({
+      requestContext: auditRequest,
+      user,
+      email,
+      reasonCode: AUDIT_AUTH_REASONS.INVALID_CREDENTIALS,
+    });
     throw invalidCredentialsError();
   }
 
   const safeUser = sanitizeUser(user);
 
-  return createAuthSession(safeUser, requestContext);
+  const session = await createAuthSession(safeUser, requestContext);
+
+  await recordAuditEvent({
+    eventType: AUDIT_EVENT_TYPES.AUTH_LOGIN_SUCCESS,
+    category: AUDIT_CATEGORIES.AUTH,
+    action: "login",
+    result: AUDIT_RESULTS.SUCCESS,
+    ...buildActor(safeUser),
+    targetType: "user",
+    targetId: safeUser.id,
+    request: auditRequest,
+    metadata: { emailDomain: emailDomainOnly(email) },
+  });
+
+  return session;
 }
 
 export async function getUserFromAccessToken(token) {

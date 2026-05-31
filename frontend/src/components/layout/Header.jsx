@@ -23,7 +23,7 @@ export default function Header() {
             />
           ) : (
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-400/40 bg-amber-400/10 text-amber-400">
-              <ShieldCheck className="h-5 w-5" />
+              <ShieldCheck className="h-5 w-5" aria-hidden="true" />
             </div>
           )}
 
@@ -83,16 +83,26 @@ export default function Header() {
         </div>
 
         <button
+          type="button"
           onClick={() => setMenuOpen((prev) => !prev)}
           className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 lg:hidden"
-          aria-label="Toggle navigation"
+          aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"}
+          aria-expanded={menuOpen}
+          aria-controls="mobile-navigation"
         >
-          {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          {menuOpen ? (
+            <X className="h-5 w-5" aria-hidden="true" />
+          ) : (
+            <Menu className="h-5 w-5" aria-hidden="true" />
+          )}
         </button>
       </div>
 
       {menuOpen ? (
-        <div className="border-t border-white/10 bg-slate-950/95 px-4 py-4 shadow-2xl lg:hidden">
+        <div
+          id="mobile-navigation"
+          className="border-t border-white/10 bg-slate-950/95 px-4 py-4 shadow-2xl lg:hidden"
+        >
           <div className="mx-auto grid max-w-7xl gap-2">
             {navigation.map((item) => (
               <a

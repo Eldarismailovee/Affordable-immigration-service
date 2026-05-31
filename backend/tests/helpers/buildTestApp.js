@@ -7,6 +7,7 @@ import {
   buildCookieConsentRepo,
   buildLeadRepo,
   buildOnboardingRepo,
+  buildPaymentRepo,
   buildDsarExportRepo,
   buildDsarRepo,
   buildUserRepo,
@@ -62,6 +63,10 @@ export async function setupTestEnvironment() {
     namedExports: buildOnboardingRepo(store),
   });
 
+  mock.module("../../src/repositories/payment.repository.js", {
+    namedExports: buildPaymentRepo(store),
+  });
+
   mock.module("../../src/repositories/dsar.repository.js", {
     namedExports: buildDsarRepo(store),
   });
@@ -72,6 +77,12 @@ export async function setupTestEnvironment() {
 
   mock.module("../../src/repositories/cookie-consent.repository.js", {
     namedExports: buildCookieConsentRepo(store),
+  });
+
+  mock.module("../../src/repositories/unit-of-work.repository.js", {
+    namedExports: {
+      withUnitOfWork: async (callback) => callback({}),
+    },
   });
 
   mock.module("../../src/middleware/rateLimit.js", {

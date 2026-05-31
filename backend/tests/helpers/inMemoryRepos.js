@@ -15,6 +15,7 @@ export function createInMemoryStore() {
     emailVerificationTokens: new Map(),
     passwordResetTokens: new Map(),
     auditLog: [],
+    auditEvents: [],
     dsarRequests: new Map(),
     dsarEvents: [],
     cookieConsentLogs: [],
@@ -302,7 +303,13 @@ export function buildLeadRepo(store) {
     createBookingRecord: async () => {},
     findLatestIntakeByLeadId: async () => null,
     findLatestBookingByLeadId: async () => null,
-    findLatestPaymentByLeadId: async () => null,
+    findLatestPaymentByLeadId: async (leadId) => {
+      const payments = [...store.payments.values()].filter(
+        (payment) => payment.lead_id === leadId
+      );
+      payments.sort((a, b) => b.created_at - a.created_at);
+      return payments[0] || null;
+    },
     updateIntakeAgreementStatusByLeadId: async () => {},
     updateIntakeDocketwiseStatusByLeadId: async () => {},
     findLatestDocketwiseSyncByLeadId: async () => null,
@@ -448,6 +455,51 @@ export function buildAuditRepo(store) {
     createAdminAuditLog: async (entry) => {
       store.auditLog.push(entry);
     },
+    insertAuditEvent: async (entry) => {
+      store.auditEvents.push({
+        id: entry.id,
+        event_type: entry.eventType,
+        category: entry.category,
+        action: entry.action,
+        result: entry.result,
+        actor_user_id: entry.actorUserId,
+        actor_role: entry.actorRole,
+        target_type: entry.targetType,
+        target_id: entry.targetId,
+        request_id: entry.requestId,
+        ip_hash: entry.ipHash,
+        user_agent: entry.userAgent,
+        reason_code: entry.reasonCode,
+        metadata_json: entry.metadataJson,
+        created_at: new Date(),
+      });
+    },
+    listAuditEvents: async ({
+      eventType,
+      actorUserId,
+      targetType,
+      targetId,
+      limit = 50,
+    } = {}) => {
+      let rows = [...store.auditEvents];
+
+      if (eventType) {
+        rows = rows.filter((row) => row.event_type === eventType);
+      }
+      if (actorUserId) {
+        rows = rows.filter((row) => row.actor_user_id === actorUserId);
+      }
+      if (targetType) {
+        rows = rows.filter((row) => row.target_type === targetType);
+      }
+      if (targetId) {
+        rows = rows.filter((row) => row.target_id === targetId);
+      }
+
+      return rows
+        .sort((a, b) => b.created_at - a.created_at)
+        .slice(0, Math.min(limit, 200));
+    },
   };
 }
 
@@ -532,5 +584,61 @@ export function buildOnboardingRepo(store) {
       packet.updated_at = new Date();
       return packet;
     },
+  };
+}
+
+export function buildPaymentRepo(store) {
+  return {
+    createPaymentRecord: async (payload) => {
+      const row = {
+        id: payload.id,
+        lead_id: payload.leadId,
+        amount_min: payload.amountMin,
+        amount_max: payload.amountMax,
+        status: payload.status || "pending_manual_processing",
+        manual_review: payload.manualReview ?? true,
+        notes: payload.notes || "",
+        notes_redacted: payload.notesRedacted ?? false,
+        billing_name: payload.billingName,
+        billing_email: payload.billingEmail,
+        payment_preference: payload.paymentPreference,
+        consent_manual_processing: Boolean(payload.consentManualProcessing),
+        payment_method: payload.paymentMethod || "payment_link",
+        hosted_payment_url: payload.hostedPaymentUrl || null,
+        provider: payload.provider || null,
+        provider_reference: payload.providerReference || null,
+        created_at: new Date(),
+        updated_at: new Date(),
+      };
+      store.payments.set(row.id, row);
+    },
+    updatePaymentStatusByLeadId: async (leadId, status) => {
+      for (const payment of store.payments.values()) {
+        if (payment.lead_id === leadId) {
+          payment.status = status;
+          payment.updated_at = new Date();
+          return { ...payment };
+        }
+      }
+      return null;
+    },
+    updateHostedPaymentUrlByLeadId: async ({
+      leadId,
+      hostedPaymentUrl,
+      provider,
+      providerReference,
+    }) => {
+      for (const payment of store.payments.values()) {
+        if (payment.lead_id === leadId) {
+          payment.hosted_payment_url = hostedPaymentUrl;
+          if (provider) payment.provider = provider;
+          if (providerReference) payment.provider_reference = providerReference;
+          payment.updated_at = new Date();
+          return { ...payment };
+        }
+      }
+      return null;
+    },
+    updateIntakePaymentStatusByLeadId: async () => {},
   };
 }

@@ -16,6 +16,7 @@ function ConsentToggle({ id, label, description, checked, disabled, onChange }) 
         type="checkbox"
         checked={checked}
         disabled={disabled}
+        aria-label={label}
         onChange={(event) => onChange(event.target.checked)}
         className="mt-1 h-4 w-4 rounded border-white/20 bg-slate-900 text-amber-400 focus:ring-amber-400"
       />
@@ -46,7 +47,7 @@ export default function CookieConsentBanner() {
   return (
     <div
       className="fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-slate-950/95 p-4 shadow-2xl backdrop-blur md:p-6"
-      role="dialog"
+      role="region"
       aria-labelledby="cookie-consent-title"
       aria-describedby="cookie-consent-description"
     >
@@ -112,7 +113,7 @@ export default function CookieConsentBanner() {
             </button>
             <Link
               to="/privacy"
-              className="text-sm text-slate-400 transition hover:text-amber-300 sm:ml-auto"
+              className="text-sm text-slate-300 transition hover:text-amber-300 sm:ml-auto"
             >
               Privacy Policy
             </Link>

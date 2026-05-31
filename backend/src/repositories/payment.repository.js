@@ -1,5 +1,9 @@
 import pool from "../db/pool.js";
 import { query } from "../db/query.js";
+import {
+  DEFAULT_PAYMENT_NOTE,
+  PAYMENT_METHOD_PAYMENT_LINK,
+} from "../constants/payment.js";
 
 export async function createPaymentRecord(
   {
@@ -10,10 +14,15 @@ export async function createPaymentRecord(
     status = "pending_manual_processing",
     manualReview = true,
     notes,
+    notesRedacted = false,
     billingName,
     billingEmail,
     paymentPreference,
     consentManualProcessing,
+    paymentMethod = PAYMENT_METHOD_PAYMENT_LINK,
+    hostedPaymentUrl = null,
+    provider = null,
+    providerReference = null,
   },
   db = pool
 ) {
@@ -27,12 +36,17 @@ export async function createPaymentRecord(
       status,
       manual_review,
       notes,
+      notes_redacted,
       billing_name,
       billing_email,
       payment_preference,
       consent_manual_processing,
+      payment_method,
+      hosted_payment_url,
+      provider,
+      provider_reference,
       updated_at
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW())
     `,
     [
       id,
@@ -41,11 +55,16 @@ export async function createPaymentRecord(
       amountMax,
       status,
       manualReview,
-      notes || "Payment to be processed manually by office",
+      notes || DEFAULT_PAYMENT_NOTE,
+      Boolean(notesRedacted),
       billingName,
       billingEmail,
       paymentPreference,
       Boolean(consentManualProcessing),
+      paymentMethod,
+      hostedPaymentUrl,
+      provider,
+      providerReference,
     ]
   );
 }
@@ -64,14 +83,58 @@ export async function updatePaymentStatusByLeadId(leadId, status, db = pool) {
       status,
       manual_review,
       notes,
+      notes_redacted,
       billing_name,
       billing_email,
       payment_preference,
       consent_manual_processing,
+      payment_method,
+      hosted_payment_url,
+      provider,
+      provider_reference,
       created_at,
       updated_at
     `,
     [leadId, status]
+  );
+
+  return rows[0] || null;
+}
+
+export async function updateHostedPaymentUrlByLeadId(
+  { leadId, hostedPaymentUrl, provider, providerReference },
+  db = pool
+) {
+  const { rows } = await query(db, 
+    `
+    UPDATE payments
+    SET
+      hosted_payment_url = $2,
+      provider = COALESCE($3, provider),
+      provider_reference = COALESCE($4, provider_reference),
+      updated_at = NOW()
+    WHERE lead_id = $1
+    RETURNING
+      id,
+      lead_id,
+      amount_min,
+      amount_max,
+      status,
+      manual_review,
+      notes,
+      notes_redacted,
+      billing_name,
+      billing_email,
+      payment_preference,
+      consent_manual_processing,
+      payment_method,
+      hosted_payment_url,
+      provider,
+      provider_reference,
+      created_at,
+      updated_at
+    `,
+    [leadId, hostedPaymentUrl, provider ?? null, providerReference ?? null]
   );
 
   return rows[0] || null;

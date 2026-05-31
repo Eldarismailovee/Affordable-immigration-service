@@ -43,3 +43,15 @@ test("final intake schema rejects invalid payment preference", () => {
 
   assert.equal(result.success, false);
 });
+
+test("final intake schema rejects card-like paymentNotes", () => {
+  const result = finalIntakeSchema.safeParse({
+    ...validPayload,
+    paymentNotes: "4242424242424242",
+  });
+
+  assert.equal(result.success, false);
+  if (!result.success) {
+    assert.match(result.error.issues[0].message, /card numbers/i);
+  }
+});

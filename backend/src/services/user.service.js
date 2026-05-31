@@ -9,6 +9,14 @@ import {
 import { assertAdminAccess } from "./access.service.js";
 import { userNotFoundError } from "../domain/errors.js";
 import {
+  AUDIT_CATEGORIES,
+  AUDIT_EVENT_TYPES,
+  AUDIT_RESULTS,
+} from "../constants/audit.js";
+import { recordAuditEvent } from "./audit.service.js";
+import { buildActor } from "../utils/auditContext.js";
+import { withUnitOfWork } from "../repositories/unit-of-work.repository.js";
+import {
   assertCanDeleteUser,
   assertCanRemoveAdminRole,
   isAdmin,
@@ -27,7 +35,7 @@ export async function listUsers({ actor }) {
   return users.map(sanitizeUser);
 }
 
-export async function updateUserRole({ userId, role, actor }) {
+export async function updateUserRole({ userId, role, actor, auditContext = null }) {
   assertAdminAccess(actor);
 
   const nextRole = parseUserRole(role);
@@ -43,7 +51,33 @@ export async function updateUserRole({ userId, role, actor }) {
     assertCanRemoveAdminRole({ user: currentUser, nextRole, activeAdminCount });
   }
 
-  return sanitizeUser(await updateUserRoleById(userId, nextRole));
+  const oldRole = currentUser.role;
+
+  const updatedUser = await withUnitOfWork(async (client) => {
+    const updated = await updateUserRoleById(userId, nextRole, client);
+
+    await recordAuditEvent(
+      {
+        eventType: AUDIT_EVENT_TYPES.USER_ROLE_CHANGE,
+        category: AUDIT_CATEGORIES.USER_ADMIN,
+        action: "update_role",
+        result: AUDIT_RESULTS.SUCCESS,
+        ...buildActor(actor),
+        targetType: "user",
+        targetId: userId,
+        request: auditContext,
+        metadata: {
+          oldRole,
+          newRole: nextRole,
+        },
+      },
+      client
+    );
+
+    return updated;
+  });
+
+  return sanitizeUser(updatedUser);
 }
 
 export async function deleteUser({ userId, actor }) {

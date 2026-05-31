@@ -10,6 +10,7 @@ import {
   dsarRequestMutationResponseSchema,
 } from "../schemas/responses/dsar.response.schema.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { getAuditContext } from "../utils/auditContext.js";
 import { sendResponse } from "../utils/sendResponse.js";
 
 export const createDsarRequestController = asyncHandler(async (req, res) => {
@@ -18,6 +19,7 @@ export const createDsarRequestController = asyncHandler(async (req, res) => {
     type: req.body.type,
     message: req.body.message,
     requestedChanges: req.body.requestedChanges,
+    auditContext: getAuditContext(req),
   });
   sendResponse(res, dsarRequestMutationResponseSchema, { request }, 201);
 });

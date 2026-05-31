@@ -22,19 +22,19 @@ export default function Footer() {
 
             <div className="mt-8 space-y-4">
               <div className="flex items-center gap-3 text-slate-200">
-                <Phone className="h-5 w-5 text-amber-400" />
+                <Phone className="h-5 w-5 text-amber-400" aria-hidden="true" />
                 <span>{settings?.phone || "(555) 123-4567"}</span>
               </div>
               <div className="flex items-center gap-3 text-slate-200">
-                <Mail className="h-5 w-5 text-amber-400" />
+                <Mail className="h-5 w-5 text-amber-400" aria-hidden="true" />
                 <span>{settings?.email || "info@immigrationfirm.com"}</span>
               </div>
               <div className="flex items-center gap-3 text-slate-200">
-                <Clock3 className="h-5 w-5 text-amber-400" />
+                <Clock3 className="h-5 w-5 text-amber-400" aria-hidden="true" />
                 <span>Mon–Fri · 9:00 AM–6:00 PM</span>
               </div>
               <div className="flex items-center gap-3 text-slate-200">
-                <MapPin className="h-5 w-5 text-amber-400" />
+                <MapPin className="h-5 w-5 text-amber-400" aria-hidden="true" />
                 <span>{settings?.address || settings?.office_mode || "Zoom / phone only"}</span>
               </div>
             </div>
@@ -60,13 +60,14 @@ export default function Footer() {
                 <Link to="/privacy" className="transition hover:text-amber-300">Privacy Policy</Link>
                 <Link to="/terms" className="transition hover:text-amber-300">Terms of Service</Link>
                 <Link to="/cookie-preferences" className="transition hover:text-amber-300">Cookie Preferences</Link>
+                <Link to="/availability" className="transition hover:text-amber-300">State &amp; Jurisdiction Availability</Link>
                 <Link to="/disclaimer" className="transition hover:text-amber-300">Legal Disclaimer</Link>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="mt-12 border-t border-white/10 pt-6 text-sm text-slate-500">
+        <div className="mt-12 border-t border-white/10 pt-6 text-sm text-slate-400">
           © 2026 {settings?.firm_name || "Immigration Law Firm"}. All rights reserved.
         </div>
       </div>

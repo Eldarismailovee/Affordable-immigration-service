@@ -4,7 +4,7 @@ import { ATTORNEY_REVIEW_TODO, LEGAL_LAST_UPDATED } from "../../data/legalMeta";
 export default function LegalPageLayout({ title, children }) {
   return (
     <div className="min-h-screen bg-[#040816] px-4 py-10 text-white md:px-6 lg:px-8">
-      <div className="mx-auto max-w-5xl">
+      <main id="main-content" className="mx-auto max-w-5xl">
         <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
           <div>
             <div className="text-sm font-semibold uppercase tracking-[0.2em] text-amber-400">
@@ -31,7 +31,7 @@ export default function LegalPageLayout({ title, children }) {
         <div className="space-y-6 rounded-[2rem] border border-white/10 bg-white/5 p-8 text-slate-300">
           {children}
         </div>
-      </div>
+      </main>
     </div>
   );
 }

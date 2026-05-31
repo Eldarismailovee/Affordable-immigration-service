@@ -272,10 +272,15 @@ export async function findLatestPaymentByLeadId(leadId, db = pool) {
       status,
       manual_review,
       notes,
+      notes_redacted,
       billing_name,
       billing_email,
       payment_preference,
       consent_manual_processing,
+      payment_method,
+      hosted_payment_url,
+      provider,
+      provider_reference,
       created_at,
       updated_at
     FROM payments

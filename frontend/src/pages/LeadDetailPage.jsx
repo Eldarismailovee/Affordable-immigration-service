@@ -5,6 +5,7 @@ import {
   generateOnboardingPacketForLead,
   getAdminLeadDetail,
   syncLeadToDocketwise,
+  updateHostedPaymentUrl,
   updatePaymentStatus,
 } from "../services/api";
 import { sanitizeDocumentHtml } from "../utils/sanitizeDocumentHtml";
@@ -42,7 +43,7 @@ function StatusBadge({ value }) {
 function InfoRow({ label, value }) {
   return (
     <div className="grid gap-2 border-b border-white/10 py-3 md:grid-cols-[180px_1fr]">
-      <div className="text-sm text-slate-400">{label}</div>
+      <div className="text-sm text-slate-300">{label}</div>
       <div className="text-sm text-slate-200">{value || "—"}</div>
     </div>
   );
@@ -69,6 +70,8 @@ export default function LeadDetailPage() {
   const [generatingPacket, setGeneratingPacket] = useState(false);
   const [syncingDocketwise, setSyncingDocketwise] = useState(false);
   const [updatingPayment, setUpdatingPayment] = useState(false);
+  const [hostedPaymentUrl, setHostedPaymentUrl] = useState("");
+  const [savingHostedUrl, setSavingHostedUrl] = useState(false);
 
   const loadDetail = useCallback(async () => {
     setLoading(true);
@@ -140,13 +143,32 @@ export default function LeadDetailPage() {
     }
   }
 
+  async function handleSaveHostedPaymentUrl(event) {
+    event.preventDefault();
+    setSavingHostedUrl(true);
+    setError("");
+
+    try {
+      await updateHostedPaymentUrl(leadId, { hostedPaymentUrl: hostedPaymentUrl.trim() });
+      await loadDetail();
+    } catch (err) {
+      setError(err.message || "Failed to save hosted payment URL");
+    } finally {
+      setSavingHostedUrl(false);
+    }
+  }
+
+  useEffect(() => {
+    setHostedPaymentUrl(detail?.payment?.hosted_payment_url || "");
+  }, [detail?.payment?.hosted_payment_url]);
+
   useEffect(() => {
     loadDetail();
   }, [loadDetail]);
 
   return (
     <div className="min-h-screen bg-[#040816] px-4 py-10 text-white md:px-6 lg:px-8">
-      <div className="mx-auto max-w-7xl">
+      <main id="main-content" className="mx-auto max-w-7xl">
         <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
             <div className="text-sm font-semibold uppercase tracking-[0.2em] text-amber-400">
@@ -178,13 +200,13 @@ export default function LeadDetailPage() {
         </div>
 
         {loading ? (
-          <div className="rounded-[2rem] border border-white/10 bg-white/5 p-8 text-slate-300">
+          <div role="status" className="rounded-[2rem] border border-white/10 bg-white/5 p-8 text-slate-300">
             Loading lead detail...
           </div>
         ) : null}
 
         {error ? (
-          <div className="rounded-[2rem] border border-red-500/30 bg-red-500/10 p-8 text-red-300">
+          <div role="alert" className="rounded-[2rem] border border-red-500/30 bg-red-500/10 p-8 text-red-200">
             {error}
           </div>
         ) : null}
@@ -341,6 +363,51 @@ export default function LeadDetailPage() {
                   value={detail.payment?.manual_review ? "Yes" : "No"}
                 />
                 <InfoRow label="Notes" value={detail.payment?.notes} />
+                {detail.payment?.notes_redacted ? (
+                  <InfoRow label="Notes redacted" value="Yes (card-like data removed)" />
+                ) : null}
+                <InfoRow
+                  label="Payment method"
+                  value={detail.payment?.payment_method || "payment_link"}
+                />
+                <InfoRow
+                  label="Hosted payment URL"
+                  value={
+                    detail.payment?.hosted_payment_url ? (
+                      <a
+                        href={detail.payment.hosted_payment_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-amber-300 underline hover:text-amber-200"
+                      >
+                        Pay securely (hosted checkout)
+                      </a>
+                    ) : (
+                      "—"
+                    )
+                  }
+                />
+
+                <form onSubmit={handleSaveHostedPaymentUrl} className="mt-4 space-y-3">
+                  <label className="block text-sm text-slate-300" htmlFor="hosted-payment-url">
+                    Set hosted payment link (HTTPS only)
+                  </label>
+                  <input
+                    id="hosted-payment-url"
+                    type="url"
+                    value={hostedPaymentUrl}
+                    onChange={(e) => setHostedPaymentUrl(e.target.value)}
+                    placeholder="https://checkout.stripe.com/..."
+                    className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm"
+                  />
+                  <button
+                    type="submit"
+                    disabled={savingHostedUrl || !hostedPaymentUrl.trim()}
+                    className="rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-amber-300 disabled:opacity-60"
+                  >
+                    {savingHostedUrl ? "Saving..." : "Save payment link"}
+                  </button>
+                </form>
 
                 <div className="mt-4 flex flex-wrap gap-2">
                   {[
@@ -385,7 +452,7 @@ export default function LeadDetailPage() {
             </div>
           </div>
         ) : null}
-      </div>
+      </main>
     </div>
   );
 }

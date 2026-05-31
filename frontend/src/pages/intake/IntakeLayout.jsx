@@ -3,7 +3,7 @@ import { Outlet } from "react-router-dom";
 export default function IntakeLayout() {
   return (
     <div className="min-h-screen bg-[#040816] text-white">
-      <div className="mx-auto max-w-4xl px-4 py-10 md:px-6">
+      <main id="main-content" className="mx-auto max-w-4xl px-4 py-10 md:px-6">
         <div className="mb-8">
           <a
             href="/"
@@ -22,7 +22,7 @@ export default function IntakeLayout() {
         <div className="rounded-[2rem] border border-white/10 bg-white/5 p-6 md:p-8">
           <Outlet />
         </div>
-      </div>
+      </main>
     </div>
   );
 }

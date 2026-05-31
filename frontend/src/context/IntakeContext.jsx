@@ -18,6 +18,7 @@ const defaultState = {
   billingEmail: "",
   paymentPreference: "invoice",
   consentManualProcessing: false,
+  consentAvailabilityAcknowledgment: false,
   paymentNotes: "",
   agreementPreview: null,
   submissionResult: null,

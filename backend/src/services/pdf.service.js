@@ -39,9 +39,10 @@ async function renderHtmlToPdfBufferUnsafe({ title, html }) {
 
     const fullHtml = `
       <!doctype html>
-      <html>
+      <html lang="en">
         <head>
           <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
           <title>${escapeHtml(title || "Document")}</title>
           <style>
             html, body {
@@ -56,22 +57,50 @@ async function renderHtmlToPdfBufferUnsafe({ title, html }) {
               line-height: 1.6;
               font-size: 14px;
             }
-            h1, h2, h3 {
+            main {
+              max-width: 100%;
+            }
+            h1, h2, h3, h4 {
               color: #111827;
+              margin-top: 1.5em;
+              margin-bottom: 0.5em;
+            }
+            h1:first-child, h2:first-child, h3:first-child {
               margin-top: 0;
             }
             hr {
               border: none;
-              border-top: 1px solid #d1d5db;
+              border-top: 1px solid #374151;
               margin: 20px 0;
             }
-            p, li, div, span {
+            p, li, td, th {
               color: #1f2937;
+            }
+            a {
+              color: #1d4ed8;
+              text-decoration: underline;
+            }
+            table {
+              border-collapse: collapse;
+              width: 100%;
+            }
+            th, td {
+              border: 1px solid #d1d5db;
+              padding: 8px;
+              text-align: left;
+            }
+            th {
+              background: #f3f4f6;
+            }
+            ul, ol {
+              padding-left: 1.5em;
             }
           </style>
         </head>
         <body>
-          ${html || "<p>No content</p>"}
+          <main>
+            ${html || "<p>No content</p>"}
+          </main>
         </body>
       </html>
     `;

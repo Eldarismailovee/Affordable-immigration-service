@@ -107,7 +107,7 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-[#040816] px-4 py-10 text-white md:px-6 lg:px-8">
-      <div className="mx-auto max-w-7xl">
+      <main id="main-content" className="mx-auto max-w-7xl">
         <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
             <div className="text-sm font-semibold uppercase tracking-[0.2em] text-amber-400">
@@ -155,13 +155,13 @@ export default function AdminPage() {
         </div>
 
         {loading ? (
-          <div className="rounded-[2rem] border border-white/10 bg-white/5 p-8 text-slate-300">
+          <div role="status" className="rounded-[2rem] border border-white/10 bg-white/5 p-8 text-slate-300">
             Loading leads...
           </div>
         ) : null}
 
         {error ? (
-          <div className="rounded-[2rem] border border-red-500/30 bg-red-500/10 p-8 text-red-300">
+          <div role="alert" className="rounded-[2rem] border border-red-500/30 bg-red-500/10 p-8 text-red-200">
             {error}
           </div>
         ) : null}
@@ -178,17 +178,17 @@ export default function AdminPage() {
               <table className="min-w-full border-collapse">
                 <thead className="bg-slate-950/60">
                   <tr className="border-b border-white/10 text-left text-sm text-slate-300">
-                    <th className="px-4 py-4 font-medium">Client</th>
-                    <th className="px-4 py-4 font-medium">Contact</th>
-                    <th className="px-4 py-4 font-medium">Package</th>
-                    <th className="px-4 py-4 font-medium">Case type</th>
-                    <th className="px-4 py-4 font-medium">Pricing</th>
-                    <th className="px-4 py-4 font-medium">Agreement</th>
-                    <th className="px-4 py-4 font-medium">Onboarding</th>
-                    <th className="px-4 py-4 font-medium">Booking</th>
-                    <th className="px-4 py-4 font-medium">Payment</th>
-                    <th className="px-4 py-4 font-medium">Docketwise</th>
-                    <th className="px-4 py-4 font-medium">Created</th>
+                    <th scope="col" className="px-4 py-4 font-medium">Client</th>
+                    <th scope="col" className="px-4 py-4 font-medium">Contact</th>
+                    <th scope="col" className="px-4 py-4 font-medium">Package</th>
+                    <th scope="col" className="px-4 py-4 font-medium">Case type</th>
+                    <th scope="col" className="px-4 py-4 font-medium">Pricing</th>
+                    <th scope="col" className="px-4 py-4 font-medium">Agreement</th>
+                    <th scope="col" className="px-4 py-4 font-medium">Onboarding</th>
+                    <th scope="col" className="px-4 py-4 font-medium">Booking</th>
+                    <th scope="col" className="px-4 py-4 font-medium">Payment</th>
+                    <th scope="col" className="px-4 py-4 font-medium">Docketwise</th>
+                    <th scope="col" className="px-4 py-4 font-medium">Created</th>
                   </tr>
                 </thead>
 
@@ -317,7 +317,7 @@ export default function AdminPage() {
             </div>
           </div>
         ) : null}
-      </div>
+      </main>
     </div>
   );
 }

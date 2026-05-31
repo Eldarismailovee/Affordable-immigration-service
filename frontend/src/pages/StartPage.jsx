@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 export default function StartPage() {
   return (
     <div className="min-h-screen bg-[#040816] px-4 py-16 text-white">
-      <div className="mx-auto max-w-3xl rounded-[2rem] border border-white/10 bg-white/5 p-8">
+      <main id="main-content" className="mx-auto max-w-3xl rounded-[2rem] border border-white/10 bg-white/5 p-8">
         <div className="text-sm font-semibold uppercase tracking-[0.2em] text-amber-400">
           Start now
         </div>
@@ -30,7 +30,7 @@ export default function StartPage() {
             Back home
           </Link>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

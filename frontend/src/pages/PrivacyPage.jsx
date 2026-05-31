@@ -1,7 +1,7 @@
 import LegalContactSection from "../components/legal/LegalContactSection";
 import LegalPageLayout from "../components/legal/LegalPageLayout";
 import LegalSection from "../components/legal/LegalSection";
-import { RETENTION_TODO, SUBPROCESSORS_TODO } from "../data/legalMeta";
+import { RETENTION_TODO, SUBPROCESSORS_NOTICE, SUBPROCESSORS_TODO } from "../data/legalMeta";
 import { useSiteSettings } from "../context/SiteSettingsContext";
 
 export default function PrivacyPage() {
@@ -152,17 +152,20 @@ export default function PrivacyPage() {
       </LegalSection>
 
       <LegalSection title="8. Subprocessors / Service Providers">
+        <p>{SUBPROCESSORS_NOTICE}</p>
         <p>
-          We use service providers to support website hosting, database storage, email delivery,
-          document and PDF generation, file uploads, authentication, and security monitoring. These
-          providers process personal information on our behalf under contractual or operational
-          safeguards.
+          These providers may support website hosting, database storage, email delivery, payment
+          coordination through third-party checkout links, document and PDF generation, file
+          uploads, authentication, and security monitoring. They process personal information on
+          our behalf under contractual or operational safeguards where applicable.
         </p>
         <p>Categories of providers may include:</p>
         <ul className="list-disc space-y-2 pl-6">
           <li>Hosting and infrastructure (e.g., web server / reverse proxy)</li>
           <li>Database provider (PostgreSQL)</li>
           <li>Email provider (when configured for production)</li>
+          <li>Payment processor (hosted checkout; card data not collected on this site)</li>
+          <li>Legal workflow / case management tools (when configured)</li>
           <li>Document and PDF generation infrastructure (e.g., headless browser rendering)</li>
           <li>Local or cloud file storage for uploaded documents</li>
           <li>Security and logging tools</li>

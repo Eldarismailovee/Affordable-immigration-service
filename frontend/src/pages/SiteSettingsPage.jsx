@@ -15,21 +15,24 @@ function ImageField({
 
   return (
     <div className="space-y-3 rounded-2xl border border-white/10 bg-slate-950/40 p-4">
-      <div className="text-sm font-medium text-white">{label}</div>
+      <label htmlFor={`${fieldName}-url`} className="block text-sm font-medium text-white">
+        {label}
+      </label>
 
       {value ? (
         <img
           src={value}
-          alt={label}
+          alt=""
           className="h-32 w-full rounded-2xl border border-white/10 object-cover"
         />
       ) : (
-        <div className="flex h-32 items-center justify-center rounded-2xl border border-dashed border-white/10 text-sm text-slate-500">
+        <div className="flex h-32 items-center justify-center rounded-2xl border border-dashed border-white/10 text-sm text-slate-400">
           No image selected
         </div>
       )}
 
       <input
+        id={`${fieldName}-url`}
         type="text"
         name={fieldName}
         value={value || ""}
@@ -39,10 +42,11 @@ function ImageField({
       />
 
       <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white hover:border-amber-400/40 hover:text-amber-300">
+        <span className="sr-only">{label} file upload</span>
         <input
           type="file"
           accept="image/*"
-          className="hidden"
+          className="sr-only"
           onChange={(event) => {
             const file = event.target.files?.[0];
             if (file) {
@@ -127,7 +131,7 @@ export default function SiteSettingsPage() {
 
   return (
     <div className="min-h-screen bg-[#040816] px-4 py-10 text-white md:px-6 lg:px-8">
-      <div className="mx-auto max-w-6xl">
+      <main id="main-content" className="mx-auto max-w-6xl">
         <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
           <div>
             <div className="text-sm font-semibold uppercase tracking-[0.2em] text-amber-400">
@@ -153,51 +157,88 @@ export default function SiteSettingsPage() {
           className="space-y-6 rounded-[2rem] border border-white/10 bg-white/5 p-8"
         >
           <div className="grid gap-4 md:grid-cols-2">
-            <input
-              name="firm_name"
-              value={form.firm_name || ""}
-              onChange={handleChange}
-              className="rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3"
-              placeholder="Firm name"
-            />
-            <input
-              name="phone"
-              value={form.phone || ""}
-              onChange={handleChange}
-              className="rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3"
-              placeholder="Phone"
-            />
-            <input
-              name="email"
-              value={form.email || ""}
-              onChange={handleChange}
-              className="rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3"
-              placeholder="Email"
-            />
-            <input
-              name="office_mode"
-              value={form.office_mode || ""}
-              onChange={handleChange}
-              className="rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3"
-              placeholder="Zoom / phone only"
-            />
-            <input
-              name="address"
-              value={form.address || ""}
-              onChange={handleChange}
-              className="rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 md:col-span-2"
-              placeholder="Address"
-            />
+            <div>
+              <label htmlFor="settings-firm-name" className="mb-1.5 block text-sm font-medium text-slate-200">
+                Firm name
+              </label>
+              <input
+                id="settings-firm-name"
+                name="firm_name"
+                value={form.firm_name || ""}
+                onChange={handleChange}
+                className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3"
+              />
+            </div>
+            <div>
+              <label htmlFor="settings-phone" className="mb-1.5 block text-sm font-medium text-slate-200">
+                Phone
+              </label>
+              <input
+                id="settings-phone"
+                name="phone"
+                type="tel"
+                value={form.phone || ""}
+                onChange={handleChange}
+                className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3"
+                autoComplete="tel"
+              />
+            </div>
+            <div>
+              <label htmlFor="settings-email" className="mb-1.5 block text-sm font-medium text-slate-200">
+                Email
+              </label>
+              <input
+                id="settings-email"
+                name="email"
+                type="email"
+                value={form.email || ""}
+                onChange={handleChange}
+                className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3"
+                autoComplete="email"
+              />
+            </div>
+            <div>
+              <label htmlFor="settings-office-mode" className="mb-1.5 block text-sm font-medium text-slate-200">
+                Office mode
+              </label>
+              <input
+                id="settings-office-mode"
+                name="office_mode"
+                value={form.office_mode || ""}
+                onChange={handleChange}
+                className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3"
+                placeholder="Zoom / phone only"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label htmlFor="settings-address" className="mb-1.5 block text-sm font-medium text-slate-200">
+                Address
+              </label>
+              <input
+                id="settings-address"
+                name="address"
+                value={form.address || ""}
+                onChange={handleChange}
+                className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3"
+                autoComplete="street-address"
+              />
+            </div>
 
-            <select
-              name="language_mode"
-              value={form.language_mode || "english"}
-              onChange={handleChange}
-              className="rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 md:col-span-2"
-            >
-              <option value="english">English only</option>
-              <option value="bilingual">Bilingual</option>
-            </select>
+            <div className="md:col-span-2">
+              <label htmlFor="settings-language-mode" className="mb-1.5 block text-sm font-medium text-slate-200">
+                Language mode
+              </label>
+              <select
+                id="settings-language-mode"
+                name="language_mode"
+                value={form.language_mode || "english"}
+                onChange={handleChange}
+                className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3"
+              >
+                <option value="english">English only</option>
+                <option value="bilingual">Bilingual</option>
+              </select>
+            </div>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
@@ -239,13 +280,13 @@ export default function SiteSettingsPage() {
           </div>
 
           {message ? (
-            <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-emerald-300">
+            <div role="status" className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-emerald-300">
               {message}
             </div>
           ) : null}
 
           {error ? (
-            <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-red-300">
+            <div role="alert" className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-red-200">
               {error}
             </div>
           ) : null}
@@ -258,7 +299,7 @@ export default function SiteSettingsPage() {
             {saving ? "Saving..." : "Save settings"}
           </button>
         </form>
-      </div>
+      </main>
     </div>
   );
 }

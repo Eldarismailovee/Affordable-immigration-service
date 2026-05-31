@@ -20,6 +20,12 @@ import {
 import { findUserById } from "../repositories/user.repository.js";
 import { AppError } from "../utils/appError.js";
 import { logger } from "../lib/logger.js";
+import {
+  AUDIT_CATEGORIES,
+  AUDIT_EVENT_TYPES,
+  AUDIT_RESULTS,
+} from "../constants/audit.js";
+import { recordAuditEvent } from "./audit.service.js";
 
 function getRequestMetadata(requestContext = {}) {
   return {
@@ -122,7 +128,32 @@ export async function refreshAuthSession(refreshToken, requestContext) {
   };
 }
 
-export async function logoutUser(refreshToken) {
-  await revokeRefreshTokenByHash(hashToken(refreshToken));
+export async function logoutUser(refreshToken, { actor = null, auditContext = null } = {}) {
+  const tokenRow = await findRefreshTokenByHash(hashToken(refreshToken));
+
+  if (tokenRow) {
+    await revokeRefreshTokenByHash(hashToken(refreshToken));
+  }
+
+  const actorUserId = actor?.id ?? tokenRow?.user_id ?? null;
+  const actorRole = actor?.role ?? null;
+
+  if (actorUserId) {
+    await recordAuditEvent({
+      eventType: AUDIT_EVENT_TYPES.AUTH_LOGOUT,
+      category: AUDIT_CATEGORIES.AUTH,
+      action: "logout",
+      result: AUDIT_RESULTS.SUCCESS,
+      actorUserId,
+      actorRole,
+      targetType: "user",
+      targetId: actorUserId,
+      request: auditContext,
+      metadata: {
+        sessionId: tokenRow?.id ?? null,
+      },
+    });
+  }
+
   return authMessage("Signed out successfully");
 }

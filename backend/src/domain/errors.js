@@ -51,6 +51,18 @@ export function paymentNotFoundError() {
   return new AppError("Payment record not found", 404, "PAYMENT_NOT_FOUND");
 }
 
+export function paymentCardDataInNotesError() {
+  return new AppError(
+    "Do not enter card numbers or security codes in notes. Please use the secure payment link.",
+    400,
+    "PAYMENT_CARD_DATA_IN_NOTES"
+  );
+}
+
+export function invalidHostedPaymentUrlError(message = "Invalid hosted payment URL") {
+  return new AppError(message, 400, "INVALID_HOSTED_PAYMENT_URL");
+}
+
 export function intakeNotFoundError() {
   return new AppError(
     "Intake record not found for this lead",

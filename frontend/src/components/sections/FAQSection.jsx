@@ -19,6 +19,7 @@ export default function FAQSection() {
         {faq.map((item, index) => (
           <FaqItem
             key={item.question}
+            id={`faq-item-${index}`}
             question={item.question}
             answer={item.answer}
             open={openIndex === index}

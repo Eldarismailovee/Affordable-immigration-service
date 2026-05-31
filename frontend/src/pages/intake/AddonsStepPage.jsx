@@ -21,22 +21,33 @@ export default function AddonsStepPage() {
       </p>
 
       <div className="mt-8 grid gap-4">
-        <input
-          type="number"
-          min="0"
-          value={intake.additionalI130Count}
-          onChange={(e) => updateField("additionalI130Count", e.target.value)}
-          className="rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3"
-          placeholder="Additional I-130 count"
-        />
-
-        <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3">
+        <div>
+          <label htmlFor="intake-i130-count" className="mb-1.5 block text-sm font-medium text-slate-200">
+            Additional I-130 count
+          </label>
           <input
+            id="intake-i130-count"
+            name="additionalI130Count"
+            type="number"
+            min="0"
+            value={intake.additionalI130Count}
+            onChange={(e) => updateField("additionalI130Count", e.target.value)}
+            className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3"
+          />
+        </div>
+
+        <label
+          htmlFor="intake-expedited"
+          className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3"
+        >
+          <input
+            id="intake-expedited"
+            name="expedited"
             type="checkbox"
             checked={intake.expedited}
             onChange={(e) => updateField("expedited", e.target.checked)}
           />
-          Expedited processing (+$500)
+          <span className="text-slate-200">Expedited processing (+$500)</span>
         </label>
       </div>
 

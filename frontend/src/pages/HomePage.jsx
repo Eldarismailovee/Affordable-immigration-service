@@ -12,7 +12,7 @@ export default function HomePage() {
     <div className="min-h-screen bg-[#040816] text-white">
       <div className="fixed inset-0 -z-20 bg-[radial-gradient(circle_at_top,rgba(30,64,175,0.25),transparent_28%),radial-gradient(circle_at_bottom,rgba(245,158,11,0.10),transparent_24%),linear-gradient(180deg,#09142d_0%,#040816_55%,#030612_100%)]" />
       <Header />
-      <main id="top">
+      <main id="main-content">
         <HeroSection />
         <HowItWorksSection />
         <PricingSection />

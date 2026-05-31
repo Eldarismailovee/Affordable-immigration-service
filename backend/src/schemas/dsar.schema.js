@@ -5,6 +5,10 @@ import {
   DSAR_STATUSES,
 } from "../constants/dsar.js";
 import { uuidSchema } from "../domain/validators.js";
+import {
+  adminFreeTextNotesSchema,
+  rejectPaymentCardData,
+} from "./payment-notes.schema.js";
 
 export const dsarRequestIdParamsSchema = z.object({
   requestId: uuidSchema,
@@ -13,7 +17,13 @@ export const dsarRequestIdParamsSchema = z.object({
 export const createDsarRequestSchema = z
   .object({
     type: z.enum(DSAR_REQUEST_TYPES),
-    message: z.string().trim().min(1).max(4000).optional(),
+    message: z
+      .string()
+      .trim()
+      .min(1)
+      .max(4000)
+      .optional()
+      .superRefine(rejectPaymentCardData),
     requestedChanges: z.record(z.string(), z.unknown()).optional(),
   })
   .strict()
@@ -30,7 +40,7 @@ export const createDsarRequestSchema = z
 export const adminIdentityVerificationSchema = z
   .object({
     status: z.enum(DSAR_IDENTITY_STATUSES),
-    notes: z.string().trim().max(4000).optional(),
+    notes: adminFreeTextNotesSchema,
   })
   .strict();
 
@@ -51,7 +61,7 @@ export const adminCorrectionActionSchema = z
       })
       .strict()
       .optional(),
-    notes: z.string().trim().max(4000).optional(),
+    notes: adminFreeTextNotesSchema,
   })
   .strict()
   .refine((data) => data.userFields || data.leadFields, {
@@ -62,7 +72,7 @@ export const adminLegalHoldSchema = z
   .object({
     legalHold: z.boolean(),
     reason: z.string().trim().min(1).max(4000).optional(),
-    notes: z.string().trim().max(4000).optional(),
+    notes: adminFreeTextNotesSchema,
   })
   .strict()
   .superRefine((data, ctx) => {
@@ -78,7 +88,7 @@ export const adminLegalHoldSchema = z
 export const adminStatusUpdateSchema = z
   .object({
     status: z.enum(DSAR_STATUSES),
-    notes: z.string().trim().max(4000).optional(),
+    notes: adminFreeTextNotesSchema,
   })
   .strict();
 

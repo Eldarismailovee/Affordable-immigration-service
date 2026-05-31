@@ -12,7 +12,7 @@ export default function HeroSection() {
   ];
 
   return (
-    <section className="relative overflow-hidden">
+    <section id="top" className="relative overflow-hidden">
       <div
         className="absolute inset-0 -z-20 bg-cover bg-center opacity-30"
         style={{ backgroundImage: `url('${settings?.hero_image_url || "/images/la-skyline.jpg"}')` }}

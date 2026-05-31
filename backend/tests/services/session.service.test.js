@@ -39,6 +39,14 @@ async function loadSessionService(t, { userRepo = {}, authTokenRepo = {} } = {})
     },
   });
 
+  t.mock.module("../../src/services/audit.service.js", {
+    namedExports: {
+      recordAuditEvent: async () => {},
+      recordAdminAction: async () => {},
+      listAdminAuditEvents: async () => [],
+    },
+  });
+
   return import(`../../src/services/session.service.js?case=${Math.random()}`);
 }
 
@@ -168,6 +176,10 @@ test("logoutUser revokes the supplied refresh token by hash", async (t) => {
   const calls = [];
   const { logoutUser } = await loadSessionService(t, {
     authTokenRepo: {
+      findRefreshTokenByHash: async () => ({
+        id: "rt-1",
+        user_id: "user-1",
+      }),
       revokeRefreshTokenByHash: async (hash) => {
         calls.push(hash);
         return null;

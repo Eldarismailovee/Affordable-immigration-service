@@ -30,6 +30,8 @@ const CONFIG_KEYS = [
   "UPLOAD_VIRUS_SCAN_ENABLED",
   "UPLOAD_VIRUS_SCAN_COMMAND",
   "UPLOAD_VIRUS_SCAN_TIMEOUT_MS",
+  "TECHNICAL_LOG_RETENTION_DAYS",
+  "SECURITY_AUDIT_RETENTION_DAYS",
 ];
 
 function withConfigEnv(overrides) {
@@ -151,4 +153,16 @@ test("env parses upload security settings", async () => {
   assert.equal(env.UPLOAD_VIRUS_SCAN_ENABLED, true);
   assert.equal(env.UPLOAD_VIRUS_SCAN_COMMAND, "clamdscan");
   assert.equal(env.UPLOAD_VIRUS_SCAN_TIMEOUT_MS, 15000);
+});
+
+test("env applies default log retention windows", async () => {
+  const { default: env } = await importEnvWith(
+    validProductionEnv({
+      TECHNICAL_LOG_RETENTION_DAYS: "",
+      SECURITY_AUDIT_RETENTION_DAYS: "",
+    })
+  );
+
+  assert.equal(env.TECHNICAL_LOG_RETENTION_DAYS, 90);
+  assert.equal(env.SECURITY_AUDIT_RETENTION_DAYS, 365);
 });

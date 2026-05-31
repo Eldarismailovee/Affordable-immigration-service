@@ -23,10 +23,16 @@ export default function PackageStepPage() {
   return (
     <div>
       <div className="text-sm uppercase tracking-[0.18em] text-amber-400">Step 1</div>
-      <h2 className="mt-2 text-3xl font-semibold">Choose your package</h2>
+      <h2 id="package-step-title" className="mt-2 text-3xl font-semibold">
+        Choose your package
+      </h2>
       <p className="mt-3 text-slate-300">Select the level of attorney support you need.</p>
 
-      <div className="mt-8 grid gap-4 md:grid-cols-2">
+      <div
+        role="radiogroup"
+        aria-labelledby="package-step-title"
+        className="mt-8 grid gap-4 md:grid-cols-2"
+      >
         {packages.map((item) => {
           const selected = intake.selectedPackage === item.id;
 
@@ -34,6 +40,8 @@ export default function PackageStepPage() {
             <button
               key={item.id}
               type="button"
+              role="radio"
+              aria-checked={selected}
               onClick={() => updateField("selectedPackage", item.id)}
               className={`rounded-3xl border p-5 text-left transition ${
                 selected

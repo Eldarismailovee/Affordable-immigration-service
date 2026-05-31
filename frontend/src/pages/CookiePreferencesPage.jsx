@@ -17,6 +17,7 @@ function ConsentToggle({ id, label, description, checked, disabled, onChange }) 
         type="checkbox"
         checked={checked}
         disabled={disabled}
+        aria-label={label}
         onChange={(event) => onChange(event.target.checked)}
         className="mt-1 h-4 w-4 rounded border-white/20 bg-slate-900 text-amber-400 focus:ring-amber-400"
       />
@@ -38,6 +39,8 @@ export default function CookiePreferencesPage() {
     const current = consent || getConsent();
 
     if (current) {
+      // Sync editable toggles when stored consent loads or changes.
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- mirrors external consent storage
       setAnalytics(Boolean(current.analytics));
       setMarketing(Boolean(current.marketing));
     }
@@ -57,7 +60,7 @@ export default function CookiePreferencesPage() {
 
   return (
     <div className="min-h-screen bg-[#040816] px-4 py-10 text-white md:px-6 lg:px-8">
-      <div className="mx-auto max-w-3xl">
+      <main id="main-content" className="mx-auto max-w-3xl">
         <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
           <div>
             <div className="text-sm font-semibold uppercase tracking-[0.2em] text-amber-400">
@@ -116,7 +119,7 @@ export default function CookiePreferencesPage() {
             </p>
           ) : null}
 
-          <p className="text-sm leading-7 text-slate-400">
+          <p className="text-sm leading-7 text-slate-300">
             Read more in our{" "}
             <Link to="/privacy" className="text-amber-300 hover:text-amber-200">
               Privacy Policy
@@ -129,7 +132,7 @@ export default function CookiePreferencesPage() {
             by privacy counsel before production launch.
           </p>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

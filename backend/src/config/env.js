@@ -1,5 +1,9 @@
 import dotenv from "dotenv";
 import { z } from "zod";
+import {
+  SECURITY_AUDIT_RETENTION_DAYS,
+  TECHNICAL_LOG_RETENTION_DAYS,
+} from "../constants/retention.js";
 
 dotenv.config();
 
@@ -102,6 +106,27 @@ const optionalPasswordSchema = z
   .preprocess(emptyToUndefined, z.string().min(12).optional())
   .transform((value) => value || "");
 
+const paymentHostAllowlistSchema = z.preprocess((value) => {
+  const normalizedValue = emptyToUndefined(value);
+
+  if (normalizedValue === undefined) {
+    return [];
+  }
+
+  if (Array.isArray(normalizedValue)) {
+    return normalizedValue;
+  }
+
+  if (typeof normalizedValue === "string") {
+    return normalizedValue
+      .split(",")
+      .map((entry) => entry.trim().toLowerCase())
+      .filter(Boolean);
+  }
+
+  return normalizedValue;
+}, z.array(z.string().trim().min(1)).default([]));
+
 const corsOriginsSchema = z.preprocess((value) => {
   const normalizedValue = emptyToUndefined(value);
 
@@ -155,6 +180,15 @@ const rawEnvSchema = z.object({
   UPLOAD_VIRUS_SCAN_ENABLED: booleanEnv(false),
   UPLOAD_VIRUS_SCAN_COMMAND: stringEnv("clamdscan"),
   UPLOAD_VIRUS_SCAN_TIMEOUT_MS: integerEnv(10000, z.number().int().min(1000)),
+  PAYMENT_HOST_ALLOWLIST: paymentHostAllowlistSchema,
+  TECHNICAL_LOG_RETENTION_DAYS: integerEnv(
+    TECHNICAL_LOG_RETENTION_DAYS,
+    z.number().int().min(1).max(3650)
+  ),
+  SECURITY_AUDIT_RETENTION_DAYS: integerEnv(
+    SECURITY_AUDIT_RETENTION_DAYS,
+    z.number().int().min(1).max(3650)
+  ),
 });
 
 const parsedEnv = rawEnvSchema.safeParse(process.env);

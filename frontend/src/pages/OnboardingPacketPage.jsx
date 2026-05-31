@@ -45,7 +45,7 @@ export default function OnboardingPacketPage() {
 
   return (
     <div className="min-h-screen bg-[#040816] px-4 py-10 text-white md:px-6">
-      <div className="mx-auto max-w-5xl">
+      <main id="main-content" className="mx-auto max-w-5xl">
         <div className="mb-8 flex items-center justify-between gap-4">
           <div>
             <div className="text-sm font-semibold uppercase tracking-[0.2em] text-amber-400">
@@ -90,24 +90,25 @@ export default function OnboardingPacketPage() {
         </div>
 
         {loading ? (
-          <div className="rounded-[2rem] border border-white/10 bg-white/5 p-8 text-slate-300">
+          <div role="status" className="rounded-[2rem] border border-white/10 bg-white/5 p-8 text-slate-300">
             Loading onboarding packet...
           </div>
         ) : null}
 
         {error ? (
-          <div className="rounded-[2rem] border border-red-500/30 bg-red-500/10 p-8 text-red-300">
+          <div role="alert" className="rounded-[2rem] border border-red-500/30 bg-red-500/10 p-8 text-red-200">
             {error}
           </div>
         ) : null}
 
         {!loading && !error && packet ? (
-          <div
+          <article
             className="prose prose-invert max-w-none rounded-[2rem] border border-white/10 bg-white/5 p-8"
+            aria-label="Onboarding packet content"
             dangerouslySetInnerHTML={{ __html: sanitizeDocumentHtml(packet.html_content) }}
           />
         ) : null}
-      </div>
+      </main>
     </div>
   );
 }

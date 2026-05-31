@@ -272,6 +272,13 @@ export async function updatePaymentStatus(leadId, status) {
   });
 }
 
+export async function updateHostedPaymentUrl(leadId, payload) {
+  return request(`/admin/payments/${leadId}/hosted-url`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function getSiteSettings() {
   return request("/public/site-settings");
 }

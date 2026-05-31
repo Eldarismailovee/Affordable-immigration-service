@@ -15,6 +15,7 @@ import {
   assertPacketIsDraft,
 } from "../domain/packet.policy.js";
 import { AppError } from "../utils/appError.js";
+import { textForAdminStorage } from "./payment-notes.service.js";
 
 export async function approveAgreementPacket({ leadId, actor, reviewNotes }) {
   assertAttorneyCanApprovePacket(actor);
@@ -30,7 +31,7 @@ export async function approveAgreementPacket({ leadId, actor, reviewNotes }) {
   const approved = await approveAgreementByLeadId({
     leadId,
     approvedBy: actor.id,
-    reviewNotes,
+    reviewNotes: reviewNotes ? textForAdminStorage(reviewNotes) : null,
   });
 
   if (!approved) {
@@ -54,7 +55,7 @@ export async function approveOnboardingPacket({ leadId, actor, reviewNotes }) {
   const approved = await approveOnboardingPacketByLeadId({
     leadId,
     approvedBy: actor.id,
-    reviewNotes,
+    reviewNotes: reviewNotes ? textForAdminStorage(reviewNotes) : null,
   });
 
   if (!approved) {
