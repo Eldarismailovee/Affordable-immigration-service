@@ -1,89 +1,90 @@
-# WCAG 2.2 AA Manual QA Checklist
+# WCAG 2.2 AA Checklist
 
-Target: practical accessibility improvements oriented toward **WCAG 2.2 AA**. Automated fixes and linting reduce obvious issues, but **do not replace manual verification**.
+## Status
 
-> **TODO:** Run manual screen reader + keyboard QA before claiming WCAG 2.2 AA conformance.
+- Target: WCAG 2.2 AA
+- Date: May 31, 2026
+- Owner: Engineering / product
+- Status: In progress
+- Note: Manual QA required before conformance claim.
 
-> **TODO:** Validate generated PDFs with Acrobat Accessibility Checker or equivalent PDF/UA tooling before claiming accessible PDF compliance.
+> **TODO:** Run manual keyboard, screen reader, contrast, and PDF accessibility QA before making any formal WCAG 2.2 AA conformance claim.
 
-## Before you start
+## Forms and labels
 
-- Use latest frontend build (`cd frontend && npm run build && npm run preview`)
-- Test in Chrome/Firefox with keyboard only (unplug mouse or avoid pointer)
-- Test with at least one screen reader (VoiceOver on macOS, NVDA on Windows)
+- [ ] Every input has accessible name.
+- [ ] Visible labels exist where practical.
+- [ ] Placeholder is not the only label.
+- [ ] Required fields are marked visually and programmatically.
+- [ ] Help/error text connected with `aria-describedby`.
+- [ ] Errors use `aria-invalid` and are announced.
 
-## Keyboard-only navigation
+## Keyboard
 
-- [ ] Skip link appears on Tab and moves focus to `#main-content`
-- [ ] All header links, mobile menu toggle, and menu items are reachable and activatable
-- [ ] Cookie banner: Accept all, Reject optional, Manage preferences, and Privacy link work with keyboard
-- [ ] Login / register forms: Tab order is logical; submit works with Enter
-- [ ] Full intake flow (package → client → case → add-ons → agreement preview → booking → success) works without mouse
-- [ ] FAQ accordion toggles with Enter/Space; focus remains visible
-- [ ] Admin tables and action buttons are reachable
-- [ ] No keyboard traps in cookie banner, mobile menu, or document pages
+- [ ] All interactive controls reachable by Tab.
+- [ ] Enter/Space activates buttons.
+- [ ] No keyboard traps.
+- [ ] Modals trap focus and restore focus.
+- [ ] Skip link works.
+- [ ] Focus order follows visual/logical order.
 
-## Screen reader pass
+## Focus
 
-- [ ] Page title updates per route (check browser tab / screen reader announcement)
-- [ ] Landmarks announced: `main`, `nav`, `footer`, legal page structure
-- [ ] Form fields have audible names (not placeholder-only)
-- [ ] Login/register/intake validation errors announced (`role="alert"`)
-- [ ] Cookie preference save confirmation announced (`role="status"`)
-- [ ] FAQ expanded/collapsed state announced (`aria-expanded`)
-- [ ] Package selection announced as radio group
-- [ ] Icon-only controls have accessible names (mobile menu button)
-- [ ] Document HTML views (agreement/onboarding) have meaningful region labels
-
-## Zoom and reflow
-
-- [ ] Zoom browser to **200%** — content readable without horizontal scrolling on key pages
-- [ ] Test at **320px** viewport width — intake and auth forms remain usable
-- [ ] Sticky header does not fully obscure focused elements
+- [ ] Visible focus indicator exists.
+- [ ] Focus indicator has adequate contrast.
+- [ ] Focus is not hidden under sticky UI.
+- [ ] Focus appearance meets WCAG 2.2 target where practical.
 
 ## Contrast
 
-- [ ] Body text and button labels meet **4.5:1** against background (spot-check with browser devtools or contrast checker)
-- [ ] Large headings meet **3:1** minimum
-- [ ] Focus ring visible on buttons, links, inputs (amber outline)
-- [ ] Error messages are not conveyed by color alone (text + border/background)
+- [ ] Normal text at least 4.5:1.
+- [ ] Large text at least 3:1.
+- [ ] UI component boundaries/focus indicators at least 3:1.
+- [ ] Errors are not color-only.
 
-## Forms and errors
+## Screen reader
 
-- [ ] Required fields have visible labels and programmatic names
-- [ ] Booking step payment notes help text associated via `aria-describedby`
-- [ ] Submit errors on booking/login/register are announced once, not on every keystroke
-- [ ] File upload on site settings has keyboard-accessible control
+- [ ] Page has one main landmark.
+- [ ] Headings are meaningful and ordered.
+- [ ] Icon-only buttons have accessible names.
+- [ ] Status messages use `aria-live` / `role` where appropriate.
+- [ ] Form error summary links to fields.
 
-## Modals, menus, and status
+## PDFs
 
-- [ ] Mobile navigation opens/closes; focus not trapped incorrectly
-- [ ] Cookie banner does not block entire page unless intended
-- [ ] Async loading states do not spam live regions
+- [ ] Generated PDF source HTML has semantic headings.
+- [ ] PDF has title/language where possible.
+- [ ] Images have alt text or are decorative.
+- [ ] Tables are semantic where possible.
+- [ ] Accessible HTML alternative exists or is planned.
+- [ ] PDF/UA validation TODO documented.
 
-## PDF accessibility
+## Manual QA
 
-- [ ] Download agreement/onboarding PDF and run **Acrobat Accessibility Checker** (or PAC/PDF/UA validator)
-- [ ] Confirm document title and reading order in PDF viewer
-- [ ] Compare with in-app HTML view as accessible alternative
-- [ ] Note: Puppeteer-generated PDFs may not be fully tagged PDF/UA without additional remediation
+- [ ] Keyboard-only walkthrough.
+- [ ] NVDA/VoiceOver smoke test.
+- [ ] 200% zoom/reflow.
+- [ ] Contrast audit.
+- [ ] Generated PDF accessibility check.
 
 ## Automated checks (dev)
 
 ```bash
 cd frontend
-npm run lint    # includes eslint-plugin-jsx-a11y recommended rules
+npm run lint    # eslint-plugin-jsx-a11y recommended rules
 npm test
 npm run build
 ```
 
+See also: [keyboard-test-plan.md](./keyboard-test-plan.md), [contrast-test-notes.md](./contrast-test-notes.md), [generated-pdf-accessibility-notes.md](./generated-pdf-accessibility-notes.md).
+
 ## Sign-off
 
-| Area              | Tester | Date | Pass/Fail | Notes |
-|-------------------|--------|------|-----------|-------|
-| Keyboard          |        |      |           |       |
-| Screen reader     |        |      |           |       |
-| Zoom/reflow       |        |      |           |       |
-| Contrast          |        |      |           |       |
-| Forms/errors      |        |      |           |       |
-| PDFs              |        |      |           |       |
+| Area          | Tester | Date | Pass/Fail | Notes |
+|---------------|--------|------|-----------|-------|
+| Keyboard      |        |      |           |       |
+| Screen reader |        |      |           |       |
+| Zoom/reflow   |        |      |           |       |
+| Contrast      |        |      |           |       |
+| Forms/errors  |        |      |           |       |
+| PDFs          |        |      |           |       |

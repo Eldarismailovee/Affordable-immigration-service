@@ -43,10 +43,19 @@ test("cookieConsentLogSchema accepts preferences source", () => {
   assert.equal(result.success, true);
 });
 
-test("cookieConsentLogSchema rejects invalid anonymousId", () => {
+test("cookieConsentLogSchema accepts gpc source", () => {
   const result = cookieConsentLogSchema.safeParse({
     ...validPayload,
-    anonymousId: "not-a-uuid",
+    source: "gpc",
+    gpcActive: true,
   });
-  assert.equal(result.success, false);
+  assert.equal(result.success, true);
+});
+
+test("cookieConsentLogSchema accepts gpcActive flag", () => {
+  const result = cookieConsentLogSchema.safeParse({
+    ...validPayload,
+    gpcActive: true,
+  });
+  assert.equal(result.success, true);
 });

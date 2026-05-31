@@ -1,11 +1,23 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import {
   generateAgreementForLead,
   generateOnboardingPacketForLead,
   getAdminLeads,
   syncLeadToDocketwise,
 } from "../services/api";
+
+const LEAD_STATUSES = [
+  "all",
+  "new",
+  "conflict_check",
+  "attorney_review",
+  "accepted",
+  "engaged",
+  "declined",
+  "filed",
+];
 
 function formatDate(value) {
   if (!value) return "—";
@@ -38,7 +50,10 @@ function StatusBadge({ value }) {
 }
 
 export default function AdminPage() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const [leads, setLeads] = useState([]);
+  const [statusFilter, setStatusFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [generatingLeadId, setGeneratingLeadId] = useState("");
@@ -105,24 +120,43 @@ export default function AdminPage() {
     loadLeads();
   }, []);
 
+  const filteredLeads = useMemo(() => {
+    if (statusFilter === "all") return leads;
+    return leads.filter((lead) => lead.status === statusFilter);
+  }, [leads, statusFilter]);
+
   return (
     <div className="min-h-screen bg-[#040816] px-4 py-10 text-white md:px-6 lg:px-8">
       <main id="main-content" className="mx-auto max-w-7xl">
         <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
             <div className="text-sm font-semibold uppercase tracking-[0.2em] text-amber-400">
-              Admin
+              {isAdmin ? "Admin" : "Attorney"}
             </div>
             <h1 className="mt-2 text-4xl font-semibold tracking-tight">
               Leads dashboard
             </h1>
             <p className="mt-3 max-w-2xl text-slate-300">
-              View new leads, submitted intake records, selected packages,
-              pricing ranges, and workflow statuses.
+              View leads by workflow status, conflict check stage, and document approvals.
             </p>
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
+            <label htmlFor="admin-status-filter" className="flex items-center gap-2 text-sm text-slate-300">
+              Filter status
+              <select
+                id="admin-status-filter"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="rounded-full border border-white/10 bg-slate-950/70 px-4 py-2 text-white"
+              >
+                {LEAD_STATUSES.map((status) => (
+                  <option key={status} value={status}>
+                    {status === "all" ? "All statuses" : status.replace(/_/g, " ")}
+                  </option>
+                ))}
+              </select>
+            </label>
             <Link
               to="/"
               className="rounded-full border border-white/15 bg-white/5 px-5 py-3 font-semibold text-white transition hover:border-amber-400/40 hover:text-amber-300"
@@ -131,18 +165,29 @@ export default function AdminPage() {
             </Link>
 
             <Link
-              to="/admin/users"
+              to="/admin/privacy-requests"
               className="rounded-full border border-white/15 bg-white/5 px-5 py-3 font-semibold text-white transition hover:border-amber-400/40 hover:text-amber-300"
             >
-              Users
+              Privacy requests
             </Link>
 
-            <Link
-              to="/admin/settings"
-              className="rounded-full border border-white/15 bg-white/5 px-5 py-3 font-semibold text-white transition hover:border-amber-400/40 hover:text-amber-300"
-            >
-              Site settings
-            </Link>
+            {isAdmin ? (
+              <Link
+                to="/admin/users"
+                className="rounded-full border border-white/15 bg-white/5 px-5 py-3 font-semibold text-white transition hover:border-amber-400/40 hover:text-amber-300"
+              >
+                Users
+              </Link>
+            ) : null}
+
+            {isAdmin ? (
+              <Link
+                to="/admin/settings"
+                className="rounded-full border border-white/15 bg-white/5 px-5 py-3 font-semibold text-white transition hover:border-amber-400/40 hover:text-amber-300"
+              >
+                Site settings
+              </Link>
+            ) : null}
 
             <button
               type="button"
@@ -166,18 +211,19 @@ export default function AdminPage() {
           </div>
         ) : null}
 
-        {!loading && !error && leads.length === 0 ? (
+        {!loading && !error && filteredLeads.length === 0 ? (
           <div className="rounded-[2rem] border border-white/10 bg-white/5 p-8 text-slate-300">
-            No leads found yet.
+            No leads found for this filter.
           </div>
         ) : null}
 
-        {!loading && !error && leads.length > 0 ? (
+        {!loading && !error && filteredLeads.length > 0 ? (
           <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/5">
             <div className="overflow-x-auto">
               <table className="min-w-full border-collapse">
                 <thead className="bg-slate-950/60">
                   <tr className="border-b border-white/10 text-left text-sm text-slate-300">
+                    <th scope="col" className="px-4 py-4 font-medium">Status</th>
                     <th scope="col" className="px-4 py-4 font-medium">Client</th>
                     <th scope="col" className="px-4 py-4 font-medium">Contact</th>
                     <th scope="col" className="px-4 py-4 font-medium">Package</th>
@@ -193,11 +239,14 @@ export default function AdminPage() {
                 </thead>
 
                 <tbody>
-                  {leads.map((lead) => (
+                  {filteredLeads.map((lead) => (
                     <tr
                       key={lead.id}
                       className="border-b border-white/10 align-top text-sm text-slate-200"
                     >
+                      <td className="px-4 py-4">
+                        <StatusBadge value={lead.status} />
+                      </td>
                       <td className="px-4 py-4">
                         <div className="font-semibold text-white">
                           {lead.first_name} {lead.last_name}

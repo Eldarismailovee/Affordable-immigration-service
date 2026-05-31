@@ -10,17 +10,17 @@ const USER = { id: "user-1", role: "user" };
 const ATTORNEY = { id: "attorney-1", role: "attorney" };
 
 test("canAccessLead allows admins to read any lead", () => {
-  assert.equal(canAccessLead(ADMIN, { id: "lead-1", user_id: "other", status: "prospective" }), true);
+  assert.equal(canAccessLead(ADMIN, { id: "lead-1", user_id: "other", status: "new" }), true);
 });
 
-test("canAccessLead allows attorneys to read workflow leads only", () => {
+test("canAccessLead allows attorneys to read workflow leads", () => {
   assert.equal(
     canAccessLead(ATTORNEY, { id: "lead-1", user_id: "other", status: "attorney_review" }),
     true
   );
   assert.equal(
-    canAccessLead(ATTORNEY, { id: "lead-2", user_id: "other", status: "prospective" }),
-    false
+    canAccessLead(ATTORNEY, { id: "lead-2", user_id: "other", status: "new" }),
+    true
   );
 });
 

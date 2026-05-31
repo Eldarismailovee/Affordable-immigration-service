@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
 import { NEW_LEAD_STATUS } from "../constants/domain.js";
-import { createAgreement } from "../repositories/agreement.repository.js";
+import { evaluateJurisdictionAvailability } from "../constants/jurisdictionAvailability.js";
 import { createDocketwiseSyncRecord } from "../repositories/docketwise.repository.js";
 import { isAttorney } from "../domain/user.policy.js";
 import {
@@ -9,15 +9,12 @@ import {
   createLead,
   listLeadSummaries,
 } from "../repositories/lead.repository.js";
-import { createOnboardingPacket } from "../repositories/onboarding.repository.js";
 import { createPaymentRecord } from "../repositories/payment.repository.js";
 import { withUnitOfWork } from "../repositories/unit-of-work.repository.js";
 import { calculatePricing } from "../utils/pricingCalculator.js";
 import { buildIntakeResponse } from "../utils/intakeResponse.js";
-import { generateAgreement } from "./agreement.service.js";
 import { assertProcessingNotRestricted } from "../domain/processing.policy.js";
 import { assertStaffAccess } from "./access.service.js";
-import { generateOnboardingPacket } from "./onboarding.service.js";
 import { prepareUserPaymentNotes } from "./payment-notes.service.js";
 import {
   AUDIT_CATEGORIES,
@@ -27,13 +24,12 @@ import {
 import { recordAuditEvent } from "./audit.service.js";
 import { intakeSubmitMetadata } from "../utils/auditRedaction.js";
 import { buildActor } from "../utils/auditContext.js";
+import { AppError } from "../utils/appError.js";
 
-async function persistIntakeSubmission({ payload, userId, pricing, agreement, onboarding }) {
+async function persistIntakeSubmission({ payload, userId, pricing }) {
   const ids = {
     leadId: randomUUID(),
     intakeId: randomUUID(),
-    agreementId: randomUUID(),
-    onboardingId: randomUUID(),
     bookingId: randomUUID(),
     paymentId: randomUUID(),
     docketwiseSyncId: randomUUID(),
@@ -64,26 +60,7 @@ async function persistIntakeSubmission({ payload, userId, pricing, agreement, on
         expedited: payload.expedited,
         pricingMin: pricing.minTotal,
         pricingMax: pricing.maxTotal,
-      },
-      client
-    );
-
-    await createAgreement(
-      {
-        id: ids.agreementId,
-        leadId: ids.leadId,
-        title: agreement.agreementTitle,
-        htmlContent: agreement.html,
-      },
-      client
-    );
-
-    await createOnboardingPacket(
-      {
-        id: ids.onboardingId,
-        leadId: ids.leadId,
-        title: onboarding.title,
-        htmlContent: onboarding.html,
+        agreementStatus: "previewed",
       },
       client
     );
@@ -126,21 +103,30 @@ async function persistIntakeSubmission({ payload, userId, pricing, agreement, on
   return ids;
 }
 
+function assertIntakeAvailability(payload) {
+  const availability = evaluateJurisdictionAvailability({
+    matterType: payload.caseType,
+    jurisdiction: payload.jurisdiction,
+  });
+
+  if (!availability.reviewRequired && !availability.available) {
+    throw new AppError(availability.reason, 400, "JURISDICTION_NOT_AVAILABLE");
+  }
+}
+
 export async function createIntake(payload, user, auditContext = null) {
   if (user) {
     assertProcessingNotRestricted(user);
   }
 
+  assertIntakeAvailability(payload);
+
   const pricing = calculatePricing(payload);
-  const agreement = generateAgreement(payload);
-  const onboarding = generateOnboardingPacket(payload);
 
   const { leadId } = await persistIntakeSubmission({
     payload,
     userId: user?.id || null,
     pricing,
-    agreement,
-    onboarding,
   });
 
   await recordAuditEvent({
@@ -153,6 +139,20 @@ export async function createIntake(payload, user, auditContext = null) {
     targetId: leadId,
     request: auditContext,
     metadata: intakeSubmitMetadata(payload),
+  });
+
+  await recordAuditEvent({
+    eventType: AUDIT_EVENT_TYPES.JURISDICTION_AVAILABILITY_CHECKED,
+    category: AUDIT_CATEGORIES.LEAD_WORKFLOW,
+    action: "intake_submit",
+    result: AUDIT_RESULTS.SUCCESS,
+    ...buildActor(user),
+    targetType: "lead",
+    targetId: leadId,
+    metadata: {
+      matterType: payload.caseType,
+      reviewRequired: true,
+    },
   });
 
   return buildIntakeResponse({ payload, pricing, leadId });

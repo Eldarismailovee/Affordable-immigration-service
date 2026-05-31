@@ -47,16 +47,59 @@ function setProcessingRestricted(userId) {
   user.processing_restriction_reason = "DSAR restriction";
 }
 
+test("POST /api/public/privacy/request creates anonymous access request", async () => {
+  await withApp(app, async (client) => {
+    const res = await client.post("/api/public/privacy/request", {
+      type: "access",
+      email: "anonymous@example.com",
+      message: "Please send my data.",
+    });
+    assert.equal(res.status, 201);
+    assert.equal(res.body.type, "access");
+    assert.equal(res.body.status, "identity_verification_required");
+    assert.match(res.body.message, /received your privacy request/i);
+  });
+});
+
+test("POST /api/public/privacy/request accepts all privacy request types", async () => {
+  const types = [
+    "access",
+    "correction",
+    "deletion",
+    "restriction",
+    "portability",
+    "objection",
+    "ccpa_opt_out",
+  ];
+
+  await withApp(app, async (client) => {
+    for (const type of types) {
+      const body = {
+        type,
+        email: `${type}-${randomUUID().slice(0, 8)}@example.com`,
+        message: `Request for ${type}`,
+      };
+      if (type === "correction") {
+        body.requestedChanges = { phone: "+15550001111" };
+      }
+
+      const res = await client.post("/api/public/privacy/request", body);
+      assert.equal(res.status, 201, `expected 201 for type ${type}`);
+      assert.equal(res.body.type, type === "export" ? "access" : type);
+    }
+  });
+});
+
 test("POST /api/account/dsar creates an export request", async () => {
   await withApp(app, async (client) => {
     const session = await makeUser(client);
     const res = await client.post(
       "/api/account/dsar",
-      { type: "export", message: "Please export my data." },
+      { type: "access", message: "Please export my data." },
       { token: session.token }
     );
     assert.equal(res.status, 201);
-    assert.equal(res.body.request.type, "export");
+    assert.equal(res.body.request.type, "access");
     assert.equal(res.body.request.status, "identity_verification_required");
   });
 });
@@ -68,7 +111,7 @@ test("GET /api/account/dsar returns only the caller's requests", async () => {
 
     await client.post(
       "/api/account/dsar",
-      { type: "export", message: "A export" },
+      { type: "access", message: "A export" },
       { token: userA.token }
     );
     await client.post(
@@ -80,7 +123,7 @@ test("GET /api/account/dsar returns only the caller's requests", async () => {
     const aList = await client.get("/api/account/dsar", { token: userA.token });
     assert.equal(aList.status, 200);
     assert.equal(aList.body.requests.length, 1);
-    assert.equal(aList.body.requests[0].type, "export");
+    assert.equal(aList.body.requests[0].type, "access");
 
     const bList = await client.get("/api/account/dsar", { token: userB.token });
     assert.equal(bList.body.requests.length, 1);
@@ -95,7 +138,7 @@ test("GET /api/account/dsar/:requestId returns 403 for another user's request", 
 
     const created = await client.post(
       "/api/account/dsar",
-      { type: "export", message: "mine" },
+      { type: "access", message: "mine" },
       { token: userA.token }
     );
     const requestId = created.body.request.id;
@@ -110,7 +153,7 @@ test("GET /api/account/dsar/:requestId/export returns 403 before identity verifi
     const session = await makeUser(client);
     const created = await client.post(
       "/api/account/dsar",
-      { type: "export", message: "export" },
+      { type: "access", message: "export" },
       { token: session.token }
     );
 
@@ -157,7 +200,7 @@ test("PATCH /api/admin/dsar/:requestId/identity marks verified and enables expor
 
     const created = await client.post(
       "/api/account/dsar",
-      { type: "export", message: "export" },
+      { type: "access", message: "export" },
       { token: userSession.token }
     );
     const requestId = created.body.request.id;
@@ -207,6 +250,7 @@ test("POST /api/account/intake returns 403 when processing is restricted", async
       billingEmail: "user@example.com",
       paymentPreference: "invoice",
       consentManualProcessing: true,
+      consentAvailabilityAcknowledgment: true,
     };
 
     const res = await client.post("/api/account/intake", payload, { token: session.token });
@@ -223,10 +267,53 @@ test("POST /api/account/dsar still works when processing is restricted", async (
 
     const res = await client.post(
       "/api/account/dsar",
-      { type: "export", message: "Still need my data" },
+      { type: "access", message: "Still need my data" },
       { token: session.token }
     );
     assert.equal(res.status, 201);
+  });
+});
+
+test("correction request rejects forbidden fields", async () => {
+  await withApp(app, async (client) => {
+    const session = await makeUser(client);
+    const res = await client.post(
+      "/api/account/dsar",
+      {
+        type: "correction",
+        message: "fix role",
+        requestedChanges: { role: "admin" },
+      },
+      { token: session.token }
+    );
+    assert.equal(res.status, 400);
+  });
+});
+
+test("admin actions create dsar request events", async () => {
+  await withApp(app, async (client) => {
+    const adminSession = await makeAdmin(client);
+    const userSession = await makeUser(client, "events@example.com");
+
+    const created = await client.post(
+      "/api/account/dsar",
+      { type: "access", message: "access" },
+      { token: userSession.token }
+    );
+    const requestId = created.body.request.id;
+
+    await client.patch(
+      `/api/admin/dsar/${requestId}/identity`,
+      { status: "verified" },
+      { token: adminSession.token }
+    );
+
+    const eventsBefore = store.dsarEvents.filter((e) => e.dsar_request_id === requestId).length;
+    await client.post(`/api/admin/dsar/${requestId}/notes`, { note: "Reviewed" }, {
+      token: adminSession.token,
+    });
+    const eventsAfter = store.dsarEvents.filter((e) => e.dsar_request_id === requestId).length;
+    assert.ok(eventsAfter > eventsBefore);
   });
 });
 

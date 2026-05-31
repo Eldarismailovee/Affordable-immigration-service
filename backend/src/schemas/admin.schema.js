@@ -16,6 +16,7 @@ export const updateLeadStateSchema = z
   .object({
     state: leadStatusSchema,
     notes: adminFreeTextNotesSchema,
+    reason: adminFreeTextNotesSchema,
   })
   .strict();
 

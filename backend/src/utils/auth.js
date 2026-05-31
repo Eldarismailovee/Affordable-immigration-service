@@ -104,6 +104,10 @@ export function sanitizeUser(user) {
     emailVerifiedAt: user.email_verified_at,
     processingRestrictedAt: user.processing_restricted_at ?? null,
     processingRestrictionReason: user.processing_restriction_reason ?? null,
+    marketingConsent: Boolean(user.marketing_consent),
+    newsletterConsent: Boolean(user.newsletter_consent),
+    marketingConsentAt: user.marketing_consent_at ?? null,
+    marketingOptOutAt: user.marketing_opt_out_at ?? null,
     createdAt: user.created_at,
     updatedAt: user.updated_at,
   };

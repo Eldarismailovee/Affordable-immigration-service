@@ -1,5 +1,5 @@
 import { Menu, ShieldCheck, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import navigation from "../../data/navigation";
 import Button from "../ui/Button";
@@ -11,8 +11,23 @@ export default function Header() {
   const { settings } = useSiteSettings();
   const { isAuthenticated, isAdmin, logout } = useAuth();
 
+  useEffect(() => {
+    if (!menuOpen) {
+      return undefined;
+    }
+
+    function handleKeyDown(event) {
+      if (event.key === "Escape") {
+        setMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [menuOpen]);
+
   return (
-    <header className="sticky top-0 z-40 border-b border-white/10 bg-slate-950/80 backdrop-blur-xl">
+    <header id="top" className="sticky top-0 z-40 border-b border-white/10 bg-slate-950/80 backdrop-blur-xl">
       <div className="mx-auto flex h-[72px] max-w-7xl items-center justify-between gap-5 px-4 md:px-6 lg:px-8">
         <a href="#top" className="flex min-w-0 items-center gap-3">
           {settings?.logo_url ? (
@@ -37,7 +52,10 @@ export default function Header() {
           </div>
         </a>
 
-        <nav className="hidden items-center gap-1 rounded-full border border-white/10 bg-white/[0.03] p-1 lg:flex">
+        <nav
+          aria-label="Primary"
+          className="hidden items-center gap-1 rounded-full border border-white/10 bg-white/[0.03] p-1 lg:flex"
+        >
           {navigation.map((item) => (
             <a
               key={item.label}
@@ -101,6 +119,8 @@ export default function Header() {
       {menuOpen ? (
         <div
           id="mobile-navigation"
+          role="navigation"
+          aria-label="Mobile"
           className="border-t border-white/10 bg-slate-950/95 px-4 py-4 shadow-2xl lg:hidden"
         >
           <div className="mx-auto grid max-w-7xl gap-2">

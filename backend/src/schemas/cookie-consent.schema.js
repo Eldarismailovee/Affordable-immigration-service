@@ -8,6 +8,7 @@ export const cookieConsentLogSchema = z.object({
   }),
   analytics: z.boolean(),
   marketing: z.boolean(),
+  gpcActive: z.boolean().optional().default(false),
   source: z.enum(COOKIE_CONSENT_SOURCES),
   anonymousId: z.string().uuid().optional(),
   regionHint: z.string().max(64).optional().nullable(),

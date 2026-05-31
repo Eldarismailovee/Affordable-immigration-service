@@ -6,13 +6,14 @@ import {
 } from "../../src/domain/lead-state.policy.js";
 
 test("assertLeadStateTransition allows valid transitions", () => {
-  assert.doesNotThrow(() => assertLeadStateTransition("prospective", "conflict_check"));
+  assert.doesNotThrow(() => assertLeadStateTransition("new", "conflict_check"));
   assert.doesNotThrow(() => assertLeadStateTransition("attorney_review", "accepted"));
-  assert.doesNotThrow(() => assertLeadStateTransition("accepted", "filed"));
+  assert.doesNotThrow(() => assertLeadStateTransition("accepted", "engaged"));
+  assert.doesNotThrow(() => assertLeadStateTransition("engaged", "filed"));
 });
 
 test("assertLeadStateTransition rejects invalid transitions", () => {
-  assert.throws(() => assertLeadStateTransition("prospective", "accepted"), {
+  assert.throws(() => assertLeadStateTransition("new", "accepted"), {
     name: "AppError",
     statusCode: 400,
     code: "INVALID_LEAD_STATE_TRANSITION",

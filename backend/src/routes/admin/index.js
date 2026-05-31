@@ -9,6 +9,7 @@ import siteSettingsRoutes from "./site-settings.routes.js";
 import uploadsRoutes from "./uploads.routes.js";
 import dsarRoutes from "./dsar.routes.js";
 import auditRoutes from "./audit.routes.js";
+import retentionRoutes from "./retention.routes.js";
 import { requireRole } from "../../middleware/auth.js";
 
 const router = Router();
@@ -25,5 +26,6 @@ router.use("/site-settings", adminOnly, siteSettingsRoutes);
 router.use("/uploads", adminOnly, uploadsRoutes);
 router.use("/dsar", dsarRoutes);
 router.use("/audit-events", adminOnly, auditRoutes);
+router.use("/retention", adminOnly, retentionRoutes);
 
 export default router;

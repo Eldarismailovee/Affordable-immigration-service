@@ -1,7 +1,7 @@
 import LegalContactSection from "../components/legal/LegalContactSection";
 import LegalPageLayout from "../components/legal/LegalPageLayout";
 import LegalSection from "../components/legal/LegalSection";
-import { REFUND_TODO, RESPONSIBLE_ATTORNEY_TODO } from "../data/legalMeta";
+import { REFUND_CANCELLATION_NOTICE, RESPONSIBLE_ATTORNEY_PUBLIC_TEXT } from "../data/legalMeta";
 
 export default function TermsPage() {
   return (
@@ -74,12 +74,10 @@ export default function TermsPage() {
         <p>
           Certain service packages described on this website involve attorney review, preparation, or
           filing support. The responsible attorney and applicable licensing details will be
-          identified in engagement documents and on the Legal Disclaimer page before production
-          launch.
+          identified in engagement documents and required attorney disclosures before
+          representation begins.
         </p>
-        <p className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-amber-100">
-          {RESPONSIBLE_ATTORNEY_TODO}
-        </p>
+        <p>{RESPONSIBLE_ATTORNEY_PUBLIC_TEXT}</p>
       </LegalSection>
 
       <LegalSection title="8. User Responsibilities">
@@ -139,9 +137,7 @@ export default function TermsPage() {
             cancellable through a clear process disclosed at purchase
           </li>
         </ul>
-        <p className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-amber-100">
-          {REFUND_TODO}
-        </p>
+        <p>{REFUND_CANCELLATION_NOTICE}</p>
       </LegalSection>
 
       <LegalSection title="12. No Guarantee of Outcome">

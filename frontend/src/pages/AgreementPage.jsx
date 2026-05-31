@@ -102,11 +102,17 @@ export default function AgreementPage() {
         ) : null}
 
         {!loading && !error && agreement ? (
-          <article
-            className="prose prose-invert max-w-none rounded-[2rem] border border-white/10 bg-white/5 p-8"
-            aria-label="Fee agreement content"
-            dangerouslySetInnerHTML={{ __html: sanitizeDocumentHtml(agreement.html_content) }}
-          />
+          <>
+            <p className="mb-4 text-sm text-slate-300">
+              This page is the accessible HTML view of your fee agreement. You can also download a
+              PDF copy below; PDF accessibility may vary by viewer.
+            </p>
+            <article
+              className="prose prose-invert max-w-none rounded-[2rem] border border-white/10 bg-white/5 p-8"
+              aria-label="Fee agreement content"
+              dangerouslySetInnerHTML={{ __html: sanitizeDocumentHtml(agreement.html_content) }}
+            />
+          </>
         ) : null}
       </main>
     </div>

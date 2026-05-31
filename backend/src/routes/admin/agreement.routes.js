@@ -14,7 +14,7 @@ const staff = requireRole("admin", "attorney");
 
 router.post(
   "/:leadId/generate",
-  adminOnly,
+  staff,
   validateRequest({ params: leadIdParamsSchema }),
   generateAgreementForLeadController
 );

@@ -42,6 +42,22 @@ app.use(
           },
         }
       : false,
+    hsts: env.isProduction
+      ? {
+          maxAge: 31_536_000,
+          includeSubDomains: true,
+        }
+      : false,
+    referrerPolicy: { policy: "strict-origin-when-cross-origin" },
+    crossOriginOpenerPolicy: { policy: "same-origin" },
+    permissionsPolicy: {
+      features: {
+        camera: [],
+        geolocation: [],
+        microphone: [],
+        payment: [],
+      },
+    },
   })
 );
 app.use(cors(corsConfig));

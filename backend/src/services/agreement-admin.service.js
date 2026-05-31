@@ -9,20 +9,25 @@ import {
   createAgreement,
   findLatestAgreementByLeadId,
 } from "../repositories/agreement.repository.js";
-import { withUnitOfWork } from "../repositories/unit-of-work.repository.js";
+import { findConflictCheckByLeadId } from "../repositories/conflict-check.repository.js";
 import { isUniqueViolation } from "../db/errors.js";
 import { intakeNotFoundError, leadNotFoundError } from "../domain/errors.js";
+import { assertLeadCanGenerateAgreement } from "../domain/lead-workflow.policy.js";
 import { generateAgreement } from "./agreement.service.js";
-import { assertAdminAccess } from "./access.service.js";
+import { assertStaffAccess } from "./access.service.js";
+import { enrichLeadWithWorkflow } from "./conflict-check.service.js";
 
 export async function generateAgreementForLead({ leadId, actor }) {
-  assertAdminAccess(actor);
+  assertStaffAccess(actor);
 
   const lead = await findLeadById(leadId);
 
   if (!lead) {
     throw leadNotFoundError();
   }
+
+  const enrichedLead = await enrichLeadWithWorkflow(lead);
+  assertLeadCanGenerateAgreement(enrichedLead);
 
   const intake = await findLatestIntakeByLeadId(leadId);
 

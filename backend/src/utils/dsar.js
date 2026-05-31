@@ -1,10 +1,24 @@
-import { DSAR_STATUS_TRANSITIONS } from "../constants/dsar.js";
+import {
+  DSAR_CORRECTABLE_LEAD_FIELDS,
+  DSAR_CORRECTABLE_USER_FIELDS,
+  DSAR_DELETION_REQUEST_TYPES,
+  DSAR_EXPORT_REQUEST_TYPES,
+  DSAR_FORBIDDEN_CORRECTION_FIELDS,
+  DSAR_LEGACY_REQUEST_TYPES,
+  DSAR_STATUS_TRANSITIONS,
+} from "../constants/dsar.js";
 import {
   dsarIdentityNotVerifiedError,
+  dsarInvalidCorrectionFieldsError,
   dsarInvalidStatusTransitionError,
   dsarLegalHoldError,
 } from "../domain/errors.js";
 import { sanitizeUser } from "./auth.js";
+
+const LEGACY_TYPE_ALIASES = {
+  export: "access",
+  anonymization: "deletion",
+};
 
 const DSAR_REQUEST_FIELDS = `
   id,
@@ -20,14 +34,57 @@ const DSAR_REQUEST_FIELDS = `
   legal_hold_applied_by,
   legal_hold_applied_at,
   admin_notes,
+  denial_reason,
   user_message,
   requested_changes,
   export_payload_json,
+  export_pdf_path,
+  export_generated_at,
   completed_at,
   completed_by,
   created_at,
   updated_at
 `;
+
+export function normalizeRequestType(type) {
+  return LEGACY_TYPE_ALIASES[type] ?? type;
+}
+
+export function isExportRequestType(type) {
+  const normalized = normalizeRequestType(type);
+  return DSAR_EXPORT_REQUEST_TYPES.includes(normalized);
+}
+
+export function isDeletionRequestType(type) {
+  const normalized = normalizeRequestType(type);
+  return DSAR_DELETION_REQUEST_TYPES.includes(normalized);
+}
+
+export function acceptsLegacyRequestType(type) {
+  return DSAR_LEGACY_REQUEST_TYPES.includes(type);
+}
+
+export function assertAllowedCorrectionFields(requestedChanges) {
+  if (!requestedChanges || typeof requestedChanges !== "object") {
+    return;
+  }
+
+  const keys = Object.keys(requestedChanges);
+  const allowed = new Set([
+    ...DSAR_CORRECTABLE_USER_FIELDS,
+    ...DSAR_CORRECTABLE_LEAD_FIELDS,
+  ]);
+
+  for (const key of keys) {
+    const lower = key.toLowerCase();
+    if (DSAR_FORBIDDEN_CORRECTION_FIELDS.some((f) => lower.includes(f))) {
+      throw dsarInvalidCorrectionFieldsError(key);
+    }
+    if (!allowed.has(key)) {
+      throw dsarInvalidCorrectionFieldsError(key);
+    }
+  }
+}
 
 export { DSAR_REQUEST_FIELDS };
 
@@ -51,18 +108,22 @@ export function mapDsarRequestRow(row, { includeAdmin = false, includeEvents = f
       ...base,
       requestedChanges: row.requested_changes ?? null,
       hasExport: Boolean(row.export_payload_json),
+      hasExportPdf: Boolean(row.export_pdf_path),
     };
   }
 
   const admin = {
     ...base,
-    requesterUserId: row.requester_user_id,
+    requesterUserId: row.requester_user_id ?? null,
     requesterEmail: row.requester_email,
     adminNotes: row.admin_notes ?? null,
+    denialReason: row.denial_reason ?? null,
     legalHoldReason: row.legal_hold_reason ?? null,
     identityVerifiedAt: row.identity_verified_at ?? null,
     requestedChanges: row.requested_changes ?? null,
     hasExport: Boolean(row.export_payload_json),
+    hasExportPdf: Boolean(row.export_pdf_path),
+    exportGeneratedAt: row.export_generated_at ?? null,
   };
 
   if (includeEvents && row.events) {

@@ -8,6 +8,7 @@ import {
 } from "../repositories/lead.repository.js";
 import { findLatestAgreementByLeadId } from "../repositories/agreement.repository.js";
 import { findLatestOnboardingPacketByLeadId } from "../repositories/onboarding.repository.js";
+import { findConflictCheckByLeadId } from "../repositories/conflict-check.repository.js";
 import { leadNotFoundError } from "../domain/errors.js";
 import { isLeadVisibleToAttorney } from "../domain/lead-state.policy.js";
 import { isAttorney } from "../domain/user.policy.js";
@@ -59,6 +60,7 @@ export async function getLeadDetail({ leadId, actor, auditContext = null }) {
     booking: await findLatestBookingByLeadId(leadId),
     payment: await findLatestPaymentByLeadId(leadId),
     docketwise: await findLatestDocketwiseSyncByLeadId(leadId),
+    conflictCheck: await findConflictCheckByLeadId(leadId),
   };
 }
 

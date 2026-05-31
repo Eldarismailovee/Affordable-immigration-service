@@ -102,11 +102,17 @@ export default function OnboardingPacketPage() {
         ) : null}
 
         {!loading && !error && packet ? (
-          <article
-            className="prose prose-invert max-w-none rounded-[2rem] border border-white/10 bg-white/5 p-8"
-            aria-label="Onboarding packet content"
-            dangerouslySetInnerHTML={{ __html: sanitizeDocumentHtml(packet.html_content) }}
-          />
+          <>
+            <p className="mb-4 text-sm text-slate-300">
+              This page is the accessible HTML view of your onboarding packet. You can also download
+              a PDF copy below; PDF accessibility may vary by viewer.
+            </p>
+            <article
+              className="prose prose-invert max-w-none rounded-[2rem] border border-white/10 bg-white/5 p-8"
+              aria-label="Onboarding packet content"
+              dangerouslySetInnerHTML={{ __html: sanitizeDocumentHtml(packet.html_content) }}
+            />
+          </>
         ) : null}
       </main>
     </div>

@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   createDsarRequestController,
   getDsarExportController,
+  getDsarExportPdfController,
   getDsarRequestController,
   listDsarRequestsController,
 } from "../../controllers/dsar.controller.js";
@@ -21,6 +22,11 @@ router.get(
   "/:requestId/export",
   validateRequest({ params: dsarRequestIdParamsSchema }),
   getDsarExportController
+);
+router.get(
+  "/:requestId/export.pdf",
+  validateRequest({ params: dsarRequestIdParamsSchema }),
+  getDsarExportPdfController
 );
 
 export default router;

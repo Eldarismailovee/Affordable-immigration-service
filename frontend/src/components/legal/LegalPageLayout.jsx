@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ATTORNEY_REVIEW_TODO, LEGAL_LAST_UPDATED } from "../../data/legalMeta";
+import { ATTORNEY_REVIEW_NOTICE, LEGAL_LAST_UPDATED } from "../../data/legalMeta";
 
 export default function LegalPageLayout({ title, children }) {
   return (
@@ -25,7 +25,7 @@ export default function LegalPageLayout({ title, children }) {
         </div>
 
         <div className="mb-6 rounded-2xl border border-amber-400/20 bg-amber-400/5 px-5 py-4 text-sm leading-7 text-amber-100">
-          {ATTORNEY_REVIEW_TODO}
+          {ATTORNEY_REVIEW_NOTICE}
         </div>
 
         <div className="space-y-6 rounded-[2rem] border border-white/10 bg-white/5 p-8 text-slate-300">

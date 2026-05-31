@@ -1,13 +1,64 @@
+import { useState } from "react";
 import LegalContactSection from "../components/legal/LegalContactSection";
 import LegalPageLayout from "../components/legal/LegalPageLayout";
 import LegalSection from "../components/legal/LegalSection";
-import { RETENTION_TODO, SUBPROCESSORS_NOTICE, SUBPROCESSORS_TODO } from "../data/legalMeta";
+import {
+  DATA_RETENTION_SUMMARY,
+  EU_TRANSFER_NOTICE,
+  SUBPROCESSORS_DETAIL_NOTICE,
+  SUBPROCESSORS_NOTICE,
+} from "../data/legalMeta";
 import { useSiteSettings } from "../context/SiteSettingsContext";
+import { useAuth } from "../context/AuthContext";
+import { submitPublicPrivacyRequest } from "../services/api";
+
+const PRIVACY_REQUEST_TYPES = [
+  { value: "access", label: "Access / copy of my data" },
+  { value: "correction", label: "Correct inaccurate data" },
+  { value: "deletion", label: "Delete / anonymize my data" },
+  { value: "restriction", label: "Restrict processing" },
+  { value: "portability", label: "Data portability" },
+  { value: "objection", label: "Object to processing" },
+  { value: "ccpa_opt_out", label: "CCPA opt-out of sale/share" },
+];
 
 export default function PrivacyPage() {
+  const { user } = useAuth();
   const { settings } = useSiteSettings();
   const firmName = settings?.firm_name || "Immigration Law Firm";
   const contactEmail = settings?.email || "info@immigrationfirm.com";
+  const [form, setForm] = useState({
+    type: "access",
+    email: user?.email || "",
+    message: "",
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [submitSuccess, setSubmitSuccess] = useState("");
+
+  async function handlePrivacySubmit(event) {
+    event.preventDefault();
+    setSubmitting(true);
+    setSubmitError("");
+    setSubmitSuccess("");
+
+    try {
+      const payload = {
+        type: form.type,
+        message: form.message.trim() || undefined,
+      };
+      if (!user?.email) {
+        payload.email = form.email.trim();
+      }
+      const result = await submitPublicPrivacyRequest(payload);
+      setSubmitSuccess(result.message || "Request submitted.");
+      setForm((prev) => ({ ...prev, message: "" }));
+    } catch (err) {
+      setSubmitError(err.message || "Could not submit request");
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
     <LegalPageLayout title="Privacy Policy">
@@ -170,9 +221,7 @@ export default function PrivacyPage() {
           <li>Local or cloud file storage for uploaded documents</li>
           <li>Security and logging tools</li>
         </ul>
-        <p className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-amber-100">
-          {SUBPROCESSORS_TODO}
-        </p>
+        <p className="text-sm text-slate-400">{SUBPROCESSORS_DETAIL_NOTICE}</p>
       </LegalSection>
 
       <LegalSection title="9. International Transfers, Including EU/US Transfers">
@@ -182,11 +231,9 @@ export default function PrivacyPage() {
           United States, your information may be transferred to jurisdictions that may have different
           data protection laws than your country of residence.
         </p>
+        <p>{EU_TRANSFER_NOTICE}</p>
         <p>
-          Where required by applicable law, including for transfers from the European Economic Area,
-          the United Kingdom, or Switzerland, we use appropriate safeguards such as Standard
-          Contractual Clauses approved by the European Commission or other lawful transfer
-          mechanisms. Additional information about transfer safeguards may be provided upon request.
+          Additional information about transfer safeguards may be provided upon request.
         </p>
       </LegalSection>
 
@@ -239,9 +286,7 @@ export default function PrivacyPage() {
             </tbody>
           </table>
         </div>
-        <p className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-amber-100">
-          {RETENTION_TODO}
-        </p>
+        <p className="text-sm text-slate-400">{DATA_RETENTION_SUMMARY}</p>
       </LegalSection>
 
       <LegalSection title="11. Your Privacy Rights">
@@ -306,18 +351,101 @@ export default function PrivacyPage() {
 
       <LegalSection title="14. How to Submit a Privacy Request">
         <p>
-          To submit a privacy request, contact us at {contactEmail} with the subject line
-          &ldquo;Privacy Request.&rdquo; Please describe the request and provide enough
-          information for us to locate your records.
+          You may submit a request using the form below or by emailing {contactEmail} with the
+          subject line &ldquo;Privacy Request.&rdquo; We may need to verify your identity before
+          fulfilling certain requests.
         </p>
-        <p>
+        <form
+          onSubmit={handlePrivacySubmit}
+          className="mt-6 space-y-4 rounded-2xl border border-white/10 bg-white/5 p-6"
+          aria-describedby={
+            submitError
+              ? "privacy-form-error"
+              : submitSuccess
+                ? "privacy-form-success"
+                : undefined
+          }
+          noValidate
+        >
+          <div>
+            <label htmlFor="privacy-request-type" className="block text-sm text-slate-200">
+              Request type
+            </label>
+            <select
+              id="privacy-request-type"
+              name="type"
+              value={form.type}
+              onChange={(e) => setForm((prev) => ({ ...prev, type: e.target.value }))}
+              className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-2 text-white"
+              aria-invalid={Boolean(submitError)}
+              aria-describedby={submitError ? "privacy-form-error" : undefined}
+            >
+              {PRIVACY_REQUEST_TYPES.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          {!user?.email ? (
+            <div>
+              <label htmlFor="privacy-request-email" className="block text-sm text-slate-200">
+                Email
+              </label>
+              <input
+                id="privacy-request-email"
+                name="email"
+                type="email"
+                required
+                autoComplete="email"
+                value={form.email}
+                onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
+                className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-2 text-white"
+                aria-invalid={Boolean(submitError)}
+                aria-describedby={submitError ? "privacy-form-error" : undefined}
+              />
+            </div>
+          ) : null}
+          <div>
+            <label htmlFor="privacy-request-message" className="block text-sm text-slate-200">
+              Message (optional)
+            </label>
+            <textarea
+              id="privacy-request-message"
+              name="message"
+              value={form.message}
+              onChange={(e) => setForm((prev) => ({ ...prev, message: e.target.value }))}
+              rows={4}
+              maxLength={4000}
+              className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-2 text-white"
+            />
+          </div>
+          {submitError ? (
+            <p id="privacy-form-error" role="alert" className="text-sm text-red-200">
+              {submitError}
+            </p>
+          ) : null}
+          {submitSuccess ? (
+            <p id="privacy-form-success" role="status" className="text-sm text-emerald-200">
+              {submitSuccess}
+            </p>
+          ) : null}
+          <button
+            type="submit"
+            disabled={submitting}
+            className="rounded-full bg-amber-400 px-5 py-2 text-sm font-semibold text-slate-950 disabled:opacity-60"
+          >
+            {submitting ? "Submitting..." : "Submit privacy request"}
+          </button>
+        </form>
+        <p className="mt-4 text-sm text-slate-400">
           Authorized agents may submit requests on your behalf where permitted by law, subject to
-          verification of the agent&rsquo;s authority.
-        </p>
-        <p>
-          If we implement Global Privacy Control or similar browser-based opt-out signals where
-          required by law, we will describe how those signals are honored in an updated version of
-          this policy.
+          verification. You can also manage cookie preferences and Global Privacy Control signals on
+          our{" "}
+          <a href="/cookie-preferences" className="text-amber-300 hover:text-amber-200">
+            Cookie Preferences
+          </a>{" "}
+          page.
         </p>
       </LegalSection>
 
@@ -332,14 +460,43 @@ export default function PrivacyPage() {
 
       <LegalSection title="16. Cookies / Analytics / Tracking">
         <p>
-          The website may use cookies, local storage, and session tools to support authentication,
-          security, and basic site functionality. Based on current implementation, we do not use
-          third-party advertising analytics on the public site, but this may change before
-          production launch.
+          We use cookies and similar technologies in three categories. You can manage optional
+          categories at any time on our{" "}
+          <a href="/cookie-preferences" className="text-amber-300 hover:text-amber-200">
+            Cookie Preferences
+          </a>{" "}
+          page.
+        </p>
+        <ul className="list-disc space-y-2 pl-6">
+          <li>
+            <strong>Strictly necessary:</strong> always enabled. Includes authentication,
+            security, and storage of your cookie choices. These cannot be disabled because the
+            site cannot function without them.
+          </li>
+          <li>
+            <strong>Analytics:</strong> optional and off by default. If enabled and configured,
+            analytics tools help us understand site usage. Analytics vendors are loaded only if
+            configured and you have opted in.
+          </li>
+          <li>
+            <strong>Marketing:</strong> optional and off by default. If enabled and configured,
+            marketing tools support outreach and measure campaign effectiveness. Marketing vendors
+            are loaded only if configured and you have opted in.
+          </li>
+        </ul>
+        <p>
+          Optional cookies are not set before you opt in. You can accept all, reject optional
+          cookies, or choose categories individually. Withdrawing consent is as easy as giving it.
         </p>
         <p>
-          You can control cookies through your browser settings. Disabling certain cookies may affect
-          site functionality.
+          <strong>Global Privacy Control (GPC):</strong> If your browser sends a GPC signal, we
+          treat it as an opt-out preference for marketing and sale/share-related tracking.
+          Marketing cookies remain disabled while GPC is active. We do not ask you to override
+          GPC to enable optional tracking.
+        </p>
+        <p className="text-sm text-slate-400">
+          Cookie banner text, category definitions, GPC behavior, and region assumptions are
+          subject to privacy counsel review before production launch.
         </p>
       </LegalSection>
 

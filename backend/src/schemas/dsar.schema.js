@@ -37,6 +37,45 @@ export const createDsarRequestSchema = z
     }
   });
 
+export const createPublicPrivacyRequestSchema = z
+  .object({
+    type: z.enum(DSAR_REQUEST_TYPES),
+    email: z.string().email().optional(),
+    message: z
+      .string()
+      .trim()
+      .max(4000)
+      .optional()
+      .superRefine(rejectPaymentCardData),
+    requestedChanges: z.record(z.string(), z.unknown()).optional(),
+  })
+  .strict()
+  .superRefine((data, ctx) => {
+    const normalized = data.type === "export" ? "access" : data.type === "anonymization" ? "deletion" : data.type;
+    if (normalized === "correction" && !data.requestedChanges) {
+      ctx.addIssue({
+        code: "custom",
+        message: "requestedChanges is required for correction requests",
+        path: ["requestedChanges"],
+      });
+    }
+  });
+
+export const adminObjectionResolveSchema = z
+  .object({
+    accepted: z.boolean(),
+    notes: adminFreeTextNotesSchema,
+    denialReason: z.string().trim().max(4000).optional(),
+  })
+  .strict();
+
+export const adminCcpaOptOutSchema = z
+  .object({
+    notes: adminFreeTextNotesSchema,
+    explanation: z.string().trim().max(4000).optional(),
+  })
+  .strict();
+
 export const adminIdentityVerificationSchema = z
   .object({
     status: z.enum(DSAR_IDENTITY_STATUSES),

@@ -5,6 +5,8 @@ import {
   buildAuditRepo,
   buildAuthTokenRepo,
   buildCookieConsentRepo,
+  buildEmailSuppressionRepo,
+  buildConflictCheckRepo,
   buildLeadRepo,
   buildOnboardingRepo,
   buildPaymentRepo,
@@ -51,6 +53,10 @@ export async function setupTestEnvironment() {
     namedExports: buildLeadRepo(store),
   });
 
+  mock.module("../../src/repositories/conflict-check.repository.js", {
+    namedExports: buildConflictCheckRepo(store),
+  });
+
   mock.module("../../src/repositories/audit.repository.js", {
     namedExports: buildAuditRepo(store),
   });
@@ -79,6 +85,10 @@ export async function setupTestEnvironment() {
     namedExports: buildCookieConsentRepo(store),
   });
 
+  mock.module("../../src/repositories/email-suppression.repository.js", {
+    namedExports: buildEmailSuppressionRepo(store),
+  });
+
   mock.module("../../src/repositories/unit-of-work.repository.js", {
     namedExports: {
       withUnitOfWork: async (callback) => callback({}),
@@ -98,13 +108,6 @@ export async function setupTestEnvironment() {
 
   mock.module("../../src/lib/logger.js", {
     namedExports: { logger: passthroughLog },
-  });
-
-  mock.module("../../src/services/email.service.js", {
-    namedExports: {
-      sendEmailVerificationEmail: () => {},
-      sendPasswordResetEmail: () => {},
-    },
   });
 
   const { default: app } = await import("../../src/app.js");

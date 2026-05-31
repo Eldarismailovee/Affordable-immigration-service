@@ -20,6 +20,33 @@ export default function PackageStepPage() {
     },
   ];
 
+  function handlePackageKeyDown(event, packageId) {
+    const index = packages.findIndex((item) => item.id === packageId);
+    if (index === -1) {
+      return;
+    }
+
+    let nextIndex = index;
+
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+      event.preventDefault();
+      nextIndex = (index + 1) % packages.length;
+    } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+      event.preventDefault();
+      nextIndex = (index - 1 + packages.length) % packages.length;
+    } else if (event.key === " " || event.key === "Enter") {
+      event.preventDefault();
+      updateField("selectedPackage", packageId);
+      return;
+    } else {
+      return;
+    }
+
+    const nextId = packages[nextIndex].id;
+    updateField("selectedPackage", nextId);
+    document.getElementById(`package-option-${nextId}`)?.focus();
+  }
+
   return (
     <div>
       <div className="text-sm uppercase tracking-[0.18em] text-amber-400">Step 1</div>
@@ -39,10 +66,12 @@ export default function PackageStepPage() {
           return (
             <button
               key={item.id}
+              id={`package-option-${item.id}`}
               type="button"
               role="radio"
               aria-checked={selected}
               onClick={() => updateField("selectedPackage", item.id)}
+              onKeyDown={(event) => handlePackageKeyDown(event, item.id)}
               className={`rounded-3xl border p-5 text-left transition ${
                 selected
                   ? "border-amber-400/50 bg-amber-400/10"

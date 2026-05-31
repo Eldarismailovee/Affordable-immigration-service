@@ -10,6 +10,7 @@ export async function createCookieConsentLog(
     strictlyNecessary,
     analytics,
     marketing,
+    gpcActive,
     source,
     regionHint,
     userAgentHash,
@@ -29,11 +30,12 @@ export async function createCookieConsentLog(
       strictly_necessary,
       analytics,
       marketing,
+      gpc_active,
       source,
       region_hint,
       user_agent_hash,
       ip_hash
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
     RETURNING id, created_at
     `,
     [
@@ -44,6 +46,7 @@ export async function createCookieConsentLog(
       strictlyNecessary,
       analytics,
       marketing,
+      gpcActive ?? false,
       source,
       regionHint ?? null,
       userAgentHash ?? null,

@@ -189,6 +189,10 @@ const rawEnvSchema = z.object({
     SECURITY_AUDIT_RETENTION_DAYS,
     z.number().int().min(1).max(3650)
   ),
+  DOCUMENT_ENCRYPTION_KEY_BASE64: z.preprocess(
+    emptyToUndefined,
+    z.string().trim().min(1).optional()
+  ),
 });
 
 const parsedEnv = rawEnvSchema.safeParse(process.env);

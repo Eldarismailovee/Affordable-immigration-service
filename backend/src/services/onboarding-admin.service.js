@@ -10,17 +10,22 @@ import {
 } from "../repositories/onboarding.repository.js";
 import { isUniqueViolation } from "../db/errors.js";
 import { intakeNotFoundError, leadNotFoundError } from "../domain/errors.js";
+import { assertLeadCanGenerateFilingPacket } from "../domain/lead-workflow.policy.js";
 import { generateOnboardingPacket } from "./onboarding.service.js";
-import { assertAdminAccess } from "./access.service.js";
+import { assertStaffAccess } from "./access.service.js";
+import { enrichLeadWithWorkflow } from "./conflict-check.service.js";
 
 export async function generateOnboardingPacketForLead({ leadId, actor }) {
-  assertAdminAccess(actor);
+  assertStaffAccess(actor);
 
   const lead = await findLeadById(leadId);
 
   if (!lead) {
     throw leadNotFoundError();
   }
+
+  const enrichedLead = await enrichLeadWithWorkflow(lead);
+  assertLeadCanGenerateFilingPacket(enrichedLead);
 
   const intake = await findLatestIntakeByLeadId(leadId);
 

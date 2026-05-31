@@ -92,7 +92,7 @@ test("DELETE /api/admin/leads/:leadId soft-deletes the lead and writes an audit 
       last_name: "Owner",
       email: "lead@example.com",
       phone: "555",
-      status: "prospective",
+      status: "new",
       deleted_at: null,
       created_at: new Date(),
       updated_at: new Date(),

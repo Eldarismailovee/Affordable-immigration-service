@@ -1,6 +1,7 @@
 import {
   createUserDsarRequest,
   getUserDsarExport,
+  getUserDsarPdfExport,
   getUserDsarRequest,
   listUserDsarRequests,
 } from "../services/dsar.service.js";
@@ -25,13 +26,13 @@ export const createDsarRequestController = asyncHandler(async (req, res) => {
 });
 
 export const listDsarRequestsController = asyncHandler(async (req, res) => {
-  const requests = await listUserDsarRequests(req.user.id);
+  const requests = await listUserDsarRequests(req.user);
   sendResponse(res, dsarRequestListResponseSchema, { requests });
 });
 
 export const getDsarRequestController = asyncHandler(async (req, res) => {
   const request = await getUserDsarRequest({
-    userId: req.user.id,
+    user: req.user,
     requestId: req.params.requestId,
   });
   sendResponse(res, dsarRequestMutationResponseSchema, { request });
@@ -39,8 +40,18 @@ export const getDsarRequestController = asyncHandler(async (req, res) => {
 
 export const getDsarExportController = asyncHandler(async (req, res) => {
   const data = await getUserDsarExport({
-    userId: req.user.id,
+    user: req.user,
     requestId: req.params.requestId,
   });
   sendResponse(res, dsarExportResponseSchema, data);
+});
+
+export const getDsarExportPdfController = asyncHandler(async (req, res) => {
+  const { pdfBuffer, filename } = await getUserDsarPdfExport({
+    user: req.user,
+    requestId: req.params.requestId,
+  });
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+  res.end(pdfBuffer);
 });

@@ -30,5 +30,8 @@ export const finalIntakeSchema = agreementPreviewSchema.extend({
   consentManualProcessing: z.boolean().refine((value) => value === true, {
     message: "Consent to manual processing is required",
   }),
+  consentAvailabilityAcknowledgment: z.boolean().refine((value) => value === true, {
+    message: "Availability acknowledgment is required",
+  }),
   paymentNotes: userFacingPaymentNotesSchema,
 });

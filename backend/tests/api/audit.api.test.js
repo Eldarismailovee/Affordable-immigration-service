@@ -155,7 +155,7 @@ test("payment status change logs oldStatus and newStatus without card data", asy
       last_name: "B",
       email: "lead@example.com",
       phone: "555",
-      status: "prospective",
+      status: "new",
       deleted_at: null,
       created_at: new Date(),
       updated_at: new Date(),
@@ -188,7 +188,7 @@ test("admin sensitive lead read logs event", async () => {
       last_name: "Owner",
       email: "lead@example.com",
       phone: "555",
-      status: "prospective",
+      status: "new",
       deleted_at: null,
       created_at: new Date(),
       updated_at: new Date(),
@@ -219,7 +219,7 @@ test("DSAR submit logs event without export payload", async () => {
 
     const events = auditEvents(AUDIT_EVENT_TYPES.DSAR_REQUEST_SUBMIT);
     assert.equal(events.length, 1);
-    assert.equal(events[0].metadata_json.requestType, "export");
+    assert.equal(events[0].metadata_json.requestType, "access");
     assert.equal(events[0].metadata_json.export, undefined);
     assertNoSensitiveAuditPayload();
   });

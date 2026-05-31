@@ -1,34 +1,16 @@
 import services from "../data/services.js";
+import { legalMeta } from "../data/legalMeta.js";
 
 /** Bump when availability disclosures change materially. */
 export const JURISDICTION_AVAILABILITY_VERSION = "2026-05-31-v1";
 
-export const PRODUCTION_CONFIRMATION_TODO =
-  "TODO: Confirm responsible attorney name, licensed jurisdiction(s), bar number if required, and accepted matter types before production launch.";
+export const RESPONSIBLE_ATTORNEY_PUBLIC_TEXT = legalMeta.responsibleAttorney.publicText;
 
-export const JURISDICTION_REVIEW_TODO =
-  "TODO: Have jurisdiction availability language reviewed by responsible attorney before production launch.";
+export const ATTORNEY_REVIEW_WORKFLOW_NOTICE =
+  "Attorney review, conflict checks, and lead acceptance workflow are enforced in the admin lead detail view.";
 
-export const STATE_BAR_RULES_TODO =
-  "TODO: Check each applicable state bar advertising and unauthorized-practice rules before production launch.";
+export const attorneyLicenses = [];
 
-export const ADVERTISING_LABELS_TODO =
-  "TODO: Confirm whether state-specific advertising labels/disclaimers are required.";
-
-export const WORKFLOW_TODO =
-  "TODO: Connect availability disclosures to attorney review/lead acceptance workflow.";
-
-export const attorneyLicenses = [
-  {
-    jurisdiction: "TODO",
-    licenseType: "Attorney",
-    barNumber: "TODO",
-    status: "TODO confirm",
-    notes: "TODO: Confirm with responsible attorney before production launch.",
-  },
-];
-
-/** Mapped from existing family-petition services; each requires attorney review before acceptance. */
 export const acceptedMatters = services.map((label) => ({
   key: label
     .toLowerCase()
@@ -57,12 +39,7 @@ export const unavailableMatters = [
   },
 ];
 
-export const unavailableJurisdictions = [
-  {
-    jurisdiction: "TODO",
-    reason: "TODO: Confirm jurisdiction restrictions with responsible attorney before production launch.",
-  },
-];
+export const unavailableJurisdictions = [];
 
 export const availabilityDisclaimers = {
   attorneyReviewRequired:
@@ -73,8 +50,9 @@ export const availabilityDisclaimers = {
     "Legal services are available only where the responsible attorney is licensed, authorized, or otherwise permitted to provide the service. Availability may depend on your location, the type of matter, forum rules, federal immigration practice rules, and applicable professional responsibility requirements.",
   noGuarantee:
     "We do not guarantee any immigration benefit, filing outcome, government processing time, or result. Government agencies make their own decisions based on applicable law and the facts of each case.",
-  advertisingNotice:
-    "This website may be considered attorney advertising in some jurisdictions.",
+  advertisingNotice: legalMeta.attorneyAdvertisingNotice,
+  licensedJurisdictionsPending:
+    "Licensed jurisdictions and bar registration details will be listed on this page once confirmed. Until then, availability depends on attorney review and written confirmation before any representation begins.",
   intakeAcknowledgment:
     "I understand that submitting this form does not create an attorney-client relationship and that my matter must be reviewed before acceptance.",
   caseTypeHelper:

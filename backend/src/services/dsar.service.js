@@ -1,7 +1,13 @@
-import { DSAR_TYPES_REQUIRING_IDENTITY } from "../constants/dsar.js";
+import {
+  DSAR_TYPES_REQUIRING_IDENTITY,
+  PUBLIC_PRIVACY_REQUEST_ACK_MESSAGE,
+} from "../constants/dsar.js";
 import {
   dsarAccessDeniedError,
+  dsarAccountRequiredError,
+  dsarEmailRequiredError,
   dsarExportNotAvailableError,
+  dsarPdfUnavailableError,
   dsarRequestNotFoundError,
 } from "../domain/errors.js";
 import {
@@ -17,20 +23,33 @@ import {
   findDsarRequestById,
   listAllDsarRequests,
   listDsarEventsByRequestId,
-  listDsarRequestsByUserId,
+  listDsarRequestsForAccount,
   updateDsarRequest,
 } from "../repositories/dsar.repository.js";
 import {
+  findUserByEmail,
+  findUserById,
+  setUserCcpaSaleOptOut,
   setUserProcessingRestriction,
   updateUserFullNameById,
 } from "../repositories/user.repository.js";
 import {
+  assertAllowedCorrectionFields,
   assertIdentityVerified,
   assertNoLegalHold,
   assertStatusTransition,
+  isDeletionRequestType,
+  isExportRequestType,
   mapDsarEventRow,
   mapDsarRequestRow,
+  normalizeRequestType,
 } from "../utils/dsar.js";
+import {
+  renderDsarExportPdf,
+  resolveDsarPdfAbsolutePath,
+  writeDsarPdfToDisk,
+} from "./dsar-pdf-export.service.js";
+import { readSensitiveDocumentFile } from "./document-storage.service.js";
 import { anonymizeUserRecord } from "./dsar-anonymization.service.js";
 import { buildUserDataExport } from "./dsar-export.service.js";
 import { textForAdminStorage } from "./payment-notes.service.js";
@@ -91,18 +110,85 @@ async function auditDsar({
   });
 }
 
-async function getRequestForUser(requestId, userId) {
+function userOwnsRequest(request, { userId, email }) {
+  if (request.requester_user_id) {
+    return request.requester_user_id === userId;
+  }
+
+  return (
+    email &&
+    request.requester_email &&
+    request.requester_email.toLowerCase() === email.toLowerCase()
+  );
+}
+
+async function getRequestForUser(requestId, user) {
   const request = await findDsarRequestById(requestId);
 
   if (!request) {
     throw dsarRequestNotFoundError();
   }
 
-  if (request.requester_user_id !== userId) {
+  if (!userOwnsRequest(request, { userId: user.id, email: user.email })) {
     throw dsarAccessDeniedError();
   }
 
   return request;
+}
+
+async function submitDsarRequest({
+  requesterUserId,
+  requesterEmail,
+  type,
+  message,
+  requestedChanges,
+  actorUserId,
+  auditContext,
+}) {
+  const normalizedType = normalizeRequestType(type);
+
+  if (normalizedType === "correction" && requestedChanges) {
+    assertAllowedCorrectionFields(requestedChanges);
+  }
+
+  const status = initialStatusForType(normalizedType);
+  const row = await createDsarRequest({
+    requesterUserId,
+    requesterEmail,
+    requestType: normalizedType,
+    status,
+    identityVerificationStatus: initialIdentityStatus(),
+    userMessage: message,
+    requestedChanges,
+  });
+
+  await logEvent(row.id, actorUserId ?? null, "submitted", { type: normalizedType });
+
+  await auditDsar({
+    eventType: AUDIT_EVENT_TYPES.DSAR_REQUEST_SUBMIT,
+    action: "submit",
+    actor: actorUserId ? { id: actorUserId } : null,
+    requestId: row.id,
+    auditContext,
+    metadata: {
+      requestType: normalizedType,
+      newStatus: status,
+      changedFields: requestedChanges ? Object.keys(requestedChanges) : [],
+      targetUserId: requesterUserId,
+    },
+  });
+
+  if (status === "identity_verification_required") {
+    await logEvent(row.id, actorUserId ?? null, "identity_verification_requested", {
+      type: normalizedType,
+    });
+  }
+
+  if (normalizedType === "objection") {
+    await logEvent(row.id, actorUserId ?? null, "objection_submitted", {});
+  }
+
+  return mapDsarRequestRow(row);
 }
 
 async function getRequestForAdmin(requestId) {
@@ -132,71 +218,118 @@ export async function createUserDsarRequest({
 }) {
   assertAuthenticated(user);
 
-  const status = initialStatusForType(type);
-  const row = await createDsarRequest({
+  return submitDsarRequest({
     requesterUserId: user.id,
     requesterEmail: user.email,
-    requestType: type,
-    status,
-    identityVerificationStatus: initialIdentityStatus(),
-    userMessage: message,
+    type,
+    message,
     requestedChanges,
-  });
-
-  await logEvent(row.id, user.id, "submitted", { type });
-
-  await auditDsar({
-    eventType: AUDIT_EVENT_TYPES.DSAR_REQUEST_SUBMIT,
-    action: "submit",
-    actor: user,
-    requestId: row.id,
+    actorUserId: user.id,
     auditContext,
-    metadata: {
-      requestType: type,
-      newStatus: status,
-      changedFields: requestedChanges ? Object.keys(requestedChanges) : [],
-    },
   });
-
-  if (status === "identity_verification_required") {
-    await logEvent(row.id, user.id, "identity_verification_requested", { type });
-  }
-
-  return mapDsarRequestRow(row);
 }
 
-export async function listUserDsarRequests(userId) {
-  const rows = await listDsarRequestsByUserId(userId);
+export async function createPublicPrivacyRequest({
+  user,
+  type,
+  email,
+  message,
+  requestedChanges,
+  auditContext = null,
+}) {
+  const requesterEmail = user?.email ?? email;
+
+  if (!requesterEmail) {
+    throw dsarEmailRequiredError();
+  }
+
+  let requesterUserId = user?.id ?? null;
+
+  if (!requesterUserId && email) {
+    const matched = await findUserByEmail(email);
+    requesterUserId = matched?.id ?? null;
+  }
+
+  const request = await submitDsarRequest({
+    requesterUserId,
+    requesterEmail,
+    type,
+    message,
+    requestedChanges,
+    actorUserId: user?.id ?? null,
+    auditContext,
+  });
+
+  return {
+    id: request.id,
+    type: request.type,
+    status: request.status,
+    message: PUBLIC_PRIVACY_REQUEST_ACK_MESSAGE,
+  };
+}
+
+export async function listUserDsarRequests(user) {
+  const rows = await listDsarRequestsForAccount({
+    userId: user.id,
+    email: user.email,
+  });
   return rows.map((row) => mapDsarRequestRow(row));
 }
 
-export async function getUserDsarRequest({ userId, requestId }) {
-  const request = await getRequestForUser(requestId, userId);
+export async function getUserDsarRequest({ user, requestId }) {
+  const request = await getRequestForUser(requestId, user);
   return mapDsarRequestRow(request);
 }
 
-export async function getUserDsarExport({ userId, requestId }) {
-  const request = await getRequestForUser(requestId, userId);
+function parseExportPayload(request) {
+  if (!request.export_payload_json) return null;
+  return typeof request.export_payload_json === "string"
+    ? JSON.parse(request.export_payload_json)
+    : request.export_payload_json;
+}
 
-  if (request.request_type !== "export") {
+export async function getUserDsarExport({ user, requestId }) {
+  const request = await getRequestForUser(requestId, user);
+
+  if (!isExportRequestType(request.request_type)) {
     throw dsarExportNotAvailableError();
   }
 
   assertIdentityVerified(request);
 
-  const payload =
-    typeof request.export_payload_json === "string"
-      ? JSON.parse(request.export_payload_json)
-      : request.export_payload_json;
+  const payload = parseExportPayload(request);
 
   if (payload) {
     return {
       generatedAt: payload.generatedAt,
+      requestId,
       export: payload,
     };
   }
 
   throw dsarExportNotAvailableError();
+}
+
+export async function getUserDsarPdfExport({ user, requestId }) {
+  const request = await getRequestForUser(requestId, user);
+
+  if (!isExportRequestType(request.request_type)) {
+    throw dsarExportNotAvailableError();
+  }
+
+  assertIdentityVerified(request);
+
+  if (!request.export_pdf_path) {
+    throw dsarExportNotAvailableError();
+  }
+
+  const absolutePath = resolveDsarPdfAbsolutePath(request.export_pdf_path);
+  const pdfBuffer = await readSensitiveDocumentFile(absolutePath);
+
+  return {
+    pdfBuffer,
+    filename: `privacy-export-${requestId}.pdf`,
+  };
 }
 
 export async function listAdminDsarRequests(actor) {
@@ -238,6 +371,15 @@ export async function verifyDsarIdentity({
     updates.status = "denied";
     await logEvent(requestId, actor.id, "identity_failed", {});
     await logEvent(requestId, actor.id, "denied", { reason: "identity_verification_failed" });
+    await auditDsar({
+      eventType: AUDIT_EVENT_TYPES.DSAR_IDENTITY_FAILED,
+      action: "identity_failed",
+      actor,
+      requestId,
+      auditContext,
+      metadata: { requestType: request.request_type },
+      result: AUDIT_RESULTS.FAILURE,
+    });
   }
 
   if (notes) {
@@ -269,16 +411,38 @@ export async function generateDsarExport({ actor, requestId, auditContext = null
   const request = await getRequestForAdmin(requestId);
   assertIdentityVerified(request);
 
+  if (!isExportRequestType(request.request_type)) {
+    throw dsarExportNotAvailableError();
+  }
+
+  if (!request.requester_user_id) {
+    throw dsarAccountRequiredError();
+  }
+
   const exportPayload = await buildUserDataExport(request.requester_user_id);
+  exportPayload.requestId = requestId;
 
   const updated = await updateDsarRequest(requestId, {
     exportPayloadJson: exportPayload,
+    exportGeneratedAt: new Date(),
     status: "action_required",
   });
 
   await logEvent(requestId, actor.id, "export_generated", {
     fieldNames: Object.keys(exportPayload),
   });
+
+  if (request.request_type === "portability") {
+    await logEvent(requestId, actor.id, "portability_exported", {});
+    await auditDsar({
+      eventType: AUDIT_EVENT_TYPES.DSAR_PORTABILITY_EXPORT,
+      action: "portability_export",
+      actor,
+      requestId,
+      auditContext,
+      metadata: { requestType: request.request_type },
+    });
+  }
 
   await auditDsar({
     eventType: AUDIT_EVENT_TYPES.DSAR_EXPORT_GENERATE,
@@ -293,6 +457,55 @@ export async function generateDsarExport({ actor, requestId, auditContext = null
   });
 
   return loadAdminRequestDetail(updated);
+}
+
+export async function generateDsarPdfExport({ actor, requestId, auditContext = null }) {
+  assertAdmin(actor);
+  const request = await getRequestForAdmin(requestId);
+  assertIdentityVerified(request);
+
+  if (!isExportRequestType(request.request_type)) {
+    throw dsarExportNotAvailableError();
+  }
+
+  let exportPayload = parseExportPayload(request);
+
+  if (!exportPayload) {
+    if (!request.requester_user_id) {
+      throw dsarAccountRequiredError();
+    }
+    exportPayload = await buildUserDataExport(request.requester_user_id);
+    exportPayload.requestId = requestId;
+    await updateDsarRequest(requestId, {
+      exportPayloadJson: exportPayload,
+      exportGeneratedAt: new Date(),
+    });
+  }
+
+  try {
+    const pdfBuffer = await renderDsarExportPdf(exportPayload, { requestId });
+    const relativePath = await writeDsarPdfToDisk({ requestId, pdfBuffer });
+
+    const updated = await updateDsarRequest(requestId, {
+      exportPdfPath: relativePath,
+      exportGeneratedAt: new Date(),
+    });
+
+    await logEvent(requestId, actor.id, "pdf_generated", {});
+
+    await auditDsar({
+      eventType: AUDIT_EVENT_TYPES.DSAR_EXPORT_PDF,
+      action: "generate_pdf_export",
+      actor,
+      requestId,
+      auditContext,
+      metadata: { requestType: request.request_type },
+    });
+
+    return loadAdminRequestDetail(updated);
+  } catch {
+    throw dsarPdfUnavailableError();
+  }
 }
 
 export async function applyDsarCorrection({
@@ -373,8 +586,12 @@ export async function applyDsarAnonymization({
   assertIdentityVerified(request);
   assertNoLegalHold(request);
 
-  if (!["deletion", "anonymization"].includes(request.request_type)) {
+  if (!isDeletionRequestType(request.request_type)) {
     throw dsarRequestNotFoundError();
+  }
+
+  if (!request.requester_user_id) {
+    throw dsarAccountRequiredError();
   }
 
   await anonymizeUserRecord(request.requester_user_id);
@@ -483,7 +700,9 @@ export async function updateDsarLegalHold({
   );
 
   await auditDsar({
-    eventType: AUDIT_EVENT_TYPES.DSAR_LEGAL_HOLD_APPLY,
+    eventType: legalHold
+      ? AUDIT_EVENT_TYPES.DSAR_LEGAL_HOLD_APPLY
+      : AUDIT_EVENT_TYPES.DSAR_LEGAL_HOLD_REMOVE,
     action: legalHold ? "apply_legal_hold" : "remove_legal_hold",
     actor,
     requestId,
@@ -537,10 +756,26 @@ export async function updateDsarStatus({
 
   if (status === "denied") {
     await logEvent(requestId, actor.id, "denied", {});
+    await auditDsar({
+      eventType: AUDIT_EVENT_TYPES.DSAR_REQUEST_DENIED,
+      action: "deny_request",
+      actor,
+      requestId,
+      auditContext,
+      metadata: { oldStatus, newStatus: status },
+    });
   } else if (status === "cancelled") {
     await logEvent(requestId, actor.id, "cancelled", {});
-  } else if (status === "completed") {
-    await logEvent(requestId, actor.id, "completed", {});
+  } else if (status === "completed" || status === "partially_completed") {
+    await logEvent(requestId, actor.id, "completed", { status });
+    await auditDsar({
+      eventType: AUDIT_EVENT_TYPES.DSAR_REQUEST_COMPLETED,
+      action: "complete_request",
+      actor,
+      requestId,
+      auditContext,
+      metadata: { oldStatus, newStatus: status },
+    });
   }
 
   if (notes) {
@@ -551,11 +786,152 @@ export async function updateDsarStatus({
   return loadAdminRequestDetail(updated);
 }
 
-export async function addDsarAdminNote({ actor, requestId, note }) {
+export async function addDsarAdminNote({ actor, requestId, note, auditContext = null }) {
   assertAdmin(actor);
   await getRequestForAdmin(requestId);
   const updated = await appendSanitizedAdminNotes(requestId, note);
   await logEvent(requestId, actor.id, "admin_note_added", {});
+  await auditDsar({
+    eventType: AUDIT_EVENT_TYPES.DSAR_ADMIN_NOTE,
+    action: "add_note",
+    actor,
+    requestId,
+    auditContext,
+    metadata: {},
+  });
+  return loadAdminRequestDetail(updated);
+}
+
+export async function resolveDsarObjection({
+  actor,
+  requestId,
+  accepted,
+  notes,
+  denialReason,
+  auditContext = null,
+}) {
+  assertAdmin(actor);
+  const request = await getRequestForAdmin(requestId);
+
+  if (request.request_type !== "objection") {
+    throw dsarRequestNotFoundError();
+  }
+
+  assertIdentityVerified(request);
+
+  if (accepted && request.requester_user_id) {
+    await setUserProcessingRestriction({
+      userId: request.requester_user_id,
+      reason: notes
+        ? textForAdminStorage(notes)
+        : "Processing restricted per objection request",
+      restricted: true,
+    });
+  }
+
+  const status = accepted ? "completed" : "denied";
+
+  const updated = await updateDsarRequest(requestId, {
+    status,
+    completedAt: new Date(),
+    completedBy: actor.id,
+    ...(accepted ? {} : { denialReason: denialReason ?? "Objection not accepted" }),
+  });
+
+  await logEvent(requestId, actor.id, "objection_resolved", { accepted });
+  await logEvent(requestId, actor.id, status === "completed" ? "completed" : "denied", {});
+
+  await auditDsar({
+    eventType: AUDIT_EVENT_TYPES.DSAR_OBJECTION_RESOLVED,
+    action: accepted ? "accept_objection" : "deny_objection",
+    actor,
+    requestId,
+    auditContext,
+    metadata: { accepted, requestType: request.request_type },
+  });
+
+  if (notes) {
+    await appendSanitizedAdminNotes(requestId, notes);
+  }
+
+  return loadAdminRequestDetail(updated);
+}
+
+export async function applyDsarCcpaOptOut({
+  actor,
+  requestId,
+  notes,
+  explanation,
+  auditContext = null,
+}) {
+  assertAdmin(actor);
+  const request = await getRequestForAdmin(requestId);
+  assertIdentityVerified(request);
+
+  if (request.request_type !== "ccpa_opt_out") {
+    throw dsarRequestNotFoundError();
+  }
+
+  if (request.requester_user_id) {
+    await setUserCcpaSaleOptOut({
+      userId: request.requester_user_id,
+      reason: explanation ?? notes ?? "CCPA opt-out of sale/share",
+    });
+    const requester = await findUserById(request.requester_user_id);
+    if (requester?.email) {
+      const { suppressMarketingForUser } = await import("./email-compliance.service.js");
+      await suppressMarketingForUser({
+        userId: requester.id,
+        email: requester.email,
+        reason: "ccpa_opt_out",
+        source: "dsar_ccpa_opt_out",
+      });
+    }
+  } else if (request.requester_email) {
+    const { recordEmailSuppression } = await import("./email-compliance.service.js");
+    const { EMAIL_SUPPRESSION_REASONS, EMAIL_SUPPRESSION_SCOPES } = await import(
+      "../constants/emailCompliance.js"
+    );
+    for (const scope of Object.values(EMAIL_SUPPRESSION_SCOPES)) {
+      await recordEmailSuppression({
+        email: request.requester_email,
+        scope,
+        reason: EMAIL_SUPPRESSION_REASONS.CCPA_OPT_OUT,
+        source: "dsar_ccpa_opt_out",
+      });
+    }
+  }
+
+  const updated = await updateDsarRequest(requestId, {
+    status: "completed",
+    completedAt: new Date(),
+    completedBy: actor.id,
+  });
+
+  await logEvent(requestId, actor.id, "ccpa_opt_out_recorded", {
+    hasAccount: Boolean(request.requester_user_id),
+  });
+  await logEvent(requestId, actor.id, "completed", {});
+
+  await auditDsar({
+    eventType: AUDIT_EVENT_TYPES.DSAR_CCPA_OPT_OUT,
+    action: "record_ccpa_opt_out",
+    actor,
+    requestId,
+    auditContext,
+    metadata: {
+      requestType: request.request_type,
+      targetUserId: request.requester_user_id,
+    },
+  });
+
+  if (notes || explanation) {
+    await appendSanitizedAdminNotes(
+      requestId,
+      [explanation, notes].filter(Boolean).join("\n")
+    );
+  }
+
   return loadAdminRequestDetail(updated);
 }
 

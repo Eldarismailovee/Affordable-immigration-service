@@ -24,6 +24,10 @@ const ROUTE_TITLES = [
   ["/cookie-preferences", "Cookie Preferences"],
   ["/disclaimer", "Legal Disclaimer"],
   ["/availability", "State & Jurisdiction Availability"],
+  ["/accessibility", "Accessibility Statement"],
+  ["/unsubscribe", "Email unsubscribe"],
+  ["/email-preferences", "Email preferences"],
+  ["/admin/privacy-requests", "Admin — Privacy requests"],
 ];
 
 function getPageTitle(pathname) {

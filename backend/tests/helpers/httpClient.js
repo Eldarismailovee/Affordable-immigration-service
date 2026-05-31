@@ -39,11 +39,12 @@ function parseSetCookieHeaders(setCookieHeader) {
   return cookies;
 }
 
-function makeRequest({ port, method, path, body, token, cookies = {} }) {
+function makeRequest({ port, method, path, body, token, cookies = {}, headers: extraHeaders = {} }) {
   return new Promise((resolve, reject) => {
     const headers = {
       "content-type": "application/json",
       "user-agent": "affordable-immigration-service-test/1.0",
+      ...extraHeaders,
     };
 
     if (token) {

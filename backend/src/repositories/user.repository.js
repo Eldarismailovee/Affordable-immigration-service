@@ -3,7 +3,7 @@ import pool from "../db/pool.js";
 import { query } from "../db/query.js";
 
 const SAFE_USER_FIELDS =
-  "id, email, full_name, role, status, email_verified_at, processing_restricted_at, processing_restriction_reason, created_at, updated_at";
+  "id, email, full_name, role, status, email_verified_at, processing_restricted_at, processing_restriction_reason, marketing_consent, newsletter_consent, marketing_consent_at, marketing_consent_source, marketing_opt_out_at, marketing_opt_out_reason, created_at, updated_at";
 const AUTH_USER_FIELDS = `${SAFE_USER_FIELDS}, password_hash`;
 
 export async function findUserByEmail(email, db = pool) {
@@ -172,6 +172,25 @@ export async function updateUserFullNameById(userId, fullName, db = pool) {
   return rows[0] || null;
 }
 
+export async function setUserCcpaSaleOptOut({ userId, reason }, db = pool) {
+  const { rows } = await query(
+    db,
+    `
+    UPDATE users
+    SET
+      ccpa_sale_opt_out_at = COALESCE(ccpa_sale_opt_out_at, NOW()),
+      ccpa_sale_opt_out_reason = COALESCE($2, ccpa_sale_opt_out_reason, 'CCPA opt-out request'),
+      updated_at = NOW()
+    WHERE id = $1
+      AND deleted_at IS NULL
+    RETURNING ${SAFE_USER_FIELDS}
+    `,
+    [userId, reason ?? null]
+  );
+
+  return rows[0] || null;
+}
+
 export async function setUserProcessingRestriction(
   { userId, reason, restricted },
   db = pool
@@ -216,6 +235,65 @@ export async function anonymizeUserById(userId, db = pool) {
     RETURNING id, email, full_name, role, status, deleted_at, created_at, updated_at
     `,
     [userId, email]
+  );
+
+  return rows[0] || null;
+}
+
+export async function grantUserMarketingConsent(
+  { userId, marketingConsent, newsletterConsent, source },
+  db = pool
+) {
+  const { rows } = await query(
+    db,
+    `
+    UPDATE users
+    SET
+      marketing_consent = COALESCE($2, marketing_consent),
+      newsletter_consent = COALESCE($3, newsletter_consent),
+      marketing_consent_at = CASE
+        WHEN COALESCE($2, marketing_consent) = TRUE OR COALESCE($3, newsletter_consent) = TRUE
+        THEN COALESCE(marketing_consent_at, NOW())
+        ELSE marketing_consent_at
+      END,
+      marketing_consent_source = COALESCE($4, marketing_consent_source),
+      marketing_opt_out_at = NULL,
+      marketing_opt_out_reason = NULL,
+      updated_at = NOW()
+    WHERE id = $1
+      AND deleted_at IS NULL
+    RETURNING ${SAFE_USER_FIELDS}
+    `,
+    [userId, marketingConsent ?? null, newsletterConsent ?? null, source ?? null]
+  );
+
+  return rows[0] || null;
+}
+
+export async function withdrawUserMarketingConsent(
+  { userId, scope, reason, source },
+  db = pool
+) {
+  const withdrawMarketing =
+    scope === "marketing" || scope === "all_non_transactional";
+  const withdrawNewsletter =
+    scope === "newsletter" || scope === "all_non_transactional";
+
+  const { rows } = await query(
+    db,
+    `
+    UPDATE users
+    SET
+      marketing_consent = CASE WHEN $2 THEN FALSE ELSE marketing_consent END,
+      newsletter_consent = CASE WHEN $3 THEN FALSE ELSE newsletter_consent END,
+      marketing_opt_out_at = NOW(),
+      marketing_opt_out_reason = COALESCE($4, marketing_opt_out_reason, 'opt_out'),
+      updated_at = NOW()
+    WHERE id = $1
+      AND deleted_at IS NULL
+    RETURNING ${SAFE_USER_FIELDS}
+    `,
+    [userId, withdrawMarketing, withdrawNewsletter, reason ?? source ?? null]
   );
 
   return rows[0] || null;

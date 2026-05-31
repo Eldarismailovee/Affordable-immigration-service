@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { logCookieConsent } from "../services/api";
 import {
   applyConsentedScripts,
+  detectGlobalPrivacyControl,
   getConsent,
   getPreviousOptionalChoices,
   needsConsentPrompt,
@@ -17,6 +18,8 @@ function logConsentBestEffort(consent) {
     strictlyNecessary: consent.strictlyNecessary,
     analytics: consent.analytics,
     marketing: consent.marketing,
+    gpcActive: consent.gpcActive,
+    regionHint: consent.regionHint,
     source: consent.source,
     anonymousId: consent.anonymousId,
   }).catch(() => {});
@@ -25,26 +28,53 @@ function logConsentBestEffort(consent) {
 export function CookieConsentProvider({ children }) {
   const [consent, setConsent] = useState(() => getConsent());
   const [showBanner, setShowBanner] = useState(() => needsConsentPrompt());
+  const gpcActive = detectGlobalPrivacyControl();
 
   useEffect(() => {
-    applyConsentedScripts();
-
-    return onConsentChange((nextConsent) => {
+    const unsubscribe = onConsentChange((nextConsent) => {
       setConsent(nextConsent);
       setShowBanner(false);
     });
-  }, []);
+
+    if (gpcActive) {
+      const current = getConsent();
+
+      if (!current) {
+        const next = saveConsent({
+          analytics: false,
+          marketing: false,
+          source: "gpc",
+          gpcActive: true,
+        });
+        logConsentBestEffort(next);
+      } else if (current.analytics || current.marketing || !current.gpcActive) {
+        const next = saveConsent({
+          analytics: false,
+          marketing: false,
+          source: "gpc",
+          gpcActive: true,
+        });
+        logConsentBestEffort(next);
+      }
+    }
+
+    applyConsentedScripts();
+
+    return unsubscribe;
+  }, [gpcActive]);
 
   const value = useMemo(
     () => ({
       consent,
       showBanner,
+      gpcActive,
       previousOptionalChoices: getPreviousOptionalChoices(),
       acceptAll: () => {
         const next = saveConsent({
-          analytics: true,
-          marketing: true,
+          analytics: gpcActive ? false : true,
+          marketing: gpcActive ? false : true,
           source: "banner",
+          gpcActive,
         });
         logConsentBestEffort(next);
       },
@@ -53,17 +83,22 @@ export function CookieConsentProvider({ children }) {
           analytics: false,
           marketing: false,
           source: "banner",
+          gpcActive,
         });
         logConsentBestEffort(next);
       },
       savePreferences: ({ analytics, marketing, source = "preferences" }) => {
-        const next = saveConsent({ analytics, marketing, source });
+        const next = saveConsent({ analytics, marketing, source, gpcActive });
         logConsentBestEffort(next);
         return next;
       },
-      reopenBanner: () => setShowBanner(true),
+      reopenBanner: () => {
+        if (!gpcActive) {
+          setShowBanner(true);
+        }
+      },
     }),
-    [consent, showBanner]
+    [consent, showBanner, gpcActive]
   );
 
   return (

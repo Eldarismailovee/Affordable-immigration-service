@@ -2,11 +2,14 @@ import { Router } from "express";
 import {
   addDsarNoteController,
   applyDsarAnonymizationController,
+  applyDsarCcpaOptOutController,
   applyDsarCorrectionController,
   applyDsarRestrictionController,
   generateDsarExportController,
+  generateDsarPdfExportController,
   getAdminDsarController,
   listAdminDsarController,
+  resolveDsarObjectionController,
   updateDsarLegalHoldController,
   updateDsarStatusController,
   verifyDsarIdentityController,
@@ -14,10 +17,12 @@ import {
 import { requireRole } from "../../middleware/auth.js";
 import { validateRequest } from "../../middleware/validateRequest.js";
 import {
+  adminCcpaOptOutSchema,
   adminCorrectionActionSchema,
   adminIdentityVerificationSchema,
   adminLegalHoldSchema,
   adminNoteSchema,
+  adminObjectionResolveSchema,
   adminStatusUpdateSchema,
   dsarRequestIdParamsSchema,
 } from "../../schemas/dsar.schema.js";
@@ -49,6 +54,13 @@ router.post(
   adminOnly,
   validateRequest({ params: dsarRequestIdParamsSchema }),
   generateDsarExportController
+);
+
+router.post(
+  "/:requestId/export-pdf",
+  adminOnly,
+  validateRequest({ params: dsarRequestIdParamsSchema }),
+  generateDsarPdfExportController
 );
 
 router.post(
@@ -103,6 +115,26 @@ router.post(
     body: adminNoteSchema,
   }),
   addDsarNoteController
+);
+
+router.post(
+  "/:requestId/objection",
+  adminOnly,
+  validateRequest({
+    params: dsarRequestIdParamsSchema,
+    body: adminObjectionResolveSchema,
+  }),
+  resolveDsarObjectionController
+);
+
+router.post(
+  "/:requestId/ccpa-opt-out",
+  adminOnly,
+  validateRequest({
+    params: dsarRequestIdParamsSchema,
+    body: adminCcpaOptOutSchema,
+  }),
+  applyDsarCcpaOptOutController
 );
 
 export default router;

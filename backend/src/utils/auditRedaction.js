@@ -1,5 +1,5 @@
 const SENSITIVE_KEY_PATTERN =
-  /^(password|passwordHash|token|accessToken|refreshToken|tokenHash|authorization|cookie|cardNumber|pan|cvv|cvc|secret|apiKey|htmlContent|html_content|exportPayload|export_payload|notes|userMessage|requestedChanges|requested_changes)$/i;
+  /^(password|passwordHash|token|accessToken|refreshToken|tokenHash|authorization|cookie|cardNumber|pan|cvv|cvc|secret|apiKey|htmlContent|html_content|exportPayload|export_payload|notes|userMessage|requestedChanges|requested_changes|email|emailNormalized|email_normalized|html|text|textBody|htmlBody)$/i;
 
 const SENSITIVE_SUBSTRING_PATTERN =
   /(password|token|authorization|cookie|card|pan|cvv|secret|api[_-]?key)/i;

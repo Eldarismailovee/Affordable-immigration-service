@@ -19,6 +19,8 @@ export function createInMemoryStore() {
     dsarRequests: new Map(),
     dsarEvents: [],
     cookieConsentLogs: [],
+    conflictChecks: new Map(),
+    emailSuppressions: new Map(),
   };
 }
 
@@ -60,6 +62,14 @@ export function buildUserRepo(store) {
         email_verified_at: null,
         processing_restricted_at: null,
         processing_restriction_reason: null,
+        ccpa_sale_opt_out_at: null,
+        ccpa_sale_opt_out_reason: null,
+        marketing_consent: false,
+        newsletter_consent: false,
+        marketing_consent_at: null,
+        marketing_consent_source: null,
+        marketing_opt_out_at: null,
+        marketing_opt_out_reason: null,
         created_at: new Date(),
         updated_at: new Date(),
       };
@@ -104,6 +114,50 @@ export function buildUserRepo(store) {
       if (!user) return null;
       user.processing_restricted_at = restricted ? new Date() : null;
       user.processing_restriction_reason = restricted ? reason : null;
+      return safeUser(user);
+    },
+    setUserCcpaSaleOptOut: async ({ userId, reason }) => {
+      const user = store.users.get(userId);
+      if (!user) return null;
+      user.ccpa_sale_opt_out_at = user.ccpa_sale_opt_out_at || new Date();
+      user.ccpa_sale_opt_out_reason = reason;
+      return safeUser(user);
+    },
+    grantUserMarketingConsent: async ({
+      userId,
+      marketingConsent,
+      newsletterConsent,
+      source,
+    }) => {
+      const user = store.users.get(userId);
+      if (!user) return null;
+      if (marketingConsent !== null && marketingConsent !== undefined) {
+        user.marketing_consent = marketingConsent;
+      }
+      if (newsletterConsent !== null && newsletterConsent !== undefined) {
+        user.newsletter_consent = newsletterConsent;
+      }
+      if (user.marketing_consent || user.newsletter_consent) {
+        user.marketing_consent_at = user.marketing_consent_at || new Date();
+        user.marketing_consent_source = source ?? user.marketing_consent_source;
+        user.marketing_opt_out_at = null;
+        user.marketing_opt_out_reason = null;
+      }
+      user.updated_at = new Date();
+      return safeUser(user);
+    },
+    withdrawUserMarketingConsent: async ({ userId, scope, reason }) => {
+      const user = store.users.get(userId);
+      if (!user) return null;
+      const withdrawMarketing =
+        scope === "marketing" || scope === "all_non_transactional";
+      const withdrawNewsletter =
+        scope === "newsletter" || scope === "all_non_transactional";
+      if (withdrawMarketing) user.marketing_consent = false;
+      if (withdrawNewsletter) user.newsletter_consent = false;
+      user.marketing_opt_out_at = new Date();
+      user.marketing_opt_out_reason = reason ?? "opt_out";
+      user.updated_at = new Date();
       return safeUser(user);
     },
     anonymizeUserById: async (userId) => {
@@ -240,9 +294,11 @@ export function buildLeadRepo(store) {
         if (userId && lead.user_id !== userId) continue;
         if (attorneyVisibleOnly) {
           const visible = [
+            "new",
             "conflict_check",
             "attorney_review",
             "accepted",
+            "engaged",
             "declined",
             "filed",
           ];
@@ -292,6 +348,11 @@ export function buildLeadRepo(store) {
         email,
         phone,
         status,
+        attorney_review_status: null,
+        attorney_reviewed_by: null,
+        attorney_reviewed_at: null,
+        attorney_review_notes: null,
+        responsible_attorney_confirmed: false,
         deleted_at: null,
         created_at: new Date(),
         updated_at: new Date(),
@@ -299,9 +360,21 @@ export function buildLeadRepo(store) {
       store.leads.set(id, row);
       return row;
     },
-    createIntakeRecord: async () => {},
+    createIntakeRecord: async ({ id, leadId, selectedPackage, caseType, notes, agreementStatus }) => {
+      store.intakes.set(leadId, {
+        id,
+        lead_id: leadId,
+        selected_package: selectedPackage,
+        case_type: caseType,
+        notes: notes || "",
+        agreement_status: agreementStatus || "previewed",
+        legal_recommendation_approved_by: null,
+        legal_recommendation_approved_at: null,
+        created_at: new Date(),
+      });
+    },
     createBookingRecord: async () => {},
-    findLatestIntakeByLeadId: async () => null,
+    findLatestIntakeByLeadId: async (leadId) => store.intakes.get(leadId) || null,
     findLatestBookingByLeadId: async () => null,
     findLatestPaymentByLeadId: async (leadId) => {
       const payments = [...store.payments.values()].filter(
@@ -376,6 +449,9 @@ export function buildDsarRepo(store) {
         user_message: payload.userMessage ?? null,
         requested_changes: payload.requestedChanges ?? null,
         export_payload_json: null,
+        export_pdf_path: null,
+        export_generated_at: null,
+        denial_reason: null,
         completed_at: null,
         completed_by: null,
         created_at: new Date(),
@@ -387,6 +463,14 @@ export function buildDsarRepo(store) {
     findDsarRequestById: async (id) => store.dsarRequests.get(id) || null,
     listDsarRequestsByUserId: async (userId) =>
       [...store.dsarRequests.values()].filter((r) => r.requester_user_id === userId),
+    listDsarRequestsForAccount: async ({ userId, email }) =>
+      [...store.dsarRequests.values()].filter(
+        (r) =>
+          r.requester_user_id === userId ||
+          (!r.requester_user_id &&
+            email &&
+            r.requester_email?.toLowerCase() === String(email).toLowerCase())
+      ),
     listAllDsarRequests: async () => [...store.dsarRequests.values()],
     updateDsarRequest: async (id, fields) => {
       const row = store.dsarRequests.get(id);
@@ -402,6 +486,9 @@ export function buildDsarRepo(store) {
       if (fields.legalHoldAppliedBy !== undefined) row.legal_hold_applied_by = fields.legalHoldAppliedBy;
       if (fields.legalHoldAppliedAt !== undefined) row.legal_hold_applied_at = fields.legalHoldAppliedAt;
       if (fields.exportPayloadJson !== undefined) row.export_payload_json = fields.exportPayloadJson;
+      if (fields.exportPdfPath !== undefined) row.export_pdf_path = fields.exportPdfPath;
+      if (fields.exportGeneratedAt !== undefined) row.export_generated_at = fields.exportGeneratedAt;
+      if (fields.denialReason !== undefined) row.denial_reason = fields.denialReason;
       if (fields.completedAt !== undefined) row.completed_at = fields.completedAt;
       if (fields.completedBy !== undefined) row.completed_by = fields.completedBy;
       row.updated_at = new Date();
@@ -514,6 +601,7 @@ export function buildCookieConsentRepo(store) {
         strictly_necessary: entry.strictlyNecessary,
         analytics: entry.analytics,
         marketing: entry.marketing,
+        gpc_active: entry.gpcActive ?? false,
         source: entry.source,
         region_hint: entry.regionHint ?? null,
         user_agent_hash: entry.userAgentHash ?? null,
@@ -587,6 +675,62 @@ export function buildOnboardingRepo(store) {
   };
 }
 
+export function buildConflictCheckRepo(store) {
+  if (!store.conflictChecks) store.conflictChecks = new Map();
+
+  return {
+    findConflictCheckByLeadId: async (leadId) => store.conflictChecks.get(leadId) || null,
+    upsertConflictCheck: async (payload) => {
+      const row = {
+        id: randomUUID(),
+        lead_id: payload.leadId,
+        potential_client_name: payload.potentialClientName,
+        potential_client_email: payload.potentialClientEmail,
+        opposing_party_names: payload.opposingPartyNames || [],
+        related_person_names: payload.relatedPersonNames || [],
+        case_summary: payload.caseSummary || null,
+        matter_type: payload.matterType,
+        jurisdiction_or_location: payload.jurisdictionOrLocation || null,
+        notes: payload.notes || null,
+        result: payload.result || "pending",
+        submitted_at: payload.submittedAt || null,
+        reviewed_by: payload.reviewedBy || null,
+        reviewed_at: payload.reviewedAt || null,
+        created_at: new Date(),
+        updated_at: new Date(),
+      };
+      store.conflictChecks.set(payload.leadId, row);
+      return row;
+    },
+    updateAttorneyReviewByLeadId: async ({
+      leadId,
+      status,
+      reviewedBy,
+      reviewNotes,
+      responsibleAttorneyConfirmed,
+    }) => {
+      const lead = store.leads.get(leadId);
+      if (!lead || lead.deleted_at) return null;
+      lead.attorney_review_status = status;
+      lead.attorney_reviewed_by = reviewedBy;
+      lead.attorney_reviewed_at = new Date();
+      lead.attorney_review_notes = reviewNotes || null;
+      if (responsibleAttorneyConfirmed) {
+        lead.responsible_attorney_confirmed = true;
+      }
+      lead.updated_at = new Date();
+      return lead;
+    },
+    markLegalRecommendationApproved: async ({ leadId, approvedBy }) => {
+      const intake = store.intakes.get(leadId);
+      if (intake) {
+        intake.legal_recommendation_approved_by = approvedBy;
+        intake.legal_recommendation_approved_at = new Date();
+      }
+    },
+  };
+}
+
 export function buildPaymentRepo(store) {
   return {
     createPaymentRecord: async (payload) => {
@@ -640,5 +784,43 @@ export function buildPaymentRepo(store) {
       return null;
     },
     updateIntakePaymentStatusByLeadId: async () => {},
+  };
+}
+
+function suppressionKey(emailHash, scope) {
+  return `${emailHash}:${scope}`;
+}
+
+export function buildEmailSuppressionRepo(store) {
+  return {
+    findSuppressionByEmailHashAndScope: async (emailHash, scope) =>
+      store.emailSuppressions.get(suppressionKey(emailHash, scope)) ?? null,
+    listSuppressionsByEmailHash: async (emailHash) =>
+      Array.from(store.emailSuppressions.values()).filter(
+        (row) => row.email_hash === emailHash
+      ),
+    upsertEmailSuppression: async (payload) => {
+      const key = suppressionKey(payload.emailHash, payload.scope);
+      const existing = store.emailSuppressions.get(key);
+      const row = {
+        id: existing?.id ?? payload.id ?? randomUUID(),
+        email_normalized: payload.emailNormalized,
+        email_hash: payload.emailHash,
+        reason: payload.reason,
+        source: payload.source,
+        scope: payload.scope,
+        user_id: payload.userId ?? existing?.user_id ?? null,
+        token_hash: payload.tokenHash ?? existing?.token_hash ?? null,
+        metadata_json: payload.metadataJson ?? {},
+        created_at: existing?.created_at ?? new Date(),
+        updated_at: new Date(),
+      };
+      store.emailSuppressions.set(key, row);
+      return row;
+    },
+    deleteSuppressionByEmailHashAndScope: async (emailHash, scope) => {
+      const key = suppressionKey(emailHash, scope);
+      return store.emailSuppressions.delete(key);
+    },
   };
 }

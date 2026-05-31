@@ -63,6 +63,7 @@ export async function buildUserDataExport(userId) {
 
   return {
     generatedAt: new Date().toISOString(),
+    requestId: null,
     user: stripSecretsFromExportUser(userRow),
     leads: leads.map(mapLead),
     intakes,

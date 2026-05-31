@@ -80,6 +80,12 @@ export default function AccountPage() {
               </Link>
             ) : null}
             <Link
+              to="/email-preferences"
+              className="rounded-full border border-white/15 bg-white/5 px-5 py-3 font-semibold text-white hover:border-amber-400/40 hover:text-amber-300"
+            >
+              Email preferences
+            </Link>
+            <Link
               to="/start"
               className="rounded-full bg-amber-400 px-5 py-3 font-semibold text-slate-950 hover:bg-amber-300"
             >

@@ -32,6 +32,7 @@ const CONFIG_KEYS = [
   "UPLOAD_VIRUS_SCAN_TIMEOUT_MS",
   "TECHNICAL_LOG_RETENTION_DAYS",
   "SECURITY_AUDIT_RETENTION_DAYS",
+  "DOCUMENT_ENCRYPTION_KEY_BASE64",
 ];
 
 function withConfigEnv(overrides) {
@@ -153,6 +154,17 @@ test("env parses upload security settings", async () => {
   assert.equal(env.UPLOAD_VIRUS_SCAN_ENABLED, true);
   assert.equal(env.UPLOAD_VIRUS_SCAN_COMMAND, "clamdscan");
   assert.equal(env.UPLOAD_VIRUS_SCAN_TIMEOUT_MS, 15000);
+});
+
+test("env accepts optional document encryption key", async () => {
+  const key = Buffer.alloc(32, 7).toString("base64");
+  const { default: env } = await importEnvWith(
+    validProductionEnv({
+      DOCUMENT_ENCRYPTION_KEY_BASE64: key,
+    })
+  );
+
+  assert.equal(env.DOCUMENT_ENCRYPTION_KEY_BASE64, key);
 });
 
 test("env applies default log retention windows", async () => {

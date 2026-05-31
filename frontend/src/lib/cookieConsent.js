@@ -1,4 +1,4 @@
-export const COOKIE_CONSENT_VERSION = "2026-05-31-v2";
+export const COOKIE_CONSENT_VERSION = "2026-05-31-v3";
 const STORAGE_KEY = "cookie_consent_preferences";
 
 const listeners = new Set();
@@ -20,12 +20,34 @@ function notifyListeners(consent) {
   }
 }
 
+export function detectGlobalPrivacyControl() {
+  try {
+    return typeof navigator !== "undefined" && navigator.globalPrivacyControl === true;
+  } catch {
+    return false;
+  }
+}
+
+export function applyGpcConstraints({ analytics, marketing }) {
+  if (!detectGlobalPrivacyControl()) {
+    return { analytics: Boolean(analytics), marketing: Boolean(marketing), gpcActive: false };
+  }
+
+  return {
+    analytics: false,
+    marketing: false,
+    gpcActive: true,
+  };
+}
+
 export function getDefaultConsent() {
   return {
     version: COOKIE_CONSENT_VERSION,
     strictlyNecessary: true,
     analytics: false,
     marketing: false,
+    gpcActive: detectGlobalPrivacyControl(),
+    regionHint: "unknown",
     updatedAt: new Date().toISOString(),
     source: null,
     anonymousId: null,
@@ -56,16 +78,23 @@ export function getConsent() {
 }
 
 export function needsConsentPrompt() {
+  if (detectGlobalPrivacyControl()) {
+    return false;
+  }
+
   return getConsent() === null;
 }
 
-export function saveConsent({ analytics, marketing, source, anonymousId }) {
+export function saveConsent({ analytics, marketing, source, anonymousId, gpcActive }) {
   const existing = readStoredRaw();
+  const constrained = applyGpcConstraints({ analytics, marketing });
   const consent = {
     version: COOKIE_CONSENT_VERSION,
     strictlyNecessary: true,
-    analytics: Boolean(analytics),
-    marketing: Boolean(marketing),
+    analytics: constrained.analytics,
+    marketing: constrained.marketing,
+    gpcActive: gpcActive ?? constrained.gpcActive,
+    regionHint: existing?.regionHint ?? "unknown",
     updatedAt: new Date().toISOString(),
     source,
     anonymousId: anonymousId || existing?.anonymousId || crypto.randomUUID(),
@@ -78,13 +107,17 @@ export function saveConsent({ analytics, marketing, source, anonymousId }) {
 }
 
 export function hasConsent(category) {
-  if (category === "strictly_necessary" || category === "strictlyNecessary") {
+  if (category === "strictly_necessary" || category === "strictlyNecessary" || category === "necessary") {
     return true;
   }
 
   const consent = getConsent();
 
   if (!consent) {
+    return false;
+  }
+
+  if (detectGlobalPrivacyControl()) {
     return false;
   }
 
@@ -99,10 +132,16 @@ export function hasConsent(category) {
   return false;
 }
 
+export const hasCookieConsent = hasConsent;
+export const getCookieConsent = getConsent;
+export const saveCookieConsent = saveConsent;
+
 export function onConsentChange(callback) {
   listeners.add(callback);
   return () => listeners.delete(callback);
 }
+
+export const onCookieConsentChange = onConsentChange;
 
 export function loadAnalytics() {
   if (!hasConsent("analytics") || analyticsLoaded) {
@@ -124,6 +163,8 @@ export function applyConsentedScripts() {
   loadAnalytics();
   loadMarketing();
 }
+
+export const applyConsentToVendors = applyConsentedScripts;
 
 export function resetOptionalScriptStateForTests() {
   analyticsLoaded = false;

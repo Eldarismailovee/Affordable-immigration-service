@@ -62,6 +62,7 @@ export default function Footer() {
                 <Link to="/cookie-preferences" className="transition hover:text-amber-300">Cookie Preferences</Link>
                 <Link to="/availability" className="transition hover:text-amber-300">State &amp; Jurisdiction Availability</Link>
                 <Link to="/disclaimer" className="transition hover:text-amber-300">Legal Disclaimer</Link>
+                <Link to="/accessibility" className="transition hover:text-amber-300">Accessibility</Link>
               </div>
             </div>
           </div>

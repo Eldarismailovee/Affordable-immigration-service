@@ -90,3 +90,25 @@ test("POST /api/public/cookie-consent stores hashed request metadata", async () 
     assert.ok(store.cookieConsentLogs[0].ip_hash);
   });
 });
+
+test("POST /api/public/cookie-consent forces GPC opt-out from Sec-GPC header", async () => {
+  await withApp(app, async (client) => {
+    const res = await client.post(
+      "/api/public/cookie-consent",
+      {
+        ...basePayload,
+        analytics: true,
+        marketing: true,
+        source: "banner",
+      },
+      { headers: { "Sec-GPC": "1" } }
+    );
+
+    assert.equal(res.status, 201);
+    assert.equal(store.cookieConsentLogs.length, 1);
+    assert.equal(store.cookieConsentLogs[0].gpc_active, true);
+    assert.equal(store.cookieConsentLogs[0].marketing, false);
+    assert.equal(store.cookieConsentLogs[0].analytics, false);
+    assert.equal(store.cookieConsentLogs[0].source, "gpc");
+  });
+});

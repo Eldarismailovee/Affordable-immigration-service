@@ -82,7 +82,21 @@ export async function listLeadSummaries({ userId, attorneyVisibleOnly = false } 
 export async function findLeadById(leadId, db = pool) {
   const { rows } = await query(db, 
     `
-    SELECT id, user_id, first_name, last_name, email, phone, status, created_at, updated_at
+    SELECT
+      id,
+      user_id,
+      first_name,
+      last_name,
+      email,
+      phone,
+      status,
+      attorney_review_status,
+      attorney_reviewed_by,
+      attorney_reviewed_at,
+      attorney_review_notes,
+      responsible_attorney_confirmed,
+      created_at,
+      updated_at
     FROM leads
     WHERE id = $1
       AND deleted_at IS NULL
@@ -104,7 +118,21 @@ export async function softDeleteLeadById(leadId, db = pool) {
       updated_at = NOW()
     WHERE id = $1
       AND deleted_at IS NULL
-    RETURNING id, user_id, first_name, last_name, email, phone, status, created_at, updated_at
+    RETURNING
+      id,
+      user_id,
+      first_name,
+      last_name,
+      email,
+      phone,
+      status,
+      attorney_review_status,
+      attorney_reviewed_by,
+      attorney_reviewed_at,
+      attorney_review_notes,
+      responsible_attorney_confirmed,
+      created_at,
+      updated_at
     `,
     [leadId, DECLINED_LEAD_STATUS]
   );
@@ -120,7 +148,7 @@ export async function createLead(
     lastName,
     email,
     phone,
-    status = "prospective",
+    status = "new",
   },
   db = pool
 ) {
@@ -228,7 +256,9 @@ export async function findLatestIntakeByLeadId(leadId, db = pool) {
       payment_status,
       docketwise_status,
       submitted_at,
-      created_at
+      created_at,
+      legal_recommendation_approved_by,
+      legal_recommendation_approved_at
     FROM intakes
     WHERE lead_id = $1
     ORDER BY created_at DESC
@@ -347,7 +377,21 @@ export async function updateLeadStateById(leadId, state, db = pool) {
       updated_at = NOW()
     WHERE id = $1
       AND deleted_at IS NULL
-    RETURNING id, user_id, first_name, last_name, email, phone, status, created_at, updated_at
+    RETURNING
+      id,
+      user_id,
+      first_name,
+      last_name,
+      email,
+      phone,
+      status,
+      attorney_review_status,
+      attorney_reviewed_by,
+      attorney_reviewed_at,
+      attorney_review_notes,
+      responsible_attorney_confirmed,
+      created_at,
+      updated_at
     `,
     [leadId, state]
   );
@@ -371,7 +415,21 @@ export async function updateLeadContactById(
       updated_at = NOW()
     WHERE id = $1
       AND deleted_at IS NULL
-    RETURNING id, user_id, first_name, last_name, email, phone, status, created_at, updated_at
+    RETURNING
+      id,
+      user_id,
+      first_name,
+      last_name,
+      email,
+      phone,
+      status,
+      attorney_review_status,
+      attorney_reviewed_by,
+      attorney_reviewed_at,
+      attorney_review_notes,
+      responsible_attorney_confirmed,
+      created_at,
+      updated_at
     `,
     [leadId, firstName ?? null, lastName ?? null, phone ?? null, email ?? null]
   );
@@ -401,7 +459,21 @@ export async function findLatestLeadByUserId(userId, db = pool) {
   const { rows } = await query(
     db,
     `
-    SELECT id, user_id, first_name, last_name, email, phone, status, created_at, updated_at
+    SELECT
+      id,
+      user_id,
+      first_name,
+      last_name,
+      email,
+      phone,
+      status,
+      attorney_review_status,
+      attorney_reviewed_by,
+      attorney_reviewed_at,
+      attorney_review_notes,
+      responsible_attorney_confirmed,
+      created_at,
+      updated_at
     FROM leads
     WHERE user_id = $1
       AND deleted_at IS NULL

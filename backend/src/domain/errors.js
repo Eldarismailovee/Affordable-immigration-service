@@ -127,6 +127,38 @@ export function dsarExportNotAvailableError() {
   return new AppError("Export is not available for this request", 404, "DSAR_EXPORT_NOT_AVAILABLE");
 }
 
+export function dsarInvalidCorrectionFieldsError(field) {
+  return new AppError(
+    `Field "${field}" cannot be corrected through a privacy request`,
+    400,
+    "DSAR_INVALID_CORRECTION_FIELD"
+  );
+}
+
+export function dsarPdfUnavailableError() {
+  return new AppError(
+    "PDF export is temporarily unavailable",
+    503,
+    "DSAR_PDF_UNAVAILABLE"
+  );
+}
+
+export function dsarEmailRequiredError() {
+  return new AppError(
+    "Email is required for anonymous privacy requests",
+    400,
+    "DSAR_EMAIL_REQUIRED"
+  );
+}
+
+export function dsarAccountRequiredError() {
+  return new AppError(
+    "This privacy request requires an associated account before processing",
+    400,
+    "DSAR_ACCOUNT_REQUIRED"
+  );
+}
+
 export function processingRestrictedError() {
   return new AppError(
     "Processing is restricted for this account",

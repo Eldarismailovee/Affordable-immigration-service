@@ -1,8 +1,15 @@
 import {
   findLeadById,
+  findLatestIntakeByLeadId,
   updateLeadStateById,
 } from "../repositories/lead.repository.js";
+import { findConflictCheckByLeadId } from "../repositories/conflict-check.repository.js";
 import { leadNotFoundError } from "../domain/errors.js";
+import {
+  assertLeadCanMoveToAccepted,
+  assertLeadCanMoveToAttorneyReview,
+  assertLeadCanMoveToEngaged,
+} from "../domain/lead-workflow.policy.js";
 import {
   assertLeadStateTransition,
   isLeadVisibleToAttorney,
@@ -10,6 +17,13 @@ import {
 import { isAdmin, isAttorney } from "../domain/user.policy.js";
 import { AppError } from "../utils/appError.js";
 import { assertStaffAccess } from "./access.service.js";
+import {
+  AUDIT_CATEGORIES,
+  AUDIT_EVENT_TYPES,
+  AUDIT_RESULTS,
+} from "../constants/audit.js";
+import { recordAuditEvent } from "./audit.service.js";
+import { buildActor } from "../utils/auditContext.js";
 
 function assertCanTransitionLeadState({ actor, fromState, toState }) {
   assertLeadStateTransition(fromState, toState);
@@ -25,7 +39,8 @@ function assertCanTransitionLeadState({ actor, fromState, toState }) {
   const attorneyAllowed = {
     conflict_check: ["attorney_review", "declined"],
     attorney_review: ["accepted", "declined"],
-    accepted: ["filed", "declined"],
+    accepted: ["engaged", "declined"],
+    engaged: ["filed"],
   };
 
   const allowed = attorneyAllowed[fromState] || [];
@@ -35,7 +50,32 @@ function assertCanTransitionLeadState({ actor, fromState, toState }) {
   }
 }
 
-export async function updateLeadState({ leadId, state, actor }) {
+async function assertWorkflowPreconditions({ lead, toState }) {
+  const conflictCheck = await findConflictCheckByLeadId(lead.id);
+  const intake = await findLatestIntakeByLeadId(lead.id);
+  const enrichedLead = {
+    ...lead,
+    conflict_check_result: conflictCheck?.result ?? null,
+  };
+
+  if (toState === "attorney_review") {
+    assertLeadCanMoveToAttorneyReview(conflictCheck);
+  }
+
+  if (toState === "accepted") {
+    assertLeadCanMoveToAccepted(
+      enrichedLead,
+      intake,
+      conflictCheck?.jurisdiction_or_location
+    );
+  }
+
+  if (toState === "engaged") {
+    assertLeadCanMoveToEngaged(enrichedLead);
+  }
+}
+
+export async function updateLeadState({ leadId, state, actor, reason = null }) {
   assertStaffAccess(actor);
 
   const lead = await findLeadById(leadId);
@@ -54,11 +94,28 @@ export async function updateLeadState({ leadId, state, actor }) {
     toState: state,
   });
 
+  await assertWorkflowPreconditions({ lead, toState: state });
+
   const updated = await updateLeadStateById(leadId, state);
 
   if (!updated) {
     throw leadNotFoundError();
   }
+
+  await recordAuditEvent({
+    eventType: AUDIT_EVENT_TYPES.LEAD_STATUS_CHANGE,
+    category: AUDIT_CATEGORIES.LEAD_WORKFLOW,
+    action: "status_change",
+    result: AUDIT_RESULTS.SUCCESS,
+    ...buildActor(actor),
+    targetType: "lead",
+    targetId: leadId,
+    metadata: {
+      oldStatus: lead.status,
+      newStatus: state,
+      reasonCode: reason ? "provided" : null,
+    },
+  });
 
   return updated;
 }

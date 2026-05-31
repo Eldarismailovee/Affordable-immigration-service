@@ -1,13 +1,21 @@
 export const USER_ROLES = ["admin", "user", "attorney"];
 export const USER_STATUSES = ["active", "disabled"];
 export const LEAD_STATUSES = [
-  "prospective",
+  "new",
   "conflict_check",
   "attorney_review",
   "accepted",
   "declined",
+  "engaged",
   "filed",
 ];
+export const CONFLICT_CHECK_RESULT_STATUSES = [
+  "pending",
+  "clear",
+  "conflict_found",
+  "needs_more_info",
+];
+export const ATTORNEY_REVIEW_RESULT_STATUSES = ["pending", "accepted", "declined"];
 export const PACKAGE_TYPES = ["guidance", "filing"];
 export const CONSULTATION_TYPES = ["Zoom", "Phone"];
 export const AGREEMENT_STATUSES = ["previewed", "generated"];
@@ -31,7 +39,8 @@ export const USER_ROLE = "user";
 export const ATTORNEY_ROLE = "attorney";
 export const GUIDANCE_PACKAGE = "guidance";
 export const FILING_PACKAGE = "filing";
-export const NEW_LEAD_STATUS = "prospective";
+export const NEW_LEAD_STATUS = "new";
+export const ENGAGED_LEAD_STATUS = "engaged";
 export const DECLINED_LEAD_STATUS = "declined";
 export const DRAFT_PACKET_STATUS = "draft";
 export const APPROVED_PACKET_STATUS = "approved";

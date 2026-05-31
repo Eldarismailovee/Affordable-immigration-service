@@ -1,7 +1,7 @@
 import LegalContactSection from "../components/legal/LegalContactSection";
 import LegalPageLayout from "../components/legal/LegalPageLayout";
 import LegalSection from "../components/legal/LegalSection";
-import { BAR_ADVERTISING_TODO, RESPONSIBLE_ATTORNEY_TODO } from "../data/legalMeta";
+import { BAR_ADVERTISING_NOTICE, RESPONSIBLE_ATTORNEY_PUBLIC_TEXT } from "../data/legalMeta";
 
 export default function DisclaimerPage() {
   return (
@@ -33,18 +33,10 @@ export default function DisclaimerPage() {
       <LegalSection title="4. Responsible Attorney">
         <p>
           Legal services offered through this website, where provided, are delivered under the
-          supervision of a responsible attorney identified in engagement documents. Before public
-          launch, the following details should appear here:
+          supervision of a responsible attorney identified in engagement documents and applicable
+          attorney disclosures.
         </p>
-        <ul className="list-disc space-y-2 pl-6">
-          <li>Responsible attorney name</li>
-          <li>Licensed jurisdiction(s)</li>
-          <li>Bar number, if required by applicable rules</li>
-          <li>Office or contact information</li>
-        </ul>
-        <p className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-amber-100">
-          {RESPONSIBLE_ATTORNEY_TODO}
-        </p>
+        <p>{RESPONSIBLE_ATTORNEY_PUBLIC_TEXT}</p>
       </LegalSection>
 
       <LegalSection title="5. Jurisdictional Limitations">
@@ -62,13 +54,11 @@ export default function DisclaimerPage() {
       </LegalSection>
 
       <LegalSection title="6. Attorney Advertising Notice">
+        <p>{BAR_ADVERTISING_NOTICE}</p>
         <p>
-          This website may be considered attorney advertising in some jurisdictions. Descriptions of
-          services, pricing ranges, process steps, and outcomes are intended to provide general
-          information about how the firm may assist prospective clients.
-        </p>
-        <p className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-amber-100">
-          {BAR_ADVERTISING_TODO}
+          Descriptions of services, pricing ranges, process steps, and outcomes are intended to
+          provide general information about how the firm may assist prospective clients. They are
+          not guarantees of results.
         </p>
       </LegalSection>
 

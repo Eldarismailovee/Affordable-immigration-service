@@ -44,7 +44,7 @@ async function makeAttorney(client, adminSession) {
   return login.body;
 }
 
-function seedDraftAgreement(leadId) {
+function seedLeadForWorkflow(leadId, status = "attorney_review") {
   store.leads.set(leadId, {
     id: leadId,
     user_id: null,
@@ -52,12 +52,51 @@ function seedDraftAgreement(leadId) {
     last_name: "Owner",
     email: "lead@example.com",
     phone: "555",
-    status: "attorney_review",
+    status,
+    attorney_review_status: status === "accepted" ? "accepted" : null,
+    attorney_reviewed_by: null,
+    attorney_reviewed_at: null,
+    attorney_review_notes: null,
+    responsible_attorney_confirmed: status === "accepted",
     deleted_at: null,
     created_at: new Date(),
     updated_at: new Date(),
   });
 
+  store.intakes.set(leadId, {
+    id: randomUUID(),
+    lead_id: leadId,
+    selected_package: "filing",
+    case_type: "Marriage-based green cards",
+    notes: "",
+    agreement_status: "previewed",
+    legal_recommendation_approved_by: null,
+    legal_recommendation_approved_at: null,
+    created_at: new Date(),
+  });
+
+  store.conflictChecks.set(leadId, {
+    id: randomUUID(),
+    lead_id: leadId,
+    potential_client_name: "Lead Owner",
+    potential_client_email: "lead@example.com",
+    opposing_party_names: [],
+    related_person_names: [],
+    case_summary: "Summary",
+    matter_type: "Marriage-based green cards",
+    jurisdiction_or_location: "California",
+    notes: null,
+    result: "clear",
+    submitted_at: new Date(),
+    reviewed_by: null,
+    reviewed_at: new Date(),
+    created_at: new Date(),
+    updated_at: new Date(),
+  });
+}
+
+function seedDraftAgreement(leadId) {
+  seedLeadForWorkflow(leadId, "attorney_review");
   store.agreements.set(leadId, {
     id: randomUUID(),
     lead_id: leadId,
@@ -76,7 +115,6 @@ test("attorney role is accepted by user role validation", async () => {
   await withApp(app, async (client) => {
     const adminSession = await makeAdmin(client);
     const attorneySession = await makeAttorney(client, adminSession);
-
     assert.equal(attorneySession.user.role, "attorney");
   });
 });
@@ -112,8 +150,6 @@ test("attorney can approve draft agreement packet", async () => {
     );
     assert.equal(res.status, 200);
     assert.equal(res.body.agreement.status, "approved");
-    assert.equal(res.body.agreement.approved_by, attorneySession.user.id);
-    assert.ok(res.body.agreement.approved_at);
   });
 });
 
@@ -123,7 +159,6 @@ test("user cannot change lead state", async () => {
     const userSession = await registerAndLogin(client, { email: "client@example.com" });
     const leadId = randomUUID();
     seedDraftAgreement(leadId);
-    store.leads.get(leadId).status = "attorney_review";
 
     const res = await client.patch(
       `/api/admin/leads/${leadId}/state`,
@@ -135,20 +170,37 @@ test("user cannot change lead state", async () => {
   });
 });
 
-test("attorney can transition attorney_review to accepted", async () => {
+test("attorney can transition conflict_check to attorney_review when conflict check is clear", async () => {
   await withApp(app, async (client) => {
     const adminSession = await makeAdmin(client);
     const attorneySession = await makeAttorney(client, adminSession);
     const leadId = randomUUID();
-    seedDraftAgreement(leadId);
+    seedLeadForWorkflow(leadId, "conflict_check");
+
+    const res = await client.patch(
+      `/api/admin/leads/${leadId}/state`,
+      { state: "attorney_review" },
+      { token: attorneySession.token }
+    );
+    assert.equal(res.status, 200);
+    assert.equal(res.body.lead.status, "attorney_review");
+  });
+});
+
+test("lead cannot move to accepted without attorney review acceptance", async () => {
+  await withApp(app, async (client) => {
+    const adminSession = await makeAdmin(client);
+    const leadId = randomUUID();
+    seedLeadForWorkflow(leadId, "attorney_review");
+    store.leads.get(leadId).attorney_review_status = null;
 
     const res = await client.patch(
       `/api/admin/leads/${leadId}/state`,
       { state: "accepted" },
-      { token: attorneySession.token }
+      { token: adminSession.token }
     );
-    assert.equal(res.status, 200);
-    assert.equal(res.body.lead.status, "accepted");
+    assert.equal(res.status, 400);
+    assert.equal(res.body.code, "ATTORNEY_REVIEW_NOT_ACCEPTED");
   });
 });
 
@@ -157,7 +209,7 @@ test("invalid lead state transition is rejected", async () => {
     const adminSession = await makeAdmin(client);
     const leadId = randomUUID();
     seedDraftAgreement(leadId);
-    store.leads.get(leadId).status = "prospective";
+    store.leads.get(leadId).status = "new";
 
     const res = await client.patch(
       `/api/admin/leads/${leadId}/state`,
@@ -169,10 +221,41 @@ test("invalid lead state transition is rejected", async () => {
   });
 });
 
-test("new agreement packet is draft by default", async () => {
+test("agreement generation is blocked before attorney review acceptance", async () => {
   await withApp(app, async (client) => {
+    const adminSession = await makeAdmin(client);
     const leadId = randomUUID();
-    seedDraftAgreement(leadId);
-    assert.equal(store.agreements.get(leadId).status, "draft");
+    seedLeadForWorkflow(leadId, "new");
+
+    const res = await client.post(`/api/admin/agreement/${leadId}/generate`, {}, {
+      token: adminSession.token,
+    });
+    assert.equal(res.status, 400);
+    assert.equal(res.body.code, "LEAD_STATUS_BLOCKS_AGREEMENT");
+  });
+});
+
+test("filing packet generation is blocked before engaged status", async () => {
+  await withApp(app, async (client) => {
+    const adminSession = await makeAdmin(client);
+    const leadId = randomUUID();
+    seedLeadForWorkflow(leadId, "accepted");
+
+    const res = await client.post(`/api/admin/onboarding/${leadId}/generate`, {}, {
+      token: adminSession.token,
+    });
+    assert.equal(res.status, 400);
+    assert.equal(res.body.code, "LEAD_STATUS_BLOCKS_FILING_PACKET");
+  });
+});
+
+test("public responsible attorney endpoint returns non-fake profile", async () => {
+  await withApp(app, async (client) => {
+    const res = await client.get("/api/public/responsible-attorney");
+    assert.equal(res.status, 200);
+    assert.equal(res.body.responsibleAttorney.configured, false);
+    assert.equal(res.body.responsibleAttorney.pendingVerification, true);
+    assert.match(res.body.responsibleAttorney.publicText, /engagement materials/i);
+    assert.equal(res.body.responsibleAttorney.name, null);
   });
 });

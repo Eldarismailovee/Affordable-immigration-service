@@ -1,18 +1,21 @@
 import { AppError } from "./errors.js";
 
 export const LEAD_STATE_TRANSITIONS = {
-  prospective: ["conflict_check", "declined"],
+  new: ["conflict_check", "declined"],
   conflict_check: ["attorney_review", "declined"],
   attorney_review: ["accepted", "declined"],
-  accepted: ["filed", "declined"],
+  accepted: ["engaged", "declined"],
+  engaged: ["filed"],
   declined: [],
   filed: [],
 };
 
 export const ATTORNEY_VISIBLE_LEAD_STATES = [
+  "new",
   "conflict_check",
   "attorney_review",
   "accepted",
+  "engaged",
   "declined",
   "filed",
 ];

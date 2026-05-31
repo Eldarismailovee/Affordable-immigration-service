@@ -5,8 +5,7 @@ import { useCookieConsent } from "../context/CookieConsentContext";
 
 function ConsentToggle({ id, label, description, checked, disabled, onChange }) {
   return (
-    <label
-      htmlFor={id}
+    <div
       className={`flex items-start gap-3 rounded-2xl border px-4 py-4 ${
         disabled ? "border-white/10 bg-white/5 opacity-80" : "border-white/15 bg-slate-950/40"
       }`}
@@ -16,20 +15,19 @@ function ConsentToggle({ id, label, description, checked, disabled, onChange }) 
         type="checkbox"
         checked={checked}
         disabled={disabled}
-        aria-label={label}
         onChange={(event) => onChange(event.target.checked)}
         className="mt-1 h-4 w-4 rounded border-white/20 bg-slate-900 text-amber-400 focus:ring-amber-400"
       />
-      <span>
+      <label htmlFor={id} className="cursor-pointer">
         <span className="block font-semibold text-white">{label}</span>
         <span className="mt-1 block text-sm leading-6 text-slate-300">{description}</span>
-      </span>
-    </label>
+      </label>
+    </div>
   );
 }
 
 export default function CookieConsentBanner() {
-  const { showBanner, previousOptionalChoices, acceptAll, rejectOptional, savePreferences } =
+  const { showBanner, gpcActive, previousOptionalChoices, acceptAll, rejectOptional, savePreferences } =
     useCookieConsent();
   const [showPreferences, setShowPreferences] = useState(false);
   const [analytics, setAnalytics] = useState(previousOptionalChoices.analytics);
@@ -78,6 +76,7 @@ export default function CookieConsentBanner() {
               label="Analytics"
               description="Help us understand how the site is used so we can improve it."
               checked={analytics}
+              disabled={gpcActive}
               onChange={setAnalytics}
             />
             <ConsentToggle
@@ -85,6 +84,7 @@ export default function CookieConsentBanner() {
               label="Marketing"
               description="Support outreach and measure campaign effectiveness."
               checked={marketing}
+              disabled={gpcActive}
               onChange={setMarketing}
             />
             <div className="flex flex-wrap gap-3 pt-1">

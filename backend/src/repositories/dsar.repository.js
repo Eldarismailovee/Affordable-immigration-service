@@ -76,6 +76,22 @@ export async function listDsarRequestsByUserId(userId, db = pool) {
   return rows;
 }
 
+export async function listDsarRequestsForAccount({ userId, email }, db = pool) {
+  const { rows } = await query(
+    db,
+    `
+    SELECT ${DSAR_REQUEST_FIELDS}
+    FROM dsar_requests
+    WHERE requester_user_id = $1
+       OR (requester_user_id IS NULL AND LOWER(requester_email) = LOWER($2))
+    ORDER BY created_at DESC
+    `,
+    [userId, email]
+  );
+
+  return rows;
+}
+
 export async function listAllDsarRequests(db = pool) {
   const { rows } = await query(
     db,
@@ -106,6 +122,9 @@ export async function updateDsarRequest(requestId, fields, db = pool) {
     legalHoldAppliedAt: "legal_hold_applied_at",
     adminNotes: "admin_notes",
     exportPayloadJson: "export_payload_json",
+    exportPdfPath: "export_pdf_path",
+    exportGeneratedAt: "export_generated_at",
+    denialReason: "denial_reason",
     completedAt: "completed_at",
     completedBy: "completed_by",
   };

@@ -66,6 +66,7 @@ export const leadDetailResponseSchema = z.object({
   booking: nullableEntityByLeadSchema,
   payment: nullableEntityByLeadSchema,
   docketwise: nullableEntityByLeadSchema,
+  conflictCheck: nullableEntityByLeadSchema.optional(),
 });
 
 export const intakeCreateResponseSchema = z.object({

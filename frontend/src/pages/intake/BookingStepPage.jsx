@@ -222,8 +222,10 @@ export default function BookingStepPage() {
             value={intake.paymentNotes || ""}
             onChange={(e) => updateField("paymentNotes", e.target.value)}
             className={fieldClassName}
-            aria-describedby="payment-notes-help"
             aria-invalid={Boolean(error)}
+            aria-describedby={
+              error ? "booking-form-error payment-notes-help" : "payment-notes-help"
+            }
           />
           <p id="payment-notes-help" className="mt-2 text-sm text-slate-300">
             Do not enter card numbers, CVV/CVC, or expiry dates here. You will receive a secure

@@ -279,6 +279,145 @@ export async function updateHostedPaymentUrl(leadId, payload) {
   });
 }
 
+export async function updateLeadState(leadId, state, reason) {
+  return request(`/admin/leads/${leadId}/state`, {
+    method: "PATCH",
+    body: JSON.stringify({ state, reason }),
+  });
+}
+
+export async function getConflictCheck(leadId) {
+  return request(`/admin/leads/${leadId}/conflict-check`);
+}
+
+export async function submitConflictCheck(leadId, payload) {
+  return request(`/admin/leads/${leadId}/conflict-check`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateConflictCheck(leadId, payload) {
+  return request(`/admin/leads/${leadId}/conflict-check`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function submitAttorneyReview(leadId, payload) {
+  return request(`/admin/leads/${leadId}/attorney-review`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function approveLegalRecommendation(leadId, payload = {}) {
+  return request(`/admin/leads/${leadId}/legal-recommendation/approve`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function approveAgreement(leadId, payload = {}) {
+  return request(`/admin/agreement/${leadId}/approve`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function approveOnboardingPacket(leadId, payload = {}) {
+  return request(`/admin/onboarding/${leadId}/approve`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function submitPublicPrivacyRequest(payload) {
+  return request("/public/privacy/request", {
+    method: "POST",
+    body: JSON.stringify(payload),
+    skipRefresh: true,
+  });
+}
+
+export async function getAccountDsarRequests() {
+  return request("/account/dsar");
+}
+
+export async function getAdminDsarRequests() {
+  return request("/admin/dsar");
+}
+
+export async function getAdminDsarRequest(requestId) {
+  return request(`/admin/dsar/${requestId}`);
+}
+
+export async function verifyAdminDsarIdentity(requestId, payload) {
+  return request(`/admin/dsar/${requestId}/identity`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function generateAdminDsarExport(requestId) {
+  return request(`/admin/dsar/${requestId}/export`, { method: "POST" });
+}
+
+export async function generateAdminDsarPdfExport(requestId) {
+  return request(`/admin/dsar/${requestId}/export-pdf`, { method: "POST" });
+}
+
+export async function updateAdminDsarStatus(requestId, payload) {
+  return request(`/admin/dsar/${requestId}/status`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateAdminDsarLegalHold(requestId, payload) {
+  return request(`/admin/dsar/${requestId}/legal-hold`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function addAdminDsarNote(requestId, note) {
+  return request(`/admin/dsar/${requestId}/notes`, {
+    method: "POST",
+    body: JSON.stringify({ note }),
+  });
+}
+
+export async function applyAdminDsarAnonymization(requestId) {
+  return request(`/admin/dsar/${requestId}/anonymize`, { method: "POST" });
+}
+
+export async function applyAdminDsarRestriction(requestId) {
+  return request(`/admin/dsar/${requestId}/restrict`, { method: "POST" });
+}
+
+export async function resolveAdminDsarObjection(requestId, payload) {
+  return request(`/admin/dsar/${requestId}/objection`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function applyAdminDsarCcpaOptOut(requestId, payload = {}) {
+  return request(`/admin/dsar/${requestId}/ccpa-opt-out`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getPublicAvailability() {
+  return request("/public/availability", { skipRefresh: true });
+}
+
+export async function getPublicResponsibleAttorney() {
+  return request("/public/responsible-attorney", { skipRefresh: true });
+}
+
 export async function getSiteSettings() {
   return request("/public/site-settings");
 }
@@ -288,6 +427,25 @@ export async function logCookieConsent(payload) {
     method: "POST",
     body: JSON.stringify(payload),
     skipRefresh: true,
+  });
+}
+
+export async function confirmUnsubscribe({ token, scope = "marketing" }) {
+  return request("/public/unsubscribe", {
+    method: "POST",
+    body: JSON.stringify({ token, scope }),
+    skipRefresh: true,
+  });
+}
+
+export async function getEmailPreferences() {
+  return request("/account/email-preferences");
+}
+
+export async function updateEmailPreferences(payload) {
+  return request("/account/email-preferences", {
+    method: "PATCH",
+    body: JSON.stringify(payload),
   });
 }
 

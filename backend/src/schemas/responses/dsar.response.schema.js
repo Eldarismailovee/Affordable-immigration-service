@@ -40,8 +40,15 @@ export const dsarEventSchema = z.object({
   createdAt: dateLikeSchema,
 });
 
+export const publicPrivacyRequestResponseSchema = z.object({
+  id: uuidSchema,
+  type: z.enum(DSAR_REQUEST_TYPES),
+  status: z.enum(DSAR_STATUSES),
+  message: z.string(),
+});
+
 export const adminDsarRequestSchema = dsarRequestDetailSchema.extend({
-  requesterUserId: uuidSchema,
+  requesterUserId: uuidSchema.nullable(),
   requesterEmail: z.string(),
   adminNotes: nullableStringSchema,
   legalHoldReason: nullableStringSchema,

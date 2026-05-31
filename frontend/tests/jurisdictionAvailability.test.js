@@ -9,16 +9,13 @@ const {
   findUnavailableMatterMatch,
   unavailableJurisdictions,
   unavailableMatters,
-  PRODUCTION_CONFIRMATION_TODO,
-  JURISDICTION_REVIEW_TODO,
+  RESPONSIBLE_ATTORNEY_PUBLIC_TEXT,
 } = await import("../src/constants/jurisdictionAvailability.js");
 
-test("availability config has version and placeholder licenses", () => {
+test("availability config has version and no placeholder license rows", () => {
   assert.equal(JURISDICTION_AVAILABILITY_VERSION, "2026-05-31-v1");
-  assert.ok(attorneyLicenses.length >= 1);
-  assert.match(attorneyLicenses[0].jurisdiction, /TODO/);
-  assert.match(PRODUCTION_CONFIRMATION_TODO, /Confirm responsible attorney/i);
-  assert.match(JURISDICTION_REVIEW_TODO, /reviewed by responsible attorney/i);
+  assert.equal(attorneyLicenses.length, 0);
+  assert.match(RESPONSIBLE_ATTORNEY_PUBLIC_TEXT, /engagement materials/i);
 });
 
 test("accepted matters are mapped from existing family-petition services", () => {
@@ -29,10 +26,9 @@ test("accepted matters are mapped from existing family-petition services", () =>
   assert.ok(acceptedMatters.every((matter) => matter.status === "review_required"));
 });
 
-test("unavailable matters and jurisdictions are disclosed", () => {
+test("unavailable matters are disclosed; jurisdiction list is empty until confirmed", () => {
   assert.ok(unavailableMatters.some((matter) => matter.key === "criminal_defense"));
-  assert.ok(unavailableJurisdictions.length >= 1);
-  assert.match(unavailableJurisdictions[0].jurisdiction, /TODO/);
+  assert.equal(unavailableJurisdictions.length, 0);
 });
 
 test("disclaimer copy covers intake and legal advice limits", () => {
@@ -47,6 +43,10 @@ test("disclaimer copy covers intake and legal advice limits", () => {
   assert.match(
     availabilityDisclaimers.intakeAcknowledgment,
     /does not create an attorney-client relationship/i
+  );
+  assert.match(
+    availabilityDisclaimers.advertisingNotice,
+    /attorney advertising/i
   );
 });
 
@@ -79,6 +79,29 @@ test("availability page includes required sections", async () => {
   assert.match(pageSource, /Matters not available/i);
   assert.match(pageSource, /Not legal advice before review/i);
   assert.match(pageSource, /availabilityDisclaimers\.notLegalAdviceBeforeReview/);
+});
+
+test("legal pages do not render visible TODO strings", async () => {
+  const fs = await import("node:fs/promises");
+  const legalPaths = [
+    "../src/pages/PrivacyPage.jsx",
+    "../src/pages/TermsPage.jsx",
+    "../src/pages/DisclaimerPage.jsx",
+    "../src/pages/AvailabilityPage.jsx",
+    "../src/components/legal/LegalPageLayout.jsx",
+  ];
+
+  for (const relativePath of legalPaths) {
+    const source = await fs.readFile(new URL(relativePath, import.meta.url), "utf8");
+    assert.doesNotMatch(source, /\bTODO\b/);
+    assert.doesNotMatch(source, /Insert attorney/i);
+    assert.doesNotMatch(source, /Confirm DPF/i);
+  }
+
+  const { legalMeta } = await import("../src/data/legalMeta.js");
+  const publicCopy = JSON.stringify(legalMeta);
+  assert.doesNotMatch(publicCopy, /\bTODO\b/);
+  assert.doesNotMatch(publicCopy, /Insert attorney/i);
 });
 
 test("booking step requires availability acknowledgment", async () => {

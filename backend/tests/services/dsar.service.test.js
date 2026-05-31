@@ -3,8 +3,10 @@ import assert from "node:assert/strict";
 import { randomUUID } from "crypto";
 import { AppError } from "../../src/utils/appError.js";
 import {
+  assertAllowedCorrectionFields,
   assertIdentityVerified,
   assertNoLegalHold,
+  normalizeRequestType,
   stripSecretsFromExportUser,
 } from "../../src/utils/dsar.js";
 
@@ -46,8 +48,11 @@ const defaultLeadRepoMocks = {
 };
 
 const defaultUserRepoMocks = {
+  findUserByEmail: async () => null,
+  findUserById: async () => null,
   updateUserFullNameById: async () => ({}),
   setUserProcessingRestriction: async () => ({}),
+  setUserCcpaSaleOptOut: async () => ({}),
   anonymizeUserById: async () => ({}),
 };
 
@@ -61,6 +66,7 @@ function defaultDsarRepoMocks() {
       }),
     findDsarRequestById: async () => null,
     listDsarRequestsByUserId: async () => [],
+    listDsarRequestsForAccount: async () => [],
     listAllDsarRequests: async () => [],
     updateDsarRequest: async (id, fields) =>
       dsarRow({
@@ -156,13 +162,13 @@ test("user can create DSAR export request", async (t) => {
 
   const request = await createUserDsarRequest({
     user: REGULAR,
-    type: "export",
+    type: "access",
     message: "Please export my data",
   });
 
   assert.equal(created.requesterUserId, USER_ID);
-  assert.equal(created.requestType, "export");
-  assert.equal(request.type, "export");
+  assert.equal(created.requestType, "access");
+  assert.equal(request.type, "access");
   assert.equal(request.status, "identity_verification_required");
 });
 
@@ -178,11 +184,11 @@ test("user can only view own DSAR request", async (t) => {
     },
   });
 
-  const own = await getUserDsarRequest({ userId: USER_ID, requestId: ownId });
+  const own = await getUserDsarRequest({ user: REGULAR, requestId: ownId });
   assert.equal(own.id, ownId);
 
   await assert.rejects(
-    getUserDsarRequest({ userId: USER_ID, requestId: randomUUID() }),
+    getUserDsarRequest({ user: REGULAR, requestId: randomUUID() }),
     (err) => {
       assert.equal(err.statusCode, 403);
       return true;
@@ -204,7 +210,7 @@ test("export cannot be downloaded before identity verification", async (t) => {
   });
 
   await assert.rejects(
-    getUserDsarExport({ userId: USER_ID, requestId }),
+    getUserDsarExport({ user: REGULAR, requestId }),
     (err) => {
       assert.equal(err.statusCode, 403);
       return true;
@@ -351,6 +357,18 @@ test("user cannot approve/process own request via admin service", async (t) => {
       assert.ok(err instanceof AppError || err.statusCode === 403);
       return true;
     }
+  );
+});
+
+test("normalizeRequestType maps legacy export to access", () => {
+  assert.equal(normalizeRequestType("export"), "access");
+  assert.equal(normalizeRequestType("anonymization"), "deletion");
+});
+
+test("assertAllowedCorrectionFields rejects role changes", () => {
+  assert.throws(
+    () => assertAllowedCorrectionFields({ role: "admin" }),
+    (err) => err.statusCode === 400
   );
 });
 

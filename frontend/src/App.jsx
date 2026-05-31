@@ -14,6 +14,8 @@ import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import AccountPage from "./pages/AccountPage";
 import AdminPage from "./pages/AdminPage";
+import AdminDsarPage from "./pages/AdminDsarPage";
+import AdminDsarDetailPage from "./pages/AdminDsarDetailPage";
 import AdminUsersPage from "./pages/AdminUsersPage";
 import LeadDetailPage from "./pages/LeadDetailPage";
 import AgreementPage from "./pages/AgreementPage";
@@ -22,6 +24,9 @@ import PrivacyPage from "./pages/PrivacyPage";
 import CookiePreferencesPage from "./pages/CookiePreferencesPage";
 import DisclaimerPage from "./pages/DisclaimerPage";
 import AvailabilityPage from "./pages/AvailabilityPage";
+import AccessibilityPage from "./pages/AccessibilityPage";
+import UnsubscribePage from "./pages/UnsubscribePage";
+import EmailPreferencesPage from "./pages/EmailPreferencesPage";
 import OnboardingPacketPage from "./pages/OnboardingPacketPage";
 import SiteSettingsPage from "./pages/SiteSettingsPage";
 
@@ -85,8 +90,24 @@ export default function App() {
               <Route
                 path="/admin"
                 element={
-                  <ProtectedRoute roles={["admin"]}>
+                  <ProtectedRoute roles={["admin", "attorney"]}>
                     <AdminPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/privacy-requests"
+                element={
+                  <ProtectedRoute roles={["admin", "attorney"]}>
+                    <AdminDsarPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/privacy-requests/:requestId"
+                element={
+                  <ProtectedRoute roles={["admin", "attorney"]}>
+                    <AdminDsarDetailPage />
                   </ProtectedRoute>
                 }
               />
@@ -109,7 +130,7 @@ export default function App() {
               <Route
                 path="/admin/leads/:leadId"
                 element={
-                  <ProtectedRoute roles={["admin"]}>
+                  <ProtectedRoute roles={["admin", "attorney"]}>
                     <LeadDetailPage />
                   </ProtectedRoute>
                 }
@@ -133,8 +154,18 @@ export default function App() {
               <Route path="/terms" element={<TermsPage />} />
               <Route path="/privacy" element={<PrivacyPage />} />
               <Route path="/cookie-preferences" element={<CookiePreferencesPage />} />
+              <Route path="/unsubscribe" element={<UnsubscribePage />} />
+              <Route
+                path="/email-preferences"
+                element={
+                  <ProtectedRoute>
+                    <EmailPreferencesPage />
+                  </ProtectedRoute>
+                }
+              />
               <Route path="/disclaimer" element={<DisclaimerPage />} />
               <Route path="/availability" element={<AvailabilityPage />} />
+              <Route path="/accessibility" element={<AccessibilityPage />} />
             </Routes>
             <CookieConsentBanner />
           </IntakeProvider>
