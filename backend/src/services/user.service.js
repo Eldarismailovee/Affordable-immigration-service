@@ -35,7 +35,13 @@ export async function listUsers({ actor }) {
   return users.map(sanitizeUser);
 }
 
-export async function updateUserRole({ userId, role, actor, auditContext = null }) {
+export async function updateUserRole({
+  userId,
+  role,
+  actor,
+  auditContext = null,
+  client = null,
+}) {
   assertAdminAccess(actor);
 
   const nextRole = parseUserRole(role);
@@ -53,8 +59,12 @@ export async function updateUserRole({ userId, role, actor, auditContext = null 
 
   const oldRole = currentUser.role;
 
-  const updatedUser = await withUnitOfWork(async (client) => {
-    const updated = await updateUserRoleById(userId, nextRole, client);
+  const run = client
+    ? async (callback) => callback(client)
+    : async (callback) => withUnitOfWork(callback);
+
+  const updatedUser = await run(async (txClient) => {
+    const updated = await updateUserRoleById(userId, nextRole, txClient);
 
     await recordAuditEvent(
       {
@@ -71,7 +81,7 @@ export async function updateUserRole({ userId, role, actor, auditContext = null 
           newRole: nextRole,
         },
       },
-      client
+      txClient
     );
 
     return updated;
@@ -80,7 +90,7 @@ export async function updateUserRole({ userId, role, actor, auditContext = null 
   return sanitizeUser(updatedUser);
 }
 
-export async function deleteUser({ userId, actor }) {
+export async function deleteUser({ userId, actor, client = null }) {
   assertAdminAccess(actor);
 
   const currentUser = await findUserById(userId);
@@ -94,5 +104,9 @@ export async function deleteUser({ userId, actor }) {
     assertCanDeleteUser({ user: currentUser, activeAdminCount });
   }
 
-  return sanitizeUser(await softDeleteUserById(userId));
+  const run = client
+    ? async (callback) => callback(client)
+    : async (callback) => callback(null);
+
+  return run(async (txClient) => sanitizeUser(await softDeleteUserById(userId, txClient)));
 }

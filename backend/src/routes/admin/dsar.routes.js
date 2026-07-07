@@ -14,8 +14,10 @@ import {
   updateDsarStatusController,
   verifyDsarIdentityController,
 } from "../../controllers/admin-dsar.controller.js";
-import { requireRole } from "../../middleware/auth.js";
+import { requireRole, requireStepUp } from "../../middleware/auth.js";
 import { validateRequest } from "../../middleware/validateRequest.js";
+import { requireIdempotencyKey } from "../../middleware/idempotency.js";
+import { IDEMPOTENCY_OPERATIONS } from "../../constants/idempotency.js";
 import {
   adminCcpaOptOutSchema,
   adminCorrectionActionSchema,
@@ -52,6 +54,8 @@ router.patch(
 router.post(
   "/:requestId/export",
   adminOnly,
+  requireStepUp(300),
+  requireIdempotencyKey(IDEMPOTENCY_OPERATIONS.DSAR_EXPORT),
   validateRequest({ params: dsarRequestIdParamsSchema }),
   generateDsarExportController
 );
@@ -59,6 +63,7 @@ router.post(
 router.post(
   "/:requestId/export-pdf",
   adminOnly,
+  requireStepUp(300),
   validateRequest({ params: dsarRequestIdParamsSchema }),
   generateDsarPdfExportController
 );
@@ -76,6 +81,8 @@ router.post(
 router.post(
   "/:requestId/anonymize",
   adminOnly,
+  requireStepUp(300),
+  requireIdempotencyKey(IDEMPOTENCY_OPERATIONS.DSAR_ANONYMIZE),
   validateRequest({ params: dsarRequestIdParamsSchema }),
   applyDsarAnonymizationController
 );

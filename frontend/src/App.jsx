@@ -9,8 +9,13 @@ import { IntakeProvider } from "./context/IntakeContext";
 import { SiteSettingsProvider } from "./context/SiteSettingsContext";
 
 import HomePage from "./pages/HomePage";
+import CaseReviewPage from "./pages/CaseReviewPage";
 import StartPage from "./pages/StartPage";
 import LoginPage from "./pages/LoginPage";
+import MfaVerifyPage from "./pages/MfaVerifyPage";
+import MfaEnrollmentPage from "./pages/MfaEnrollmentPage";
+import VerifyEmailPage from "./pages/VerifyEmailPage";
+import ChangeEmailPage from "./pages/ChangeEmailPage";
 import RegisterPage from "./pages/RegisterPage";
 import AccountPage from "./pages/AccountPage";
 import AdminPage from "./pages/AdminPage";
@@ -50,8 +55,27 @@ export default function App() {
             <IntakeProvider>
               <Routes>
               <Route path="/" element={<HomePage />} />
+              <Route path="/case-review" element={<CaseReviewPage />} />
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/mfa/verify" element={<MfaVerifyPage />} />
+              <Route path="/mfa/enroll" element={<MfaEnrollmentPage />} />
               <Route path="/register" element={<RegisterPage />} />
+              <Route
+                path="/verify-email"
+                element={
+                  <ProtectedRoute requireVerifiedEmail={false}>
+                    <VerifyEmailPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/account/change-email"
+                element={
+                  <ProtectedRoute requireVerifiedEmail={false}>
+                    <ChangeEmailPage />
+                  </ProtectedRoute>
+                }
+              />
               <Route
                 path="/account"
                 element={

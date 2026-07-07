@@ -26,7 +26,11 @@ import { intakeSubmitMetadata } from "../utils/auditRedaction.js";
 import { buildActor } from "../utils/auditContext.js";
 import { AppError } from "../utils/appError.js";
 
-async function persistIntakeSubmission({ payload, userId, pricing }) {
+function transactionalClient(client) {
+  return client && typeof client.query === "function" ? client : undefined;
+}
+
+async function persistIntakeSubmission({ payload, userId, pricing, client }) {
   const ids = {
     leadId: randomUUID(),
     intakeId: randomUUID(),
@@ -35,7 +39,12 @@ async function persistIntakeSubmission({ payload, userId, pricing }) {
     docketwiseSyncId: randomUUID(),
   };
 
-  await withUnitOfWork(async (client) => {
+  const run = client
+    ? async (callback) => callback(client)
+    : async (callback) => withUnitOfWork(callback);
+
+  await run(async (txClient) => {
+    const db = transactionalClient(txClient);
     await createLead(
       {
         id: ids.leadId,
@@ -46,7 +55,7 @@ async function persistIntakeSubmission({ payload, userId, pricing }) {
         phone: payload.phone,
         status: NEW_LEAD_STATUS,
       },
-      client
+      txClient
     );
 
     await createIntakeRecord(
@@ -56,13 +65,17 @@ async function persistIntakeSubmission({ payload, userId, pricing }) {
         selectedPackage: payload.selectedPackage,
         caseType: payload.caseType,
         notes: payload.notes || "",
+        petitionRelationship: payload.petitionRelationship,
+        location: payload.location,
+        hasUrgentDeadline: payload.hasUrgentDeadline,
+        urgentDeadlineNotes: payload.urgentDeadlineNotes || "",
         additionalI130Count: payload.additionalI130Count,
         expedited: payload.expedited,
         pricingMin: pricing.minTotal,
         pricingMax: pricing.maxTotal,
         agreementStatus: "previewed",
       },
-      client
+      txClient
     );
 
     await createBookingRecord(
@@ -72,7 +85,7 @@ async function persistIntakeSubmission({ payload, userId, pricing }) {
         consultationType: payload.consultationType,
         preferredDateTime: payload.preferredDateTime,
       },
-      client
+      txClient
     );
 
     await createPaymentRecord(
@@ -88,7 +101,7 @@ async function persistIntakeSubmission({ payload, userId, pricing }) {
         paymentPreference: payload.paymentPreference,
         consentManualProcessing: payload.consentManualProcessing,
       },
-      client
+      txClient
     );
 
     await createDocketwiseSyncRecord(
@@ -96,7 +109,7 @@ async function persistIntakeSubmission({ payload, userId, pricing }) {
         id: ids.docketwiseSyncId,
         leadId: ids.leadId,
       },
-      client
+      db ?? txClient
     );
   });
 
@@ -106,7 +119,7 @@ async function persistIntakeSubmission({ payload, userId, pricing }) {
 function assertIntakeAvailability(payload) {
   const availability = evaluateJurisdictionAvailability({
     matterType: payload.caseType,
-    jurisdiction: payload.jurisdiction,
+    jurisdiction: payload.location,
   });
 
   if (!availability.reviewRequired && !availability.available) {
@@ -114,7 +127,12 @@ function assertIntakeAvailability(payload) {
   }
 }
 
-export async function createIntake(payload, user, auditContext = null) {
+export async function createIntakeTransactional({
+  payload,
+  user,
+  auditContext = null,
+  client,
+}) {
   if (user) {
     assertProcessingNotRestricted(user);
   }
@@ -123,39 +141,58 @@ export async function createIntake(payload, user, auditContext = null) {
 
   const pricing = calculatePricing(payload);
 
-  const { leadId } = await persistIntakeSubmission({
+  const ids = await persistIntakeSubmission({
     payload,
     userId: user?.id || null,
     pricing,
+    client,
   });
 
-  await recordAuditEvent({
-    eventType: AUDIT_EVENT_TYPES.INTAKE_SUBMIT,
-    category: AUDIT_CATEGORIES.INTAKE,
-    action: "submit",
-    result: AUDIT_RESULTS.SUCCESS,
-    ...buildActor(user),
-    targetType: "lead",
-    targetId: leadId,
-    request: auditContext,
-    metadata: intakeSubmitMetadata(payload),
-  });
+  const auditDb = transactionalClient(client);
 
-  await recordAuditEvent({
-    eventType: AUDIT_EVENT_TYPES.JURISDICTION_AVAILABILITY_CHECKED,
-    category: AUDIT_CATEGORIES.LEAD_WORKFLOW,
-    action: "intake_submit",
-    result: AUDIT_RESULTS.SUCCESS,
-    ...buildActor(user),
-    targetType: "lead",
-    targetId: leadId,
-    metadata: {
-      matterType: payload.caseType,
-      reviewRequired: true,
+  await recordAuditEvent(
+    {
+      eventType: AUDIT_EVENT_TYPES.INTAKE_SUBMIT,
+      category: AUDIT_CATEGORIES.INTAKE,
+      action: "submit",
+      result: AUDIT_RESULTS.SUCCESS,
+      ...buildActor(user),
+      targetType: "lead",
+      targetId: ids.leadId,
+      request: auditContext,
+      metadata: intakeSubmitMetadata(payload),
     },
-  });
+    auditDb
+  );
 
-  return buildIntakeResponse({ payload, pricing, leadId });
+  await recordAuditEvent(
+    {
+      eventType: AUDIT_EVENT_TYPES.JURISDICTION_AVAILABILITY_CHECKED,
+      category: AUDIT_CATEGORIES.LEAD_WORKFLOW,
+      action: "intake_submit",
+      result: AUDIT_RESULTS.SUCCESS,
+      ...buildActor(user),
+      targetType: "lead",
+      targetId: ids.leadId,
+      metadata: {
+        matterType: payload.caseType,
+        reviewRequired: true,
+      },
+    },
+    auditDb
+  );
+
+  const lead = buildIntakeResponse({ payload, pricing, leadId: ids.leadId });
+
+  return {
+    lead,
+    leadId: ids.leadId,
+  };
+}
+
+export async function createIntake(payload, user, auditContext = null) {
+  const { lead } = await createIntakeTransactional({ payload, user, auditContext });
+  return lead;
 }
 
 export async function listLeads({ actor }) {

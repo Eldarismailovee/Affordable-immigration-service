@@ -1,33 +1,41 @@
 import { Link } from "react-router-dom";
+import { cardSurfaceClass, pageSurfaceClass } from "../constants/themeClasses.js";
 
 export default function StartPage() {
   return (
-    <div className="min-h-screen bg-[#040816] px-4 py-16 text-white">
-      <main id="main-content" className="mx-auto max-w-3xl rounded-[2rem] border border-white/10 bg-white/5 p-8">
-        <div className="text-sm font-semibold uppercase tracking-[0.2em] text-amber-400">
-          Start now
+    <div className={`${pageSurfaceClass} px-4 py-16`}>
+      <main id="main-content" className={`mx-auto max-w-3xl p-8 ${cardSurfaceClass}`}>
+        <div className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-900">
+          Full intake
         </div>
-        <h1 className="mt-4 text-4xl font-semibold tracking-tight">
-          Begin your immigration intake
+        <h1 className="mt-4 text-4xl font-semibold tracking-tight text-slate-950">
+          Continue to guided intake
         </h1>
-        <p className="mt-4 text-lg leading-8 text-slate-300">
+        <p className="mt-4 text-lg leading-8 text-slate-600">
           You’ll choose a package, enter your information, review pricing,
-          preview your agreement, and request your consultation.
+          preview your agreement, and request your consultation. Payment details
+          are shown before any paid service begins.
         </p>
 
-        <div className="mt-8 flex gap-4">
+        <p className="mt-6 text-base leading-7 text-slate-600" role="note">
+          Submitting information does not create an attorney-client relationship. Your
+          matter must be reviewed and accepted by the firm before legal advice or
+          representation is provided.
+        </p>
+
+        <div className="mt-8 flex flex-col gap-4 sm:flex-row">
           <Link
             to="/intake/package"
-            className="rounded-full bg-amber-400 px-5 py-3 font-semibold text-slate-950 hover:bg-amber-300"
+            className="rounded-full bg-slate-900 px-5 py-3 text-center font-semibold text-white hover:bg-slate-800"
           >
             Start intake
           </Link>
 
           <Link
-            to="/"
-            className="rounded-full border border-white/15 bg-white/5 px-5 py-3 font-semibold text-white hover:border-amber-400/40 hover:text-amber-300"
+            to="/case-review"
+            className="rounded-full border border-slate-300 bg-white px-5 py-3 text-center font-semibold text-slate-900 hover:border-slate-400 hover:bg-slate-50"
           >
-            Back home
+            Back to case review
           </Link>
         </div>
       </main>

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useIntake } from "../../context/IntakeContext";
 import { generateAgreementPreview } from "../../services/api";
 import { sanitizeDocumentHtml } from "../../utils/sanitizeDocumentHtml";
+import { cardSurfaceClass } from "../../constants/themeClasses.js";
 
 export default function AgreementPreviewPage() {
   const navigate = useNavigate();
@@ -68,25 +69,25 @@ export default function AgreementPreviewPage() {
 
   return (
     <div>
-      <div className="text-sm uppercase tracking-[0.18em] text-amber-400">Step 5</div>
-      <h2 className="mt-2 text-3xl font-semibold">Fee agreement preview</h2>
-      <p className="mt-3 text-slate-300">Review the generated agreement summary.</p>
+      <div className="font-mono text-sm uppercase tracking-[0.18em] text-blue-900">Step 5</div>
+      <h2 className="mt-2 text-3xl font-semibold text-slate-950">Fee agreement preview</h2>
+      <p className="mt-3 text-slate-600">Review the generated agreement summary.</p>
 
       {loading ? (
-        <div className="mt-8 rounded-3xl border border-white/10 bg-slate-950/50 p-6 text-slate-300">
+        <div className={`mt-8 p-6 text-slate-600 ${cardSurfaceClass}`}>
           Generating preview...
         </div>
       ) : null}
 
       {error ? (
-        <div className="mt-8 rounded-3xl border border-red-500/30 bg-red-500/10 p-6 text-red-300">
+        <div className="mt-8 rounded-3xl border border-red-200 bg-red-50 p-6 text-red-800">
           {error}
         </div>
       ) : null}
 
       {!loading && !error && intake.agreementPreview ? (
         <div
-          className="prose prose-invert mt-8 max-w-none rounded-3xl border border-white/10 bg-slate-950/50 p-6"
+          className={`prose mt-8 max-w-none p-6 text-slate-700 ${cardSurfaceClass}`}
           dangerouslySetInnerHTML={{
             __html: sanitizeDocumentHtml(intake.agreementPreview.html),
           }}
@@ -97,14 +98,14 @@ export default function AgreementPreviewPage() {
         <button
           type="button"
           onClick={() => navigate("/intake/addons")}
-          className="text-slate-300 hover:text-white"
+          className="text-slate-600 hover:text-slate-950"
         >
           Back
         </button>
         <button
           type="button"
           onClick={() => navigate("/intake/booking")}
-          className="rounded-full bg-amber-400 px-5 py-3 font-semibold text-slate-950 hover:bg-amber-300"
+          className="rounded-full bg-slate-900 px-5 py-3 font-semibold text-white hover:bg-slate-800"
         >
           Continue
         </button>

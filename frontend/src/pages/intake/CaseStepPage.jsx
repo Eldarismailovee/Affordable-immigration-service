@@ -4,6 +4,7 @@ import {
   availabilityDisclaimers,
   findUnavailableMatterMatch,
 } from "../../constants/jurisdictionAvailability";
+import { formInputClass, formLabelClass } from "../../constants/themeClasses.js";
 
 export default function CaseStepPage() {
   const navigate = useNavigate();
@@ -19,13 +20,13 @@ export default function CaseStepPage() {
 
   return (
     <div>
-      <div className="text-sm uppercase tracking-[0.18em] text-amber-400">Step 3</div>
-      <h2 className="mt-2 text-3xl font-semibold">Case details</h2>
-      <p className="mt-3 text-slate-300">Add basic information about the family petition matter.</p>
+      <div className="font-mono text-sm uppercase tracking-[0.18em] text-blue-900">Step 3</div>
+      <h2 className="mt-2 text-3xl font-semibold text-slate-950">Case details</h2>
+      <p className="mt-3 text-slate-600">Add basic information about the family petition matter.</p>
 
       <div className="mt-8 grid gap-4">
         <div>
-          <label htmlFor="intake-case-type" className="mb-1.5 block text-sm font-medium text-slate-200">
+          <label htmlFor="intake-case-type" className={formLabelClass}>
             Case type
           </label>
           <input
@@ -33,13 +34,13 @@ export default function CaseStepPage() {
             name="caseType"
             value={intake.caseType}
             onChange={(e) => updateField("caseType", e.target.value)}
-            className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3"
+            className={formInputClass}
             aria-describedby="intake-case-type-help"
             required
           />
-          <p id="intake-case-type-help" className="mt-2 text-sm text-slate-300">
+          <p id="intake-case-type-help" className="mt-2 text-sm text-slate-600">
             {availabilityDisclaimers.caseTypeHelper}{" "}
-            <Link to="/availability" className="text-amber-300 underline hover:text-amber-200">
+            <Link to="/availability" className="text-blue-900 underline hover:text-blue-800">
               View availability
             </Link>
             .
@@ -47,11 +48,11 @@ export default function CaseStepPage() {
           {unavailableMatch ? (
             <div
               role="alert"
-              className="mt-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100"
+              className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"
             >
               <strong>{unavailableMatch.label}</strong> is not offered through this platform.{" "}
               {unavailableMatch.reason}{" "}
-              <Link to="/availability" className="underline hover:text-white">
+              <Link to="/availability" className="underline hover:text-amber-900">
                 Learn more
               </Link>
               .
@@ -59,7 +60,7 @@ export default function CaseStepPage() {
           ) : null}
         </div>
         <div>
-          <label htmlFor="intake-notes" className="mb-1.5 block text-sm font-medium text-slate-200">
+          <label htmlFor="intake-notes" className={formLabelClass}>
             Describe your matter
           </label>
           <textarea
@@ -68,7 +69,7 @@ export default function CaseStepPage() {
             rows={5}
             value={intake.notes}
             onChange={(e) => updateField("notes", e.target.value)}
-            className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3"
+            className={formInputClass}
           />
         </div>
       </div>
@@ -77,7 +78,7 @@ export default function CaseStepPage() {
         <button
           type="button"
           onClick={() => navigate("/intake/client")}
-          className="text-slate-300 hover:text-white"
+          className="text-slate-600 hover:text-slate-950"
         >
           Back
         </button>
@@ -85,7 +86,7 @@ export default function CaseStepPage() {
           type="button"
           onClick={handleContinue}
           disabled={Boolean(unavailableMatch)}
-          className="rounded-full bg-amber-400 px-5 py-3 font-semibold text-slate-950 hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-full bg-slate-900 px-5 py-3 font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Continue
         </button>

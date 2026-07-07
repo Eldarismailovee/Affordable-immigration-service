@@ -13,6 +13,7 @@ export function createInMemoryStore() {
     docketwiseSync: new Map(),
     refreshTokens: new Map(),
     emailVerificationTokens: new Map(),
+    lastVerificationPlaintextToken: null,
     passwordResetTokens: new Map(),
     auditLog: [],
     auditEvents: [],
@@ -21,6 +22,10 @@ export function createInMemoryStore() {
     cookieConsentLogs: [],
     conflictChecks: new Map(),
     emailSuppressions: new Map(),
+    mfaFactors: new Map(),
+    mfaRecoveryCodes: new Map(),
+    mfaChallenges: new Map(),
+    intakeDrafts: new Map(),
   };
 }
 
@@ -60,6 +65,9 @@ export function buildUserRepo(store) {
         role,
         status: "active",
         email_verified_at: null,
+        pending_email: null,
+        pending_email_requested_at: null,
+        email_changed_at: null,
         processing_restricted_at: null,
         processing_restriction_reason: null,
         ccpa_sale_opt_out_at: null,
@@ -70,6 +78,7 @@ export function buildUserRepo(store) {
         marketing_consent_source: null,
         marketing_opt_out_at: null,
         marketing_opt_out_reason: null,
+        session_security_version: 1,
         created_at: new Date(),
         updated_at: new Date(),
       };
@@ -81,13 +90,25 @@ export function buildUserRepo(store) {
       const user = store.users.get(userId);
       if (!user) return null;
       user.role = role;
+      user.session_security_version = (user.session_security_version || 1) + 1;
       user.updated_at = new Date();
       return safeUser(user);
+    },
+    bumpSessionSecurityVersion: async (userId) => {
+      const user = store.users.get(userId);
+      if (!user) return null;
+      user.session_security_version = (user.session_security_version || 1) + 1;
+      return user.session_security_version;
+    },
+    getSessionSecurityVersion: async (userId) => {
+      const user = store.users.get(userId);
+      return user?.session_security_version || 1;
     },
     updateUserPasswordById: async (userId, passwordHash) => {
       const user = store.users.get(userId);
       if (!user) return null;
       user.password_hash = passwordHash;
+      user.session_security_version = (user.session_security_version || 1) + 1;
       user.updated_at = new Date();
       return safeUser(user);
     },
@@ -95,7 +116,46 @@ export function buildUserRepo(store) {
       const user = store.users.get(userId);
       if (!user) return null;
       user.email_verified_at = user.email_verified_at || new Date();
+      user.pending_email = null;
+      user.pending_email_requested_at = null;
+      user.session_security_version = (user.session_security_version || 1) + 1;
       return safeUser(user);
+    },
+    setPendingEmailById: async (userId, pendingEmail) => {
+      const user = store.users.get(userId);
+      if (!user) return null;
+      user.pending_email = pendingEmail;
+      user.pending_email_requested_at = new Date();
+      user.email_verified_at = null;
+      user.email_changed_at = new Date();
+      user.session_security_version = (user.session_security_version || 1) + 1;
+      return safeUser(user);
+    },
+    promotePendingEmailById: async (userId) => {
+      const user = store.users.get(userId);
+      if (!user || !user.pending_email) return null;
+      user.email = user.pending_email;
+      user.pending_email = null;
+      user.pending_email_requested_at = null;
+      user.email_verified_at = new Date();
+      user.email_changed_at = new Date();
+      user.session_security_version = (user.session_security_version || 1) + 1;
+      return safeUser(user);
+    },
+    clearPendingEmailById: async (userId) => {
+      const user = store.users.get(userId);
+      if (!user) return null;
+      user.pending_email = null;
+      user.pending_email_requested_at = null;
+      return safeUser(user);
+    },
+    findUserByNormalizedEmail: async (email) => {
+      for (const user of store.users.values()) {
+        if (user.email.toLowerCase() === String(email).toLowerCase()) {
+          return user;
+        }
+      }
+      return null;
     },
     softDeleteUserById: async (userId) => {
       const user = store.users.get(userId);
@@ -176,7 +236,14 @@ export function buildUserRepo(store) {
 
 export function buildAuthTokenRepo(store) {
   return {
-    createRefreshToken: async ({ id, userId, tokenHash, expiresAt }) => {
+    createRefreshToken: async ({
+      id,
+      userId,
+      tokenHash,
+      expiresAt,
+      mfaCompletedAt = null,
+      sessionSecurityVersion = 1,
+    }) => {
       const row = {
         id,
         user_id: userId,
@@ -187,6 +254,8 @@ export function buildAuthTokenRepo(store) {
         ip_address: "",
         last_used_at: null,
         expires_at: expiresAt,
+        mfa_completed_at: mfaCompletedAt,
+        session_security_version: sessionSecurityVersion,
         created_at: new Date(),
       };
       store.refreshTokens.set(tokenHash, row);
@@ -213,6 +282,8 @@ export function buildAuthTokenRepo(store) {
       userId,
       tokenHash,
       expiresAt,
+      mfaCompletedAt = null,
+      sessionSecurityVersion = 1,
     }) => {
       let currentRow = null;
 
@@ -234,6 +305,9 @@ export function buildAuthTokenRepo(store) {
         revoked_at: null,
         replaced_by_token_id: null,
         expires_at: expiresAt,
+        mfa_completed_at: mfaCompletedAt ?? currentRow.mfa_completed_at,
+        session_security_version:
+          sessionSecurityVersion ?? currentRow.session_security_version ?? 1,
         created_at: new Date(),
       };
       store.refreshTokens.set(tokenHash, next);
@@ -242,24 +316,79 @@ export function buildAuthTokenRepo(store) {
       currentRow.last_used_at = new Date();
       return next;
     },
-    createEmailVerificationToken: async ({ id, userId, tokenHash, expiresAt }) => {
+    createEmailVerificationToken: async ({
+      id,
+      userId,
+      email,
+      tokenHash,
+      purpose = "registration",
+      expiresAt,
+      plaintextToken = null,
+    }) => {
       const row = {
         id,
         user_id: userId,
+        email: email || "",
         token_hash: tokenHash,
+        purpose,
         consumed_at: null,
+        invalidated_at: null,
         expires_at: expiresAt,
         created_at: new Date(),
       };
       store.emailVerificationTokens.set(tokenHash, row);
+      if (plaintextToken) {
+        store.lastVerificationPlaintextToken = plaintextToken;
+      }
       return row;
     },
-    consumeEmailVerificationToken: async (tokenHash) => {
+    invalidateEmailVerificationTokensForUser: async (userId) => {
+      for (const row of store.emailVerificationTokens.values()) {
+        if (row.user_id === userId && !row.consumed_at && !row.invalidated_at) {
+          row.invalidated_at = new Date();
+        }
+      }
+    },
+    countRecentEmailVerificationSends: async (userId, since) => {
+      let total = 0;
+      for (const row of store.emailVerificationTokens.values()) {
+        if (row.user_id === userId && new Date(row.created_at) >= new Date(since)) {
+          total += 1;
+        }
+      }
+      return total;
+    },
+    findActiveEmailVerificationTokenByHash: async (tokenHash) => {
       const row = store.emailVerificationTokens.get(tokenHash);
-      if (!row || row.consumed_at || new Date(row.expires_at) <= new Date()) {
+      if (
+        !row ||
+        row.consumed_at ||
+        row.invalidated_at ||
+        new Date(row.expires_at) <= new Date()
+      ) {
         return null;
       }
+      return row;
+    },
+    consumeEmailVerificationToken: async (tokenHash, { purpose = null, email = null } = {}) => {
+      const row = store.emailVerificationTokens.get(tokenHash);
+      if (
+        !row ||
+        row.consumed_at ||
+        row.invalidated_at ||
+        new Date(row.expires_at) <= new Date()
+      ) {
+        return null;
+      }
+      if (purpose && row.purpose !== purpose) return null;
+      if (email && row.email.toLowerCase() !== String(email).toLowerCase()) return null;
       row.consumed_at = new Date();
+      return row;
+    },
+    incrementEmailVerificationFailedAttempts: async (tokenHash) => {
+      const row = store.emailVerificationTokens.get(tokenHash);
+      if (!row || row.consumed_at || row.invalidated_at) return null;
+      row.invalidated_at = new Date();
       return row;
     },
     createPasswordResetToken: async ({ id, userId, tokenHash, expiresAt }) => {
@@ -784,6 +913,43 @@ export function buildPaymentRepo(store) {
       return null;
     },
     updateIntakePaymentStatusByLeadId: async () => {},
+  };
+}
+
+export function buildDocketwiseRepo(store) {
+  return {
+    createDocketwiseSyncRecord: async ({
+      id,
+      leadId,
+      externalId = null,
+      status = "not_synced",
+      errorMessage = null,
+      lastSyncedAt = null,
+    }) => {
+      const row = {
+        id,
+        lead_id: leadId,
+        external_id: externalId,
+        status,
+        error_message: errorMessage,
+        last_synced_at: lastSyncedAt,
+        created_at: new Date(),
+      };
+      store.docketwiseSync.set(id, row);
+      return row;
+    },
+    updateDocketwiseSyncById: async (
+      id,
+      { externalId, status, errorMessage, lastSyncedAt }
+    ) => {
+      const row = store.docketwiseSync.get(id);
+      if (!row) return null;
+      row.external_id = externalId;
+      row.status = status;
+      row.error_message = errorMessage;
+      row.last_synced_at = lastSyncedAt;
+      return { ...row };
+    },
   };
 }
 

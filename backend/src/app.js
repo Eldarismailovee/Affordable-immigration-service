@@ -8,13 +8,14 @@ import publicRoutes from "./routes/public/index.js";
 import authRoutes from "./routes/auth/index.js";
 import accountRoutes from "./routes/account/index.js";
 import adminRoutes from "./routes/admin/index.js";
-import { optionalAuth, requireAuth } from "./middleware/auth.js";
+import { optionalAuth, requireAuth, requirePrivilegedMfa, requireVerifiedEmail } from "./middleware/auth.js";
 import { auditAdminAction } from "./middleware/auditAdminAction.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { httpLogger } from "./middleware/httpLogger.js";
 import { notFound } from "./middleware/notFound.js";
 import { generalRateLimit } from "./middleware/rateLimit.js";
 import { requestId } from "./middleware/requestId.js";
+import { noStoreSensitiveResponses } from "./middleware/noStore.js";
 
 const app = express();
 
@@ -22,6 +23,7 @@ app.set("trust proxy", 1);
 
 app.use(requestId);
 app.use(httpLogger);
+app.use(noStoreSensitiveResponses);
 app.use(
   helmet({
     contentSecurityPolicy: env.isProduction
@@ -83,8 +85,15 @@ app.get("/api/ready", async (_req, res) => {
 
 app.use("/api/public", publicRoutes);
 app.use("/api/auth", authRoutes);
-app.use("/api/account", requireAuth, accountRoutes);
-app.use("/api/admin", requireAuth, auditAdminAction, adminRoutes);
+app.use("/api/account", requireAuth, requireVerifiedEmail, accountRoutes);
+app.use(
+  "/api/admin",
+  requireAuth,
+  requireVerifiedEmail,
+  requirePrivilegedMfa,
+  auditAdminAction,
+  adminRoutes
+);
 
 app.use(notFound);
 app.use(errorHandler);

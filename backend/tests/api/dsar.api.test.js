@@ -2,6 +2,8 @@ import { before, beforeEach, test } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "crypto";
 import { clearStore, setupTestEnvironment } from "../helpers/buildTestApp.js";
+import { makeAdmin, makeRegularUser } from "../helpers/authTestHelpers.js";
+import { buildValidIntakePayload } from "../helpers/intakeTestPayload.js";
 import { withApp } from "../helpers/httpClient.js";
 
 let app;
@@ -25,16 +27,8 @@ async function register(client, email, fullName = "Demo User") {
   return res.body;
 }
 
-async function makeAdmin(client) {
-  return register(client, `admin-${randomUUID().slice(0, 8)}@example.com`, "Admin");
-}
-
 async function makeUser(client, email = "user@example.com") {
-  const hasAdmin = [...store.users.values()].some((u) => u.role === "admin");
-  if (!hasAdmin) {
-    await register(client, `bootstrap-${randomUUID().slice(0, 8)}@example.com`, "Bootstrap");
-  }
-  return register(client, email);
+  return makeRegularUser(client, store, email);
 }
 
 function findUser(email) {
@@ -176,7 +170,7 @@ test("GET /api/admin/dsar requires admin or attorney role", async () => {
 
 test("GET /api/admin/dsar returns requests for admin", async () => {
   await withApp(app, async (client) => {
-    const adminSession = await makeAdmin(client);
+    const adminSession = await makeAdmin(client, store);
     const userSession = await makeUser(client, "client@example.com");
 
     await client.post(
@@ -195,7 +189,7 @@ test("GET /api/admin/dsar returns requests for admin", async () => {
 
 test("PATCH /api/admin/dsar/:requestId/identity marks verified and enables export flow", async () => {
   await withApp(app, async (client) => {
-    const adminSession = await makeAdmin(client);
+    const adminSession = await makeAdmin(client, store);
     const userSession = await makeUser(client);
 
     const created = await client.post(
@@ -235,23 +229,7 @@ test("POST /api/account/intake returns 403 when processing is restricted", async
     const user = findUser("user@example.com");
     setProcessingRestricted(user.id);
 
-    const payload = {
-      firstName: "Test",
-      lastName: "User",
-      email: "user@example.com",
-      phone: "5551234567",
-      caseType: "Family",
-      selectedPackage: "guidance",
-      additionalI130Count: 0,
-      expedited: false,
-      consultationType: "Zoom",
-      preferredDateTime: "2026-06-01T10:00:00",
-      billingName: "Test User",
-      billingEmail: "user@example.com",
-      paymentPreference: "invoice",
-      consentManualProcessing: true,
-      consentAvailabilityAcknowledgment: true,
-    };
+    const payload = buildValidIntakePayload();
 
     const res = await client.post("/api/account/intake", payload, { token: session.token });
     assert.equal(res.status, 403);
@@ -292,7 +270,7 @@ test("correction request rejects forbidden fields", async () => {
 
 test("admin actions create dsar request events", async () => {
   await withApp(app, async (client) => {
-    const adminSession = await makeAdmin(client);
+    const adminSession = await makeAdmin(client, store);
     const userSession = await makeUser(client, "events@example.com");
 
     const created = await client.post(
@@ -319,7 +297,7 @@ test("admin actions create dsar request events", async () => {
 
 test("POST /api/admin/dsar/:requestId/anonymize returns 409 when legal hold is active", async () => {
   await withApp(app, async (client) => {
-    const adminSession = await makeAdmin(client);
+    const adminSession = await makeAdmin(client, store);
     const userSession = await makeUser(client);
 
     const created = await client.post(

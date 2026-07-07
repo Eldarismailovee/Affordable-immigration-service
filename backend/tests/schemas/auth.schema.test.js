@@ -33,6 +33,18 @@ test("registerSchema rejects invalid email", () => {
   assert.equal(result.success, false);
 });
 
+test("registerSchema rejects privileged role fields", () => {
+  assert.equal(registerSchema.safeParse({ ...validRegister, role: "admin" }).success, false);
+  assert.equal(registerSchema.safeParse({ ...validRegister, role: "attorney" }).success, false);
+});
+
+test("registerSchema rejects nested privileged role fields", () => {
+  assert.equal(
+    registerSchema.safeParse({ ...validRegister, profile: { role: "admin" } }).success,
+    false
+  );
+});
+
 test("registerSchema rejects short password", () => {
   const result = registerSchema.safeParse({ ...validRegister, password: "short1" });
   assert.equal(result.success, false);

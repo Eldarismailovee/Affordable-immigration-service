@@ -2,6 +2,7 @@ import { before, beforeEach, test } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "crypto";
 import { clearStore, setupTestEnvironment } from "../helpers/buildTestApp.js";
+import { makeAdmin } from "../helpers/authTestHelpers.js";
 import { withApp } from "../helpers/httpClient.js";
 
 let app;
@@ -48,7 +49,7 @@ function seedPayment(leadId) {
 
 test("PATCH /api/admin/payments/:leadId/hosted-url rejects non-HTTPS URLs", async () => {
   await withApp(app, async (client) => {
-    const adminSession = await registerAndLogin(client, { email: "admin@example.com" });
+    const adminSession = await makeAdmin(client, store);
     const leadId = randomUUID();
     seedPayment(leadId);
 
@@ -65,7 +66,7 @@ test("PATCH /api/admin/payments/:leadId/hosted-url rejects non-HTTPS URLs", asyn
 
 test("PATCH /api/admin/payments/:leadId/hosted-url saves HTTPS hosted link", async () => {
   await withApp(app, async (client) => {
-    const adminSession = await registerAndLogin(client, { email: "admin@example.com" });
+    const adminSession = await makeAdmin(client, store);
     const leadId = randomUUID();
     seedPayment(leadId);
 
@@ -90,7 +91,7 @@ test("PATCH /api/admin/payments/:leadId/hosted-url saves HTTPS hosted link", asy
 
 test("PATCH /api/admin/payments/:leadId/status rejects unknown statuses", async () => {
   await withApp(app, async (client) => {
-    const adminSession = await registerAndLogin(client, { email: "admin@example.com" });
+    const adminSession = await makeAdmin(client, store);
     const leadId = randomUUID();
     seedPayment(leadId);
 

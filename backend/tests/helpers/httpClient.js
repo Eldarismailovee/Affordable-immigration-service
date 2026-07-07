@@ -1,4 +1,5 @@
 import http from "http";
+import { randomUUID } from "crypto";
 
 function startServer(app) {
   return new Promise((resolve) => {
@@ -39,13 +40,31 @@ function parseSetCookieHeaders(setCookieHeader) {
   return cookies;
 }
 
-function makeRequest({ port, method, path, body, token, cookies = {}, headers: extraHeaders = {} }) {
+function makeRequest({
+  port,
+  method,
+  path,
+  body,
+  token,
+  cookies = {},
+  headers: extraHeaders = {},
+  skipIdempotency = false,
+}) {
   return new Promise((resolve, reject) => {
     const headers = {
       "content-type": "application/json",
       "user-agent": "affordable-immigration-service-test/1.0",
       ...extraHeaders,
     };
+
+    if (
+      !skipIdempotency &&
+      !headers["Idempotency-Key"] &&
+      !headers["idempotency-key"] &&
+      ["POST", "PATCH", "PUT", "DELETE"].includes(method)
+    ) {
+      headers["Idempotency-Key"] = randomUUID();
+    }
 
     if (token) {
       headers.authorization = `Bearer ${token}`;
@@ -125,6 +144,18 @@ export async function withApp(app, runner) {
         const res = await makeRequest({
           port,
           method: "PATCH",
+          path,
+          body,
+          cookies: cookieJar,
+          ...opts,
+        });
+        cookieJar = { ...cookieJar, ...res.cookies };
+        return res;
+      },
+      put: async (path, body, opts = {}) => {
+        const res = await makeRequest({
+          port,
+          method: "PUT",
           path,
           body,
           cookies: cookieJar,

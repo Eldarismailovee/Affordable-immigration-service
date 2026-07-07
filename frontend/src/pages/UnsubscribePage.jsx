@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { confirmUnsubscribe } from "../services/api";
 
 export default function UnsubscribePage() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const token = searchParams.get("token") || "";
   const [status, setStatus] = useState(token ? "loading" : "error");
   const [message, setMessage] = useState(
@@ -23,11 +23,13 @@ export default function UnsubscribePage() {
         if (!cancelled) {
           setStatus("success");
           setMessage(result.message || "You have been unsubscribed from marketing emails.");
+          setSearchParams({}, { replace: true });
         }
       } catch {
         if (!cancelled) {
           setStatus("success");
           setMessage("You have been unsubscribed from marketing emails.");
+          setSearchParams({}, { replace: true });
         }
       }
     }
@@ -36,7 +38,7 @@ export default function UnsubscribePage() {
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, [setSearchParams, token]);
 
   return (
     <div className="min-h-screen bg-[#040816] px-4 py-16 text-white">

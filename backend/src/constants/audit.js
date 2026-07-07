@@ -14,6 +14,7 @@ export const AUDIT_CATEGORIES = {
   DSAR: "dsar",
   LEAD_WORKFLOW: "lead_workflow",
   EMAIL: "email",
+  SECURITY: "security",
 };
 
 export const AUDIT_AUTH_REASONS = {
@@ -25,6 +26,19 @@ export const AUDIT_EVENT_TYPES = {
   AUTH_LOGIN_SUCCESS: "auth.login.success",
   AUTH_LOGIN_FAILURE: "auth.login.failure",
   AUTH_LOGOUT: "auth.logout",
+
+  MFA_ENROLLMENT_STARTED: "auth.mfa.enrollment_started",
+  MFA_ENROLLMENT_COMPLETED: "auth.mfa.enrollment_completed",
+  MFA_ENROLLMENT_FAILED: "auth.mfa.enrollment_failed",
+  MFA_VERIFICATION_SUCCESS: "auth.mfa.verification_success",
+  MFA_VERIFICATION_FAILED: "auth.mfa.verification_failed",
+  MFA_RECOVERY_CODE_USED: "auth.mfa.recovery_code_used",
+  MFA_RECOVERY_CODES_REGENERATED: "auth.mfa.recovery_codes_regenerated",
+  MFA_DISABLED: "auth.mfa.disabled",
+  MFA_ADMIN_RESET: "auth.mfa.admin_reset",
+  MFA_STEP_UP_SUCCESS: "auth.mfa.step_up_success",
+  MFA_STEP_UP_FAILED: "auth.mfa.step_up_failed",
+  MFA_CHALLENGE_RATE_LIMITED: "auth.mfa.challenge_rate_limited",
 
   INTAKE_SUBMIT: "intake.submit",
   INTAKE_UPDATE: "intake.update",
@@ -88,4 +102,20 @@ export const AUDIT_EVENT_TYPES = {
   EMAIL_MARKETING_SKIPPED_SUPPRESSED: "email.marketing.skipped_suppressed",
   EMAIL_MARKETING_SENT: "email.marketing.sent",
   EMAIL_TRANSACTIONAL_SENT: "email.transactional.sent",
+
+  EMAIL_VERIFICATION_TOKEN_CREATED: "auth.email_verification.token_created",
+  EMAIL_VERIFICATION_DELIVERY_REQUESTED: "auth.email_verification.delivery_requested",
+  EMAIL_VERIFICATION_PROVIDER_ACCEPTED: "auth.email_verification.provider_accepted",
+  EMAIL_VERIFICATION_DELIVERY_FAILED: "auth.email_verification.delivery_failed",
+  EMAIL_VERIFIED: "auth.email.verified",
+  EMAIL_VERIFICATION_TOKEN_EXPIRED: "auth.email_verification.token_expired",
+  EMAIL_VERIFICATION_REPLAY_ATTEMPTED: "auth.email_verification.replay_attempted",
+  EMAIL_VERIFICATION_RATE_LIMITED: "auth.email_verification.rate_limited",
+  EMAIL_VERIFICATION_RESENT: "auth.email_verification.resent",
+  EMAIL_CHANGE_REQUESTED: "auth.email.change_requested",
+  EMAIL_CHANGE_COMPLETED: "auth.email.change_completed",
+  EMAIL_CHANGE_CANCELLED: "auth.email.change_cancelled",
+
+  IDEMPOTENCY_KEY_CONFLICT: "security.idempotency.key_conflict",
+  IDEMPOTENCY_REPLAY: "security.idempotency.replay",
 };

@@ -28,7 +28,15 @@ export const PAYMENT_STATUSES = [
   "paid",
   "failed",
 ];
-export const DOCKETWISE_STATUSES = ["not_synced", "synced", "error"];
+export const DOCKETWISE_STATUSES = [
+  "not_synced",
+  "not_configured",
+  "pending",
+  "processing",
+  "synced",
+  "failed",
+  "error",
+];
 export const PAYMENT_PREFERENCES = ["invoice", "office_call", "manual_follow_up"];
 export const LANGUAGE_MODES = ["english", "bilingual"];
 export const ADMIN_AUDIT_METHODS = ["POST", "PUT", "PATCH", "DELETE"];
@@ -47,7 +55,11 @@ export const APPROVED_PACKET_STATUS = "approved";
 export const REQUESTED_BOOKING_STATUS = "requested";
 export const PENDING_PAYMENT_STATUS = "pending_manual_processing";
 export const NOT_SYNCED_STATUS = "not_synced";
+export const NOT_CONFIGURED_STATUS = "not_configured";
+export const PENDING_INTEGRATION_STATUS = "pending";
+export const PROCESSING_INTEGRATION_STATUS = "processing";
 export const SYNCED_STATUS = "synced";
+export const FAILED_INTEGRATION_STATUS = "failed";
 
 export const IMAGE_UPLOAD_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 export const IMAGE_UPLOAD_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp", ".gif"];

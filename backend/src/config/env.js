@@ -193,6 +193,33 @@ const rawEnvSchema = z.object({
     emptyToUndefined,
     z.string().trim().min(1).optional()
   ),
+  DOCKETWISE_API_URL: z.preprocess(emptyToUndefined, z.string().trim().url().optional()),
+  DOCKETWISE_API_TOKEN: z.preprocess(emptyToUndefined, z.string().trim().min(1).optional()),
+  BOOKING_PROVIDER_CONFIGURED: booleanEnv(isTest),
+  EMAIL_PROVIDER_CONFIGURED: booleanEnv(isTest),
+  MFA_ENCRYPTION_KEY: z.preprocess(emptyToUndefined, z.string().trim().min(1).optional()),
+  MFA_ENCRYPTION_KEY_VERSION: stringEnv("v1"),
+  MFA_ISSUER: stringEnv("Affordable Immigration Service"),
+  MFA_CHALLENGE_TTL_SECONDS: integerEnv(300, z.number().int().min(60).max(900)),
+  MFA_STEP_UP_MAX_AGE_SECONDS: integerEnv(300, z.number().int().min(60).max(3600)),
+  MFA_MAX_ATTEMPTS: integerEnv(5, z.number().int().min(3).max(20)),
+  APP_PUBLIC_URL: stringEnv("http://127.0.0.1:5173").pipe(z.string().url()),
+  EMAIL_VERIFICATION_TOKEN_TTL_SECONDS: integerEnv(
+    3600,
+    z.number().int().min(300).max(86400)
+  ),
+  EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS: integerEnv(
+    60,
+    z.number().int().min(30).max(3600)
+  ),
+  EMAIL_VERIFICATION_MAX_SENDS_PER_HOUR: integerEnv(
+    5,
+    z.number().int().min(1).max(20)
+  ),
+  EMAIL_VERIFICATION_MAX_VERIFY_ATTEMPTS: integerEnv(
+    5,
+    z.number().int().min(3).max(20)
+  ),
 });
 
 const parsedEnv = rawEnvSchema.safeParse(process.env);
@@ -222,6 +249,34 @@ const env = Object.freeze({
   isTest,
   CORS_ORIGINS: explicitOrigins.length ? explicitOrigins : fallbackOrigins,
 });
+
+if (isProduction && env.PAYMENT_HOST_ALLOWLIST.length === 0) {
+  throw new Error("PAYMENT_HOST_ALLOWLIST must be configured in production");
+}
+
+if (isProduction && !/^https:\/\//i.test(env.APP_PUBLIC_URL)) {
+  throw new Error("APP_PUBLIC_URL must use HTTPS in production");
+}
+
+if (isProduction) {
+  const mfaKey = env.MFA_ENCRYPTION_KEY;
+
+  if (!mfaKey) {
+    throw new Error("MFA_ENCRYPTION_KEY must be set in production");
+  }
+
+  try {
+    const decoded = Buffer.from(mfaKey, "base64");
+
+    if (decoded.length !== 32) {
+      throw new Error("MFA_ENCRYPTION_KEY must decode to 32 bytes");
+    }
+  } catch (error) {
+    throw new Error(
+      error instanceof Error ? error.message : "MFA_ENCRYPTION_KEY must be valid base64"
+    );
+  }
+}
 
 export { env };
 export default env;

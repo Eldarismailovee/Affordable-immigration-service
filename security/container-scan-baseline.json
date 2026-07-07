@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "description": "Expiring container scan exceptions. CI fails on expired entries and new Critical/High with available fix.",
+  "exceptions": []
+}

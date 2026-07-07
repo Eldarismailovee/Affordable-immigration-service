@@ -1,3 +1,8 @@
+import {
+  idempotencyHeaders,
+  markIdempotentCommandSuccess,
+} from "./idempotency.js";
+
 const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:5000/api";
 
 let accessToken = null;
@@ -52,10 +57,27 @@ async function refreshAuthTokens() {
 }
 
 async function request(path, options = {}) {
-  const { skipRefresh = false, ...fetchOptions } = options;
+  const {
+    skipRefresh = false,
+    idempotent = false,
+    idempotentFresh = false,
+    method = "GET",
+    ...fetchOptions
+  } = options;
+
+  const headers = buildJsonHeaders(fetchOptions);
+
+  if (idempotent) {
+    Object.assign(
+      headers,
+      idempotencyHeaders(method, path, { fresh: idempotentFresh })
+    );
+  }
+
   const response = await fetch(`${API_URL}${path}`, {
     credentials: "include",
-    headers: buildJsonHeaders(fetchOptions),
+    headers,
+    method,
     ...fetchOptions,
   });
 
@@ -63,8 +85,12 @@ async function request(path, options = {}) {
     const refreshedToken = await refreshAuthTokens();
 
     if (refreshedToken) {
-      return request(path, { ...fetchOptions, skipRefresh: true });
+      return request(path, { ...options, skipRefresh: true });
     }
+  }
+
+  if (response.status === 204) {
+    return null;
   }
 
   const data = await parseJsonResponse(response);
@@ -82,7 +108,13 @@ async function request(path, options = {}) {
         : data.message || "Request failed"
     );
     error.details = data.errors || [];
+    error.code = data.code;
+    error.status = response.status;
     throw error;
+  }
+
+  if (idempotent) {
+    markIdempotentCommandSuccess(method, path);
   }
 
   return data;
@@ -106,7 +138,43 @@ export async function login(payload) {
   return request("/auth/login", {
     method: "POST",
     body: JSON.stringify(payload),
+    skipRefresh: true,
   });
+}
+
+export async function verifyMfa(payload) {
+  return request("/auth/mfa/verify", {
+    method: "POST",
+    body: JSON.stringify(payload),
+    skipRefresh: true,
+  });
+}
+
+export async function startMfaEnrollment(payload = {}) {
+  return request("/auth/mfa/enrollment/start", {
+    method: "POST",
+    body: JSON.stringify(payload),
+    skipRefresh: true,
+  });
+}
+
+export async function confirmMfaEnrollment(payload) {
+  return request("/auth/mfa/enrollment/confirm", {
+    method: "POST",
+    body: JSON.stringify(payload),
+    skipRefresh: true,
+  });
+}
+
+export async function stepUpMfa(payload) {
+  return request("/auth/mfa/step-up", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getMfaStatus() {
+  return request("/auth/mfa/status");
 }
 
 export async function logout() {
@@ -139,10 +207,25 @@ export async function requestEmailVerification() {
 }
 
 export async function confirmEmailVerification(token) {
-  return request("/auth/email-verification/confirm", {
+  return request("/auth/email/verify", {
     method: "POST",
     body: JSON.stringify({ token }),
     skipRefresh: true,
+  });
+}
+
+export async function resendEmailVerification(email) {
+  return request("/auth/email/resend", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+    skipRefresh: true,
+  });
+}
+
+export async function changeEmail(payload) {
+  return request("/auth/email/change", {
+    method: "POST",
+    body: JSON.stringify(payload),
   });
 }
 
@@ -161,6 +244,24 @@ export async function submitIntake(payload) {
   return request("/account/intake", {
     method: "POST",
     body: JSON.stringify(payload),
+    idempotent: true,
+  });
+}
+
+export async function getIntakeDraft() {
+  return request("/account/intake/draft");
+}
+
+export async function saveIntakeDraft(payload) {
+  return request("/account/intake/draft", {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteIntakeDraft() {
+  return request("/account/intake/draft", {
+    method: "DELETE",
   });
 }
 
@@ -180,6 +281,7 @@ export async function updateAdminUserRole(userId, role) {
   return request(`/admin/users/${userId}/role`, {
     method: "PATCH",
     body: JSON.stringify({ role }),
+    idempotent: true,
   });
 }
 
@@ -209,6 +311,7 @@ export async function generateAgreementForLead(leadId) {
 export async function syncLeadToDocketwise(leadId) {
   return request(`/admin/docketwise/${leadId}/sync`, {
     method: "POST",
+    idempotent: true,
   });
 }
 
@@ -269,6 +372,7 @@ export async function updatePaymentStatus(leadId, status) {
   return request(`/admin/payments/${leadId}/status`, {
     method: "PATCH",
     body: JSON.stringify({ status }),
+    idempotent: true,
   });
 }
 
@@ -276,6 +380,7 @@ export async function updateHostedPaymentUrl(leadId, payload) {
   return request(`/admin/payments/${leadId}/hosted-url`, {
     method: "PATCH",
     body: JSON.stringify(payload),
+    idempotent: true,
   });
 }
 
@@ -337,6 +442,7 @@ export async function submitPublicPrivacyRequest(payload) {
     method: "POST",
     body: JSON.stringify(payload),
     skipRefresh: true,
+    idempotent: true,
   });
 }
 
@@ -360,7 +466,10 @@ export async function verifyAdminDsarIdentity(requestId, payload) {
 }
 
 export async function generateAdminDsarExport(requestId) {
-  return request(`/admin/dsar/${requestId}/export`, { method: "POST" });
+  return request(`/admin/dsar/${requestId}/export`, {
+    method: "POST",
+    idempotent: true,
+  });
 }
 
 export async function generateAdminDsarPdfExport(requestId) {
@@ -389,7 +498,10 @@ export async function addAdminDsarNote(requestId, note) {
 }
 
 export async function applyAdminDsarAnonymization(requestId) {
-  return request(`/admin/dsar/${requestId}/anonymize`, { method: "POST" });
+  return request(`/admin/dsar/${requestId}/anonymize`, {
+    method: "POST",
+    idempotent: true,
+  });
 }
 
 export async function applyAdminDsarRestriction(requestId) {

@@ -4,7 +4,7 @@ export default function FaqItem({ id, question, answer, open, onClick }) {
   const panelId = `${id}-panel`;
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/5">
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <h3 className="m-0">
         <button
           type="button"
@@ -14,10 +14,10 @@ export default function FaqItem({ id, question, answer, open, onClick }) {
           aria-controls={panelId}
           className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left"
         >
-          <span className="text-base font-medium text-white md:text-lg">{question}</span>
+          <span className="text-base font-medium text-slate-950 md:text-lg">{question}</span>
           <ChevronDown
             aria-hidden="true"
-            className={`h-5 w-5 shrink-0 text-amber-400 transition ${
+            className={`h-5 w-5 shrink-0 text-blue-900 transition ${
               open ? "rotate-180" : ""
             }`}
           />
@@ -29,7 +29,7 @@ export default function FaqItem({ id, question, answer, open, onClick }) {
           id={panelId}
           role="region"
           aria-labelledby={id}
-          className="border-t border-white/10 px-5 py-4 text-sm leading-7 text-slate-300 md:text-base"
+          className="border-t border-slate-200 px-5 py-4 text-base leading-7 text-slate-600"
         >
           {answer}
         </div>

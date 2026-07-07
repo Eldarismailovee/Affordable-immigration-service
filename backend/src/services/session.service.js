@@ -17,7 +17,7 @@ import {
   revokeUserRefreshTokens,
   rotateRefreshToken,
 } from "../repositories/auth-token.repository.js";
-import { findUserById } from "../repositories/user.repository.js";
+import { findUserById, getSessionSecurityVersion } from "../repositories/user.repository.js";
 import { AppError } from "../utils/appError.js";
 import { logger } from "../lib/logger.js";
 import {
@@ -26,6 +26,8 @@ import {
   AUDIT_RESULTS,
 } from "../constants/audit.js";
 import { recordAuditEvent } from "./audit.service.js";
+import pool from "../db/pool.js";
+import { query } from "../db/query.js";
 
 function getRequestMetadata(requestContext = {}) {
   return {
@@ -46,10 +48,17 @@ function invalidRefreshTokenError() {
   );
 }
 
-export async function createAuthSession(user, requestContext = {}) {
+export async function createAuthSession(
+  user,
+  requestContext = {},
+  { mfaCompleted = false, sessionSecurityVersion = null } = {}
+) {
   const refreshToken = createOpaqueToken();
   const refreshTokenId = randomUUID();
   const metadata = getRequestMetadata(requestContext);
+  const secVer =
+    sessionSecurityVersion ?? (await getSessionSecurityVersion(user.id));
+  const mfaCompletedAt = mfaCompleted ? new Date() : null;
 
   await createRefreshToken({
     id: refreshTokenId,
@@ -58,11 +67,18 @@ export async function createAuthSession(user, requestContext = {}) {
     expiresAt: addDays(new Date(), REFRESH_TOKEN_TTL_DAYS),
     userAgent: metadata.userAgent,
     ipAddress: metadata.ipAddress,
+    mfaCompletedAt,
+    sessionSecurityVersion: secVer,
   });
 
   return {
     user,
-    token: await createAccessToken(user, { sessionId: refreshTokenId }),
+    token: await createAccessToken(user, {
+      sessionId: refreshTokenId,
+      mfaCompleted,
+      mfaCompletedAt,
+      sessionSecurityVersion: secVer,
+    }),
     refreshToken,
     expiresIn: ACCESS_TOKEN_TTL_SECONDS,
   };
@@ -99,6 +115,13 @@ export async function refreshAuthSession(refreshToken, requestContext) {
     throw invalidRefreshTokenError();
   }
 
+  const currentSecVer = await getSessionSecurityVersion(user.id);
+
+  if (Number(tokenRow.session_security_version) !== Number(currentSecVer)) {
+    throw invalidRefreshTokenError();
+  }
+
+  const mfaCompleted = Boolean(tokenRow.mfa_completed_at);
   const nextRefreshToken = createOpaqueToken();
   const nextRefreshTokenId = randomUUID();
   const metadata = getRequestMetadata(requestContext);
@@ -112,6 +135,8 @@ export async function refreshAuthSession(refreshToken, requestContext) {
       expiresAt: addDays(new Date(), REFRESH_TOKEN_TTL_DAYS),
       userAgent: metadata.userAgent,
       ipAddress: metadata.ipAddress,
+      mfaCompletedAt: tokenRow.mfa_completed_at,
+      sessionSecurityVersion: currentSecVer,
     });
   } catch (error) {
     if (error instanceof RefreshTokenRotationError) {
@@ -121,10 +146,53 @@ export async function refreshAuthSession(refreshToken, requestContext) {
     throw error;
   }
 
+  const safeUser = sanitizeUser(user);
+
   return {
-    token: await createAccessToken(sanitizeUser(user), { sessionId: nextRefreshTokenId }),
+    token: await createAccessToken(safeUser, {
+      sessionId: nextRefreshTokenId,
+      mfaCompleted,
+      mfaCompletedAt: tokenRow.mfa_completed_at,
+      sessionSecurityVersion: currentSecVer,
+    }),
     refreshToken: nextRefreshToken,
     expiresIn: ACCESS_TOKEN_TTL_SECONDS,
+  };
+}
+
+export async function refreshMfaCompletedAt({
+  sessionId,
+  user,
+  sessionSecurityVersion,
+}) {
+  const mfaCompletedAt = new Date();
+
+  const { rows } = await query(
+    pool,
+    `
+    UPDATE auth_refresh_tokens
+    SET mfa_completed_at = $2
+    WHERE id = $1
+      AND user_id = $3
+      AND revoked_at IS NULL
+    RETURNING id
+    `,
+    [sessionId, mfaCompletedAt, user.id]
+  );
+
+  if (!rows[0]) {
+    throw invalidRefreshTokenError();
+  }
+
+  return {
+    token: await createAccessToken(user, {
+      sessionId,
+      mfaCompleted: true,
+      mfaCompletedAt,
+      sessionSecurityVersion,
+    }),
+    expiresIn: ACCESS_TOKEN_TTL_SECONDS,
+    mfaCompletedAt,
   };
 }
 

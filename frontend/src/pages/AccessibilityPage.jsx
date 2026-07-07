@@ -32,7 +32,7 @@ export default function AccessibilityPage() {
           <li>Visible labels and programmatic names for form fields</li>
           <li>Keyboard-operable controls and visible focus indicators</li>
           <li>Screen-reader-friendly error and status messages</li>
-          <li>Contrast-oriented styling on the dark theme</li>
+          <li>Contrast-oriented styling on light content sections and a dark premium hero</li>
           <li>Semantic HTML source for generated PDFs, with in-app HTML views where available</li>
           <li>Automated linting with eslint-plugin-jsx-a11y in development</li>
         </ul>

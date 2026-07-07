@@ -1,4 +1,9 @@
 {
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "ci:validate": "node scripts/ci/validate-workflows.js && node --test tests/ci/workflow-policy.test.js"
+  },
   "dependencies": {
     "puppeteer-core": "^25.1.0"
   }

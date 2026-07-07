@@ -33,3 +33,28 @@ test("parseHostedPaymentUrl enforces host allowlist when configured", () => {
   });
   assert.match(url, /^https:\/\/checkout\.stripe\.com\//);
 });
+
+test("parseHostedPaymentUrl rejects localhost and private hosts", () => {
+  for (const host of ["https://localhost/pay", "https://127.0.0.1/pay", "https://[::1]/pay"]) {
+    assert.throws(() => parseHostedPaymentUrl(host), {
+      code: "INVALID_HOSTED_PAYMENT_URL",
+    });
+  }
+});
+
+test("parseHostedPaymentUrl rejects URLs with embedded credentials", () => {
+  assert.throws(() => parseHostedPaymentUrl("https://user:pass@checkout.stripe.com/pay"), {
+    code: "INVALID_HOSTED_PAYMENT_URL",
+  });
+});
+
+test("parseHostedPaymentUrl fails closed when allowlist is required but empty", () => {
+  assert.throws(
+    () =>
+      parseHostedPaymentUrl("https://checkout.stripe.com/pay", {
+        allowedHosts: [],
+        requireAllowlist: true,
+      }),
+    { code: "INVALID_HOSTED_PAYMENT_URL" }
+  );
+});

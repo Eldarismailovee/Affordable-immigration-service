@@ -1,0 +1,142 @@
+name: Security Scheduled
+
+# Informational and scheduled security jobs — not merge-blocking gates.
+# Merge-blocking checks live in ci.yml (ci-required aggregate).
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-scheduled-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  dependency-audit-full:
+    name: Full Dependency Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      matrix:
+        package:
+          - backend
+          - frontend
+    defaults:
+      run:
+        working-directory: ${{ matrix.package }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ matrix.package == 'backend' && '26' || '24' }}
+          cache: npm
+          cache-dependency-path: ${{ matrix.package }}/package-lock.json
+      - run: npm ci
+      - run: node ../scripts/ci/check-npm-audit.js . ../security/dependency-audit-baseline.json --production
+      - run: npm audit --json > ../audit-${{ matrix.package }}.json
+        continue-on-error: true
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: audit-report-${{ matrix.package }}
+          path: audit-${{ matrix.package }}.json
+          retention-days: 14
+
+  codeql-scheduled:
+    name: CodeQL Scheduled
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+      packages: read
+      actions: read
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: github/codeql-action/init@411c4c9a36b3fca4d674f06b6396b2c6d23522c6 # v3
+        with:
+          languages: javascript-typescript
+      - uses: github/codeql-action/autobuild@411c4c9a36b3fca4d674f06b6396b2c6d23522c6 # v3
+      - uses: github/codeql-action/analyze@411c4c9a36b3fca4d674f06b6396b2c6d23522c6 # v3
+
+  sbom:
+    name: SBOM Generation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      matrix:
+        package:
+          - backend
+          - frontend
+    defaults:
+      run:
+        working-directory: ${{ matrix.package }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ matrix.package == 'backend' && '26' || '24' }}
+          cache: npm
+          cache-dependency-path: ${{ matrix.package }}/package-lock.json
+      - run: npm ci
+      - run: mkdir -p ../artifacts/sbom
+      - uses: anchore/sbom-action@e11c554f704a0b820cbf8c51673f6945e0731532 # v0.20.0
+        with:
+          path: .
+          format: cyclonedx-json
+          artifact-name: sbom-${{ matrix.package }}
+          output-file: ../artifacts/sbom/${{ matrix.package }}-sbom.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: sbom-${{ matrix.package }}
+          path: artifacts/sbom/${{ matrix.package }}-sbom.json
+          retention-days: 14
+
+  dast-informational:
+    name: DAST Informational
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      POSTGRES_DB: immigration_ci
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      PORT: 5000
+      CLIENT_URL: http://127.0.0.1
+      BASE_URL: http://127.0.0.1/api
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/immigration_ci
+      CHROMIUM_PATH: /usr/bin/chromium
+      AUTH_TOKEN_SECRET: ci-auth-token-secret-with-at-least-32-chars
+      ADMIN_EMAIL: admin@example.com
+      ADMIN_PASSWORD: change-me-admin-password
+      ADMIN_NAME: CI Administrator
+      VITE_API_URL: /api
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Start isolated stack
+        run: |
+          set -Eeuo pipefail
+          export COMPOSE_PROJECT_NAME="dast-scheduled-${GITHUB_RUN_ID}"
+          docker compose -p "$COMPOSE_PROJECT_NAME" up -d --build
+          for i in $(seq 1 60); do
+            if curl -sf http://127.0.0.1/api/health >/dev/null; then exit 0; fi
+            sleep 5
+          done
+          docker compose -p "$COMPOSE_PROJECT_NAME" logs
+          exit 1
+
+      - name: OWASP ZAP baseline (informational)
+        uses: zaproxy/action-baseline@7c4deb10e6261301961c86d65d54a516394f9aed # v0.14.0
+        continue-on-error: true
+        with:
+          target: "http://127.0.0.1"
+          cmd_options: "-a"
+          allow_issue_writing: false
+
+      - name: Cleanup
+        if: always()
+        run: docker compose -p "dast-scheduled-${GITHUB_RUN_ID}" down -v --remove-orphans

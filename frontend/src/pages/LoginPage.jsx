@@ -1,9 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-
-const inputClassName =
-  "w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-white";
+import { formInputClass, formLabelClass, formSurfaceClass, pageSurfaceClass } from "../constants/themeClasses.js";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -23,8 +21,17 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const user = await login(form);
-      navigate(location.state?.from || (user.role === "admin" ? "/admin" : "/account"), {
+      const result = await login(form);
+
+      if (result?.mfaPending) {
+        navigate(
+          result.enrollmentRequired ? "/mfa/enroll" : "/mfa/verify",
+          { replace: true, state: { from: location.state?.from } }
+        );
+        return;
+      }
+
+      navigate(location.state?.from || (result.role === "admin" ? "/admin" : "/account"), {
         replace: true,
       });
     } catch (err) {
@@ -35,28 +42,28 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#040816] px-4 py-16 text-white">
+    <div className={`${pageSurfaceClass} px-4 py-16`}>
       <main id="main-content" className="mx-auto max-w-xl">
         <form
           onSubmit={handleSubmit}
-          className="rounded-[2rem] border border-white/10 bg-white/5 p-8"
+          className={`${formSurfaceClass} p-8`}
           aria-describedby={error ? "login-form-error" : undefined}
           noValidate
         >
-          <Link to="/" className="text-sm font-medium text-amber-400 hover:text-amber-300">
+          <Link to="/" className="text-sm font-medium text-blue-900 hover:text-blue-800">
             Back home
           </Link>
-          <div className="mt-8 text-sm font-semibold uppercase tracking-[0.2em] text-amber-400">
+          <div className="mt-8 text-sm font-semibold uppercase tracking-[0.2em] text-blue-900">
             Sign in
           </div>
-          <h1 className="mt-3 text-4xl font-semibold tracking-tight">Welcome back</h1>
-          <p className="mt-3 text-slate-300">
+          <h1 className="mt-3 text-4xl font-semibold tracking-tight text-slate-950">Welcome back</h1>
+          <p className="mt-3 text-slate-600">
             Sign in to access your intake, documents, or admin workspace.
           </p>
 
           <div className="mt-8 grid gap-4">
             <div>
-              <label htmlFor="login-email" className="mb-1.5 block text-sm font-medium text-slate-200">
+              <label htmlFor="login-email" className={formLabelClass}>
                 Email
               </label>
               <input
@@ -65,7 +72,7 @@ export default function LoginPage() {
                 type="email"
                 value={form.email}
                 onChange={(event) => updateField("email", event.target.value)}
-                className={inputClassName}
+                className={formInputClass}
                 autoComplete="email"
                 required
                 aria-invalid={Boolean(error)}
@@ -73,10 +80,7 @@ export default function LoginPage() {
               />
             </div>
             <div>
-              <label
-                htmlFor="login-password"
-                className="mb-1.5 block text-sm font-medium text-slate-200"
-              >
+              <label htmlFor="login-password" className={formLabelClass}>
                 Password
               </label>
               <input
@@ -85,7 +89,7 @@ export default function LoginPage() {
                 type="password"
                 value={form.password}
                 onChange={(event) => updateField("password", event.target.value)}
-                className={inputClassName}
+                className={formInputClass}
                 autoComplete="current-password"
                 required
                 aria-invalid={Boolean(error)}
@@ -98,7 +102,7 @@ export default function LoginPage() {
             <div
               id="login-form-error"
               role="alert"
-              className="mt-6 rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-red-200"
+              className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-red-800"
             >
               {error}
             </div>
@@ -108,13 +112,13 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="rounded-full bg-amber-400 px-5 py-3 font-semibold text-slate-950 hover:bg-amber-300 disabled:opacity-70"
+              className="rounded-full bg-slate-900 px-5 py-3 font-semibold text-white hover:bg-slate-800 disabled:opacity-70"
             >
               {loading ? "Signing in..." : "Sign in"}
             </button>
             <Link
               to="/register"
-              className="rounded-full border border-white/15 bg-white/5 px-5 py-3 font-semibold text-white hover:border-amber-400/40 hover:text-amber-300"
+              className="rounded-full border border-slate-300 bg-white px-5 py-3 font-semibold text-slate-900 hover:border-slate-400 hover:bg-slate-50"
             >
               Create account
             </Link>

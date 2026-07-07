@@ -2,12 +2,13 @@ import { useState } from "react";
 import faq from "../../data/faq";
 import SectionTitle from "../layout/SectionTitle";
 import FaqItem from "../ui/FaqItem";
+import { sectionAltClass } from "../../constants/themeClasses.js";
 
 export default function FAQSection() {
   const [openIndex, setOpenIndex] = useState(0);
 
   return (
-    <section id="faq" className="mx-auto max-w-7xl px-4 py-20 md:px-6 lg:px-8">
+    <section id="faq" className={`${sectionAltClass} mx-auto max-w-7xl px-4 md:px-6 lg:px-8`}>
       <SectionTitle
         eyebrow="FAQ"
         title="Answers to"

@@ -24,11 +24,11 @@ These use GitHub's built-in detectors (API keys, tokens, cloud credentials) with
 3. Review audit logs for unauthorized use.
 4. Follow [incident-response-plan.md](./incident-response-plan.md).
 
-## Optional CI fallback
+## CI fallback (enabled)
 
-This repo does **not** run Gitleaks or TruffleHog in CI by default to avoid duplicate alerts when GitHub secret scanning is enabled.
+This repo runs **Gitleaks** in `.github/workflows/ci.yml` as a blocking PR/main gate. Configure GitHub secret scanning separately per [GITHUB_SETTINGS_RUNBOOK.md](../security-remediation/ci/GITHUB_SETTINGS_RUNBOOK.md).
 
-If GitHub secret scanning is unavailable, consider adding [gitleaks/gitleaks-action](https://github.com/gitleaks/gitleaks-action) as a single scanner — do not combine multiple secret scanners.
+Do not combine multiple secret scanners in CI.
 
 ## Pre-commit checklist
 

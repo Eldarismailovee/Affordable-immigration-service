@@ -38,6 +38,10 @@ const upload = multer({
   fileFilter,
   limits: {
     fileSize: MAX_IMAGE_UPLOAD_BYTES,
+    fieldNestingDepth: 1,
+    fields: 10,
+    parts: 12,
+    headerPairs: 20,
   },
 });
 

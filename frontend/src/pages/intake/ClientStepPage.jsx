@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useIntake } from "../../context/IntakeContext";
+import { formInputClass, formLabelClass } from "../../constants/themeClasses.js";
 
 export default function ClientStepPage() {
   const navigate = useNavigate();
@@ -11,13 +12,13 @@ export default function ClientStepPage() {
 
   return (
     <div>
-      <div className="text-sm uppercase tracking-[0.18em] text-amber-400">Step 2</div>
-      <h2 className="mt-2 text-3xl font-semibold">Client information</h2>
-      <p className="mt-3 text-slate-300">Enter your name, email, and phone number.</p>
+      <div className="font-mono text-sm uppercase tracking-[0.18em] text-blue-900">Step 2</div>
+      <h2 className="mt-2 text-3xl font-semibold text-slate-950">Client information</h2>
+      <p className="mt-3 text-slate-600">Enter your name, email, and phone number.</p>
 
       <div className="mt-8 grid gap-4 md:grid-cols-2">
         <div>
-          <label htmlFor="intake-first-name" className="mb-1.5 block text-sm font-medium text-slate-200">
+          <label htmlFor="intake-first-name" className={formLabelClass}>
             First name
           </label>
           <input
@@ -25,13 +26,13 @@ export default function ClientStepPage() {
             name="firstName"
             value={intake.firstName}
             onChange={(e) => updateField("firstName", e.target.value)}
-            className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3"
+            className={formInputClass}
             autoComplete="given-name"
             required
           />
         </div>
         <div>
-          <label htmlFor="intake-last-name" className="mb-1.5 block text-sm font-medium text-slate-200">
+          <label htmlFor="intake-last-name" className={formLabelClass}>
             Last name
           </label>
           <input
@@ -39,13 +40,13 @@ export default function ClientStepPage() {
             name="lastName"
             value={intake.lastName}
             onChange={(e) => updateField("lastName", e.target.value)}
-            className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3"
+            className={formInputClass}
             autoComplete="family-name"
             required
           />
         </div>
         <div>
-          <label htmlFor="intake-email" className="mb-1.5 block text-sm font-medium text-slate-200">
+          <label htmlFor="intake-email" className={formLabelClass}>
             Email
           </label>
           <input
@@ -54,13 +55,13 @@ export default function ClientStepPage() {
             type="email"
             value={intake.email}
             onChange={(e) => updateField("email", e.target.value)}
-            className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3"
+            className={formInputClass}
             autoComplete="email"
             required
           />
         </div>
         <div>
-          <label htmlFor="intake-phone" className="mb-1.5 block text-sm font-medium text-slate-200">
+          <label htmlFor="intake-phone" className={formLabelClass}>
             Phone
           </label>
           <input
@@ -69,7 +70,7 @@ export default function ClientStepPage() {
             type="tel"
             value={intake.phone}
             onChange={(e) => updateField("phone", e.target.value)}
-            className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3"
+            className={formInputClass}
             autoComplete="tel"
             required
           />
@@ -80,14 +81,14 @@ export default function ClientStepPage() {
         <button
           type="button"
           onClick={() => navigate("/intake/package")}
-          className="text-slate-300 hover:text-white"
+          className="text-slate-600 hover:text-slate-950"
         >
           Back
         </button>
         <button
           type="button"
           onClick={handleContinue}
-          className="rounded-full bg-amber-400 px-5 py-3 font-semibold text-slate-950 hover:bg-amber-300"
+          className="rounded-full bg-slate-900 px-5 py-3 font-semibold text-white hover:bg-slate-800"
         >
           Continue
         </button>

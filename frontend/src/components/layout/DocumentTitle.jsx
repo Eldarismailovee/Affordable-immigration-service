@@ -8,6 +8,7 @@ const ROUTE_TITLES = [
   ["/login", "Sign in"],
   ["/register", "Create account"],
   ["/account", "Your dashboard"],
+  ["/case-review", "Case review"],
   ["/start", "Start intake"],
   ["/intake/package", "Intake — Choose package"],
   ["/intake/client", "Intake — Client information"],

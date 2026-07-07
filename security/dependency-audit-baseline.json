@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "description": "Expiring npm audit exceptions. CI fails on expired entries and new Critical/High advisories.",
+  "exceptions": []
+}

@@ -36,20 +36,25 @@ export async function updateLeadPaymentStatus({
   status,
   actor,
   auditContext = null,
+  client = null,
 }) {
   assertCanUpdatePaymentStatus(actor);
   const nextStatus = parsePaymentStatus(status);
   const existing = await findLatestPaymentByLeadId(leadId);
   const oldStatus = existing?.status ?? null;
 
-  const payment = await withUnitOfWork(async (client) => {
-    const updatedPayment = await updatePaymentStatusByLeadId(leadId, nextStatus, client);
+  const run = client
+    ? async (callback) => callback(client)
+    : async (callback) => withUnitOfWork(callback);
+
+  const payment = await run(async (txClient) => {
+    const updatedPayment = await updatePaymentStatusByLeadId(leadId, nextStatus, txClient);
 
     if (!updatedPayment) {
       return null;
     }
 
-    await updateIntakePaymentStatusByLeadId(leadId, nextStatus, client);
+    await updateIntakePaymentStatusByLeadId(leadId, nextStatus, txClient);
 
     await recordAuditEvent(
       {
@@ -69,7 +74,7 @@ export async function updateLeadPaymentStatus({
           providerReference: updatedPayment.provider_reference ?? null,
         },
       },
-      client
+      txClient
     );
 
     return updatedPayment;
@@ -88,19 +93,25 @@ export async function setLeadHostedPaymentUrl({
   provider,
   providerReference,
   actor,
+  client = null,
 }) {
   assertCanUpdatePaymentStatus(actor);
 
   const normalizedUrl = parseHostedPaymentUrl(hostedPaymentUrl, {
     allowedHosts: env.PAYMENT_HOST_ALLOWLIST,
+    requireAllowlist: env.isProduction,
   });
 
-  const payment = await updateHostedPaymentUrlByLeadId({
-    leadId,
-    hostedPaymentUrl: normalizedUrl,
-    provider: provider || null,
-    providerReference: providerReference || null,
-  });
+  const db = client ?? undefined;
+  const payment = await updateHostedPaymentUrlByLeadId(
+    {
+      leadId,
+      hostedPaymentUrl: normalizedUrl,
+      provider: provider || null,
+      providerReference: providerReference || null,
+    },
+    db
+  );
 
   if (!payment) {
     throw paymentNotFoundError();

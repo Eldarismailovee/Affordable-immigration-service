@@ -3,7 +3,7 @@ import pool from "../db/pool.js";
 import { query } from "../db/query.js";
 
 const SAFE_USER_FIELDS =
-  "id, email, full_name, role, status, email_verified_at, processing_restricted_at, processing_restriction_reason, marketing_consent, newsletter_consent, marketing_consent_at, marketing_consent_source, marketing_opt_out_at, marketing_opt_out_reason, created_at, updated_at";
+  "id, email, full_name, role, status, email_verified_at, pending_email, pending_email_requested_at, email_changed_at, processing_restricted_at, processing_restriction_reason, marketing_consent, newsletter_consent, marketing_consent_at, marketing_consent_source, marketing_opt_out_at, marketing_opt_out_reason, session_security_version, created_at, updated_at";
 const AUTH_USER_FIELDS = `${SAFE_USER_FIELDS}, password_hash`;
 
 export async function findUserByEmail(email, db = pool) {
@@ -93,7 +93,10 @@ export async function updateUserRoleById(userId, role, db = pool) {
   const { rows } = await query(db, 
     `
     UPDATE users
-    SET role = $2, updated_at = NOW()
+    SET
+      role = $2,
+      session_security_version = session_security_version + 1,
+      updated_at = NOW()
     WHERE id = $1
       AND deleted_at IS NULL
     RETURNING ${SAFE_USER_FIELDS}
@@ -104,12 +107,47 @@ export async function updateUserRoleById(userId, role, db = pool) {
   return rows[0] || null;
 }
 
+export async function bumpSessionSecurityVersion(userId, db = pool) {
+  const { rows } = await query(
+    db,
+    `
+    UPDATE users
+    SET
+      session_security_version = session_security_version + 1,
+      updated_at = NOW()
+    WHERE id = $1
+      AND deleted_at IS NULL
+    RETURNING session_security_version
+    `,
+    [userId]
+  );
+
+  return rows[0]?.session_security_version ?? null;
+}
+
+export async function getSessionSecurityVersion(userId, db = pool) {
+  const { rows } = await query(
+    db,
+    `
+    SELECT session_security_version
+    FROM users
+    WHERE id = $1
+      AND deleted_at IS NULL
+    LIMIT 1
+    `,
+    [userId]
+  );
+
+  return rows[0]?.session_security_version ?? 1;
+}
+
 export async function updateUserPasswordById(userId, passwordHash, db = pool) {
   const { rows } = await query(db, 
     `
     UPDATE users
     SET
       password_hash = $2,
+      session_security_version = session_security_version + 1,
       updated_at = NOW()
     WHERE id = $1
       AND deleted_at IS NULL
@@ -122,11 +160,15 @@ export async function updateUserPasswordById(userId, passwordHash, db = pool) {
 }
 
 export async function markUserEmailVerifiedById(userId, db = pool) {
-  const { rows } = await query(db, 
+  const { rows } = await query(
+    db,
     `
     UPDATE users
     SET
       email_verified_at = COALESCE(email_verified_at, NOW()),
+      pending_email = NULL,
+      pending_email_requested_at = NULL,
+      session_security_version = session_security_version + 1,
       updated_at = NOW()
     WHERE id = $1
       AND deleted_at IS NULL
@@ -136,6 +178,75 @@ export async function markUserEmailVerifiedById(userId, db = pool) {
   );
 
   return rows[0] || null;
+}
+
+export async function setPendingEmailById(userId, pendingEmail, db = pool) {
+  const { rows } = await query(
+    db,
+    `
+    UPDATE users
+    SET
+      pending_email = $2,
+      pending_email_requested_at = NOW(),
+      email_verified_at = NULL,
+      email_changed_at = NOW(),
+      session_security_version = session_security_version + 1,
+      updated_at = NOW()
+    WHERE id = $1
+      AND deleted_at IS NULL
+    RETURNING ${SAFE_USER_FIELDS}
+    `,
+    [userId, pendingEmail]
+  );
+
+  return rows[0] || null;
+}
+
+export async function promotePendingEmailById(userId, db = pool) {
+  const { rows } = await query(
+    db,
+    `
+    UPDATE users
+    SET
+      email = pending_email,
+      pending_email = NULL,
+      pending_email_requested_at = NULL,
+      email_verified_at = NOW(),
+      email_changed_at = NOW(),
+      session_security_version = session_security_version + 1,
+      updated_at = NOW()
+    WHERE id = $1
+      AND deleted_at IS NULL
+      AND pending_email IS NOT NULL
+    RETURNING ${SAFE_USER_FIELDS}
+    `,
+    [userId]
+  );
+
+  return rows[0] || null;
+}
+
+export async function clearPendingEmailById(userId, db = pool) {
+  const { rows } = await query(
+    db,
+    `
+    UPDATE users
+    SET
+      pending_email = NULL,
+      pending_email_requested_at = NULL,
+      updated_at = NOW()
+    WHERE id = $1
+      AND deleted_at IS NULL
+    RETURNING ${SAFE_USER_FIELDS}
+    `,
+    [userId]
+  );
+
+  return rows[0] || null;
+}
+
+export async function findUserByNormalizedEmail(email, db = pool) {
+  return findUserByEmail(email, db);
 }
 
 export async function softDeleteUserById(userId, db = pool) {

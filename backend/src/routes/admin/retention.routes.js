@@ -3,8 +3,10 @@ import {
   retentionAdminActionController,
   runRetentionJobsController,
 } from "../../controllers/retention-admin.controller.js";
-import { requireRole } from "../../middleware/auth.js";
+import { requireRole, requireStepUp } from "../../middleware/auth.js";
 import { validateRequest } from "../../middleware/validateRequest.js";
+import { requireIdempotencyKey } from "../../middleware/idempotency.js";
+import { IDEMPOTENCY_OPERATIONS } from "../../constants/idempotency.js";
 import {
   retentionAdminActionSchema,
   runRetentionJobsSchema,
@@ -16,6 +18,8 @@ const adminOnly = requireRole("admin");
 router.post(
   "/run",
   adminOnly,
+  requireStepUp(600),
+  requireIdempotencyKey(IDEMPOTENCY_OPERATIONS.RETENTION_RUN),
   validateRequest({ body: runRetentionJobsSchema }),
   runRetentionJobsController
 );
@@ -23,6 +27,8 @@ router.post(
 router.post(
   "/actions",
   adminOnly,
+  requireStepUp(600),
+  requireIdempotencyKey(IDEMPOTENCY_OPERATIONS.RETENTION_ACTION),
   validateRequest({ body: retentionAdminActionSchema }),
   retentionAdminActionController
 );

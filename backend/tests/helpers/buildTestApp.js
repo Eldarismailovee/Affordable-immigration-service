@@ -12,9 +12,13 @@ import {
   buildPaymentRepo,
   buildDsarExportRepo,
   buildDsarRepo,
+  buildDocketwiseRepo,
   buildUserRepo,
   createInMemoryStore,
 } from "./inMemoryRepos.js";
+import { buildMfaChallengeRepo, buildMfaRepo } from "./inMemoryMfaRepos.js";
+import { buildIdempotencyRepo } from "./inMemoryIdempotencyRepos.js";
+import { buildIntakeDraftRepo } from "./inMemoryIntakeDraftRepos.js";
 
 const noopMiddleware = (_req, _res, next) => next();
 const passthroughLog = {
@@ -40,6 +44,14 @@ export async function setupTestEnvironment() {
 
   mock.module("../../src/repositories/user.repository.js", {
     namedExports: buildUserRepo(store),
+  });
+
+  mock.module("../../src/repositories/mfa.repository.js", {
+    namedExports: buildMfaRepo(store),
+  });
+
+  mock.module("../../src/repositories/mfa-challenge.repository.js", {
+    namedExports: buildMfaChallengeRepo(store),
   });
 
   mock.module("../../src/repositories/auth-token.repository.js", {
@@ -73,12 +85,24 @@ export async function setupTestEnvironment() {
     namedExports: buildPaymentRepo(store),
   });
 
+  mock.module("../../src/repositories/docketwise.repository.js", {
+    namedExports: buildDocketwiseRepo(store),
+  });
+
   mock.module("../../src/repositories/dsar.repository.js", {
     namedExports: buildDsarRepo(store),
   });
 
   mock.module("../../src/repositories/dsar-export.repository.js", {
     namedExports: buildDsarExportRepo(store),
+  });
+
+  mock.module("../../src/repositories/idempotency.repository.js", {
+    namedExports: buildIdempotencyRepo(store),
+  });
+
+  mock.module("../../src/repositories/intake-draft.repository.js", {
+    namedExports: buildIntakeDraftRepo(store),
   });
 
   mock.module("../../src/repositories/cookie-consent.repository.js", {
@@ -95,10 +119,21 @@ export async function setupTestEnvironment() {
     },
   });
 
+  mock.module("../../src/db/transaction.js", {
+    namedExports: {
+      withTransaction: async (callback) => callback({}),
+    },
+  });
+
   mock.module("../../src/middleware/rateLimit.js", {
     namedExports: {
       generalRateLimit: noopMiddleware,
       authRateLimit: noopMiddleware,
+      mfaRateLimit: noopMiddleware,
+      mfaSensitiveRateLimit: noopMiddleware,
+      emailVerificationRateLimit: noopMiddleware,
+      emailVerificationResendRateLimit: noopMiddleware,
+      emailChangeRateLimit: noopMiddleware,
     },
   });
 

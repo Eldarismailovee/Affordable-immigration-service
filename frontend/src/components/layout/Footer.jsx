@@ -52,7 +52,7 @@ export default function Footer() {
 
           <div>
             <div className="text-lg font-semibold text-white">Legal</div>
-            <div className="mt-5 space-y-3 text-sm leading-7 text-slate-300">
+            <div className="mt-5 space-y-3 text-base leading-7 text-slate-300">
               <p>Website use does not create an attorney-client relationship.</p>
               <p>Engagement starts only after the firm accepts the matter and applicable engagement requirements are met.</p>
               <p>Filing fees are separate from legal fees. Payment information may be collected online and processed manually by the office.</p>

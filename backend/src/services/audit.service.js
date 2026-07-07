@@ -76,6 +76,10 @@ export async function recordAuditEvent(
       db
     );
   } catch (err) {
+    if (db !== pool) {
+      throw err;
+    }
+
     logger.error({ err, eventType, category, action }, "Failed to write audit event");
   }
 }

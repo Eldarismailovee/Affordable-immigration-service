@@ -9,7 +9,10 @@ const PRODUCTION_ENV = {
   BASE_URL: "https://api.example.com",
   DATABASE_URL: "postgresql://user:password@db.example.com:5432/app",
   AUTH_TOKEN_SECRET: "x".repeat(32),
+  MFA_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString("base64"),
+  APP_PUBLIC_URL: "https://example.com",
   CORS_ORIGINS: "https://example.com",
+  PAYMENT_HOST_ALLOWLIST: "checkout.stripe.com",
 };
 
 const CONFIG_KEYS = [
@@ -18,6 +21,7 @@ const CONFIG_KEYS = [
   "BASE_URL",
   "DATABASE_URL",
   "AUTH_TOKEN_SECRET",
+  "MFA_ENCRYPTION_KEY",
   "CORS_ORIGINS",
   "DOCUMENT_ENCRYPTION_KEY_BASE64",
 ];

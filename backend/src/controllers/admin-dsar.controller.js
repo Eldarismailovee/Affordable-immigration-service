@@ -20,9 +20,25 @@ import {
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { getAuditContext } from "../utils/auditContext.js";
 import { sendResponse } from "../utils/sendResponse.js";
+import {
+  applyIdempotentReplayHeader,
+  executeIdempotentHttpCommand,
+} from "../utils/idempotentCommand.js";
+import { assertAdmin } from "../domain/user.policy.js";
 
 function withAudit(req, params) {
   return { ...params, auditContext: getAuditContext(req) };
+}
+
+function sanitizeDsarReplayRequest(request) {
+  if (!request || typeof request !== "object") {
+    return request;
+  }
+
+  const clone = { ...request };
+  delete clone.exportPayload;
+  delete clone.exportPdfPath;
+  return clone;
 }
 
 export const listAdminDsarController = asyncHandler(async (req, res) => {
@@ -51,13 +67,34 @@ export const verifyDsarIdentityController = asyncHandler(async (req, res) => {
 });
 
 export const generateDsarExportController = asyncHandler(async (req, res) => {
-  const request = await generateDsarExport(
-    withAudit(req, {
-      actor: req.user,
-      requestId: req.params.requestId,
-    })
-  );
-  sendResponse(res, adminDsarRequestMutationResponseSchema, { request });
+  const auditContext = getAuditContext(req);
+
+  const result = await executeIdempotentHttpCommand({
+    req,
+    auditContext,
+    actor: req.user,
+    authorizeReplay: async () => {
+      assertAdmin(req.user);
+    },
+    handler: async () => {
+      const request = await generateDsarExport(
+        withAudit(req, {
+          actor: req.user,
+          requestId: req.params.requestId,
+        })
+      );
+
+      return {
+        httpStatus: 200,
+        responseBody: { request: sanitizeDsarReplayRequest(request) },
+        resourceType: "dsar_request",
+        resourceId: request.id,
+      };
+    },
+  });
+
+  applyIdempotentReplayHeader(res, result.replayed);
+  sendResponse(res, adminDsarRequestMutationResponseSchema, result.responseBody, result.httpStatus);
 });
 
 export const generateDsarPdfExportController = asyncHandler(async (req, res) => {
@@ -84,14 +121,35 @@ export const applyDsarCorrectionController = asyncHandler(async (req, res) => {
 });
 
 export const applyDsarAnonymizationController = asyncHandler(async (req, res) => {
-  const request = await applyDsarAnonymization(
-    withAudit(req, {
-      actor: req.user,
-      requestId: req.params.requestId,
-      notes: req.body.notes,
-    })
-  );
-  sendResponse(res, adminDsarRequestMutationResponseSchema, { request });
+  const auditContext = getAuditContext(req);
+
+  const result = await executeIdempotentHttpCommand({
+    req,
+    auditContext,
+    actor: req.user,
+    authorizeReplay: async () => {
+      assertAdmin(req.user);
+    },
+    handler: async () => {
+      const request = await applyDsarAnonymization(
+        withAudit(req, {
+          actor: req.user,
+          requestId: req.params.requestId,
+          notes: req.body.notes,
+        })
+      );
+
+      return {
+        httpStatus: 200,
+        responseBody: { request: sanitizeDsarReplayRequest(request) },
+        resourceType: "dsar_request",
+        resourceId: request.id,
+      };
+    },
+  });
+
+  applyIdempotentReplayHeader(res, result.replayed);
+  sendResponse(res, adminDsarRequestMutationResponseSchema, result.responseBody, result.httpStatus);
 });
 
 export const applyDsarRestrictionController = asyncHandler(async (req, res) => {

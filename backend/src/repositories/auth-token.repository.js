@@ -12,6 +12,20 @@ const REFRESH_TOKEN_FIELDS = `
   revoked_at,
   expires_at,
   last_used_at,
+  mfa_completed_at,
+  session_security_version,
+  created_at
+`;
+
+const EMAIL_VERIFICATION_TOKEN_FIELDS = `
+  id,
+  user_id,
+  email,
+  token_hash,
+  purpose,
+  consumed_at,
+  invalidated_at,
+  expires_at,
   created_at
 `;
 
@@ -25,7 +39,16 @@ const ONE_TIME_TOKEN_FIELDS = `
 `;
 
 export async function createRefreshToken(
-  { id, userId, tokenHash, expiresAt, userAgent = "", ipAddress = "" },
+  {
+    id,
+    userId,
+    tokenHash,
+    expiresAt,
+    userAgent = "",
+    ipAddress = "",
+    mfaCompletedAt = null,
+    sessionSecurityVersion = 1,
+  },
   db = pool
 ) {
   const { rows } = await query(db, 
@@ -36,11 +59,22 @@ export async function createRefreshToken(
       token_hash,
       expires_at,
       user_agent,
-      ip_address
-    ) VALUES ($1, $2, $3, $4, $5, $6)
+      ip_address,
+      mfa_completed_at,
+      session_security_version
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
     RETURNING ${REFRESH_TOKEN_FIELDS}
     `,
-    [id, userId, tokenHash, expiresAt, userAgent, ipAddress]
+    [
+      id,
+      userId,
+      tokenHash,
+      expiresAt,
+      userAgent,
+      ipAddress,
+      mfaCompletedAt,
+      sessionSecurityVersion,
+    ]
   );
 
   return rows[0];
@@ -68,7 +102,17 @@ export class RefreshTokenRotationError extends Error {
 }
 
 export async function rotateRefreshToken(
-  { currentTokenId, nextTokenId, userId, tokenHash, expiresAt, userAgent, ipAddress },
+  {
+    currentTokenId,
+    nextTokenId,
+    userId,
+    tokenHash,
+    expiresAt,
+    userAgent,
+    ipAddress,
+    mfaCompletedAt = null,
+    sessionSecurityVersion = 1,
+  },
   db = pool
 ) {
   return withTransaction(async (client) => {
@@ -80,6 +124,8 @@ export async function rotateRefreshToken(
         expiresAt,
         userAgent,
         ipAddress,
+        mfaCompletedAt,
+        sessionSecurityVersion,
       },
       client
     );
@@ -133,34 +179,138 @@ export async function revokeUserRefreshTokens(userId, db = pool) {
 }
 
 export async function createEmailVerificationToken(
-  { id, userId, tokenHash, expiresAt },
+  { id, userId, email, tokenHash, purpose, expiresAt },
   db = pool
 ) {
-  const { rows } = await query(db, 
+  const { rows } = await query(
+    db,
     `
     INSERT INTO email_verification_tokens (
       id,
       user_id,
+      email,
       token_hash,
+      purpose,
       expires_at
-    ) VALUES ($1, $2, $3, $4)
-    RETURNING ${ONE_TIME_TOKEN_FIELDS}
+    ) VALUES ($1, $2, $3, $4, $5, $6)
+    RETURNING ${EMAIL_VERIFICATION_TOKEN_FIELDS}
     `,
-    [id, userId, tokenHash, expiresAt]
+    [id, userId, email, tokenHash, purpose, expiresAt]
   );
 
   return rows[0];
 }
 
-export async function consumeEmailVerificationToken(tokenHash, db = pool) {
-  const { rows } = await query(db, 
+export async function invalidateEmailVerificationTokensForUser(
+  userId,
+  { purpose = null } = {},
+  db = pool
+) {
+  const params = [userId];
+  let purposeClause = "";
+
+  if (purpose) {
+    params.push(purpose);
+    purposeClause = "AND purpose = $2";
+  }
+
+  await query(
+    db,
+    `
+    UPDATE email_verification_tokens
+    SET invalidated_at = COALESCE(invalidated_at, NOW())
+    WHERE user_id = $1
+      AND consumed_at IS NULL
+      AND invalidated_at IS NULL
+      ${purposeClause}
+    `,
+    params
+  );
+}
+
+export async function countRecentEmailVerificationSends(
+  userId,
+  since,
+  db = pool
+) {
+  const { rows } = await query(
+    db,
+    `
+    SELECT COUNT(*)::int AS total
+    FROM email_verification_tokens
+    WHERE user_id = $1
+      AND created_at >= $2
+    `,
+    [userId, since]
+  );
+
+  return rows[0]?.total ?? 0;
+}
+
+export async function findActiveEmailVerificationTokenByHash(tokenHash, db = pool) {
+  const { rows } = await query(
+    db,
+    `
+    SELECT ${EMAIL_VERIFICATION_TOKEN_FIELDS}
+    FROM email_verification_tokens
+    WHERE token_hash = $1
+      AND consumed_at IS NULL
+      AND invalidated_at IS NULL
+      AND expires_at > NOW()
+    LIMIT 1
+    `,
+    [tokenHash]
+  );
+
+  return rows[0] || null;
+}
+
+export async function consumeEmailVerificationToken(
+  tokenHash,
+  { purpose = null, email = null } = {},
+  db = pool
+) {
+  const params = [tokenHash];
+  let extraClauses = "";
+
+  if (purpose) {
+    params.push(purpose);
+    extraClauses += ` AND purpose = $${params.length}`;
+  }
+
+  if (email) {
+    params.push(email);
+    extraClauses += ` AND LOWER(email) = LOWER($${params.length})`;
+  }
+
+  const { rows } = await query(
+    db,
     `
     UPDATE email_verification_tokens
     SET consumed_at = NOW()
     WHERE token_hash = $1
       AND consumed_at IS NULL
+      AND invalidated_at IS NULL
       AND expires_at > NOW()
-    RETURNING ${ONE_TIME_TOKEN_FIELDS}
+      ${extraClauses}
+    RETURNING ${EMAIL_VERIFICATION_TOKEN_FIELDS}
+    `,
+    params
+  );
+
+  return rows[0] || null;
+}
+
+export async function incrementEmailVerificationFailedAttempts(tokenHash, db = pool) {
+  const { rows } = await query(
+    db,
+    `
+    UPDATE email_verification_tokens
+    SET invalidated_at = NOW()
+    WHERE token_hash = $1
+      AND consumed_at IS NULL
+      AND invalidated_at IS NULL
+    RETURNING id
     `,
     [tokenHash]
   );

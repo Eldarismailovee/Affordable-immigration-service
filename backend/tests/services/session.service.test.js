@@ -23,6 +23,7 @@ async function loadSessionService(t, { userRepo = {}, authTokenRepo = {} } = {})
   t.mock.module("../../src/repositories/user.repository.js", {
     namedExports: {
       findUserById: async () => null,
+      getSessionSecurityVersion: async () => 1,
       ...userRepo,
     },
   });
@@ -155,6 +156,8 @@ test("refreshAuthSession rotates the token and issues a new access token", async
         user_id: "user-1",
         revoked_at: null,
         expires_at: new Date(Date.now() + 60_000),
+        session_security_version: 1,
+        mfa_completed_at: null,
       }),
       rotateRefreshToken: async (input) => {
         rotations.push(input);

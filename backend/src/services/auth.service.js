@@ -1,24 +1,18 @@
-import { randomUUID } from "crypto";
-import { ACTIVE_USER_STATUS, ADMIN_ROLE, USER_ROLE } from "../constants/domain.js";
+import { ACTIVE_USER_STATUS, USER_ROLE } from "../constants/domain.js";
 import {
-  EMAIL_VERIFICATION_TOKEN_TTL_HOURS,
-  addHours,
-  createOpaqueToken,
   hashPassword,
-  hashToken,
   sanitizeUser,
   verifyAuthToken,
   verifyPassword,
 } from "../utils/auth.js";
+import { normalizeEmail } from "../utils/email.js";
 import { isUniqueViolation } from "../db/errors.js";
-import { createEmailVerificationToken } from "../repositories/auth-token.repository.js";
 import {
-  countUsers,
   createUser,
   findUserByEmail,
   findUserById,
+  getSessionSecurityVersion,
 } from "../repositories/user.repository.js";
-import { sendEmailVerificationEmail } from "./email.service.js";
 import { createAuthSession } from "./session.service.js";
 import { AppError } from "../utils/appError.js";
 import {
@@ -30,10 +24,15 @@ import {
 import { recordAuditEvent } from "./audit.service.js";
 import { emailDomainOnly } from "../utils/auditRedaction.js";
 import { buildActor } from "../utils/auditContext.js";
-
-async function getInitialRole() {
-  return (await countUsers()) === 0 ? ADMIN_ROLE : USER_ROLE;
-}
+import { MFA_CHALLENGE_PURPOSE, MFA_ERROR_CODES, isPrivilegedRole } from "../constants/mfa.js";
+import {
+  createLoginMfaChallenge,
+  hasActiveMfa,
+} from "./mfa.service.js";
+import {
+  assertPrivilegedEmailVerified,
+  createRegistrationVerification,
+} from "./email-verification.service.js";
 
 function duplicateEmailError() {
   return new AppError(
@@ -52,14 +51,19 @@ function invalidCredentialsError() {
 }
 
 export async function registerUser(payload, requestContext) {
-  const email = payload.email.toLowerCase();
+  const email = normalizeEmail(payload.email);
+
+  if (!email) {
+    throw new AppError("Valid email is required", 400, "BAD_REQUEST");
+  }
+
   const existing = await findUserByEmail(email);
 
   if (existing) {
     throw duplicateEmailError();
   }
 
-  const role = await getInitialRole();
+  const role = USER_ROLE;
   const passwordHash = await hashPassword(payload.password);
 
   let createdUser;
@@ -81,15 +85,11 @@ export async function registerUser(payload, requestContext) {
 
   const user = sanitizeUser(createdUser);
 
-  const verificationToken = createOpaqueToken();
-
-  await createEmailVerificationToken({
-    id: randomUUID(),
+  await createRegistrationVerification({
     userId: user.id,
-    tokenHash: hashToken(verificationToken),
-    expiresAt: addHours(new Date(), EMAIL_VERIFICATION_TOKEN_TTL_HOURS),
+    email: user.email,
+    requestContext,
   });
-  sendEmailVerificationEmail(user.email, verificationToken);
 
   return createAuthSession(user, requestContext);
 }
@@ -111,7 +111,7 @@ async function auditLoginFailure({ requestContext, user, reasonCode, email }) {
 }
 
 export async function loginUser(payload, requestContext) {
-  const email = payload.email.toLowerCase();
+  const email = normalizeEmail(payload.email);
   const user = await findUserByEmail(email);
   const auditRequest = {
     requestId: requestContext?.requestId,
@@ -153,6 +153,48 @@ export async function loginUser(payload, requestContext) {
 
   const safeUser = sanitizeUser(user);
 
+  if (isPrivilegedRole(safeUser.role)) {
+    try {
+      assertPrivilegedEmailVerified(safeUser);
+    } catch (error) {
+      await auditLoginFailure({
+        requestContext: auditRequest,
+        user,
+        email,
+        reasonCode: AUDIT_AUTH_REASONS.DISABLED_USER,
+      });
+      throw error;
+    }
+
+    const enrolled = await hasActiveMfa(safeUser.id);
+
+    if (!enrolled) {
+      const challenge = await createLoginMfaChallenge(
+        safeUser,
+        MFA_CHALLENGE_PURPOSE.ENROLLMENT,
+        auditRequest
+      );
+
+      return {
+        mfaEnrollmentRequired: true,
+        ...challenge,
+        code: MFA_ERROR_CODES.MFA_ENROLLMENT_REQUIRED,
+      };
+    }
+
+    const challenge = await createLoginMfaChallenge(
+      safeUser,
+      MFA_CHALLENGE_PURPOSE.LOGIN,
+      auditRequest
+    );
+
+    return {
+      mfaRequired: true,
+      ...challenge,
+      code: MFA_ERROR_CODES.MFA_REQUIRED,
+    };
+  }
+
   const session = await createAuthSession(safeUser, requestContext);
 
   await recordAuditEvent({
@@ -183,5 +225,14 @@ export async function getUserFromAccessToken(token) {
     return null;
   }
 
-  return sanitizeUser(user);
+  const currentSecVer = await getSessionSecurityVersion(user.id);
+
+  if (Number(payload.secVer) !== Number(currentSecVer)) {
+    return null;
+  }
+
+  return {
+    user: sanitizeUser(user),
+    token: payload,
+  };
 }

@@ -13,16 +13,43 @@ import {
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { getAuditContext } from "../utils/auditContext.js";
 import { sendResponse } from "../utils/sendResponse.js";
+import {
+  applyIdempotentReplayHeader,
+  executeIdempotentHttpCommand,
+} from "../utils/idempotentCommand.js";
+import { assertAuthenticated } from "../domain/user.policy.js";
 
 export const createDsarRequestController = asyncHandler(async (req, res) => {
-  const request = await createUserDsarRequest({
-    user: req.user,
-    type: req.body.type,
-    message: req.body.message,
-    requestedChanges: req.body.requestedChanges,
-    auditContext: getAuditContext(req),
+  const auditContext = getAuditContext(req);
+
+  const result = await executeIdempotentHttpCommand({
+    req,
+    auditContext,
+    actor: req.user,
+    authorizeReplay: async () => {
+      assertAuthenticated(req.user);
+    },
+    handler: async (client) => {
+      const request = await createUserDsarRequest({
+        user: req.user,
+        type: req.body.type,
+        message: req.body.message,
+        requestedChanges: req.body.requestedChanges,
+        auditContext,
+        client,
+      });
+
+      return {
+        httpStatus: 201,
+        responseBody: { request },
+        resourceType: "dsar_request",
+        resourceId: request.id,
+      };
+    },
   });
-  sendResponse(res, dsarRequestMutationResponseSchema, { request }, 201);
+
+  applyIdempotentReplayHeader(res, result.replayed);
+  sendResponse(res, dsarRequestMutationResponseSchema, result.responseBody, result.httpStatus);
 });
 
 export const listDsarRequestsController = asyncHandler(async (req, res) => {

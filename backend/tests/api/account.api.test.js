@@ -2,6 +2,7 @@ import { before, beforeEach, test } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "crypto";
 import { clearStore, setupTestEnvironment } from "../helpers/buildTestApp.js";
+import { makeAdmin, promoteUserRole, verifyUserEmail } from "../helpers/authTestHelpers.js";
 import { withApp } from "../helpers/httpClient.js";
 
 let app;
@@ -22,6 +23,7 @@ async function register(client, email) {
     password: "longenough1",
   });
   assert.equal(res.status, 201);
+  verifyUserEmail(store, email);
   return res.body;
 }
 
@@ -52,7 +54,7 @@ test("GET /api/account/leads requires authentication", async () => {
 
 test("GET /api/account/leads only returns leads owned by the caller", async () => {
   await withApp(app, async (client) => {
-    const adminSession = await register(client, "admin@example.com");
+    const adminSession = await makeAdmin(client, store);
     const userASession = await register(client, "user-a@example.com");
     const userBSession = await register(client, "user-b@example.com");
 
@@ -77,7 +79,6 @@ test("GET /api/account/leads only returns leads owned by the caller", async () =
 
 test("GET /api/account/agreement/:leadId returns 403 (IDOR) when accessing another user's lead", async () => {
   await withApp(app, async (client) => {
-    await register(client, "first-admin@example.com");
     const userASession = await register(client, "user-a@example.com");
     const userBSession = await register(client, "user-b@example.com");
 
@@ -96,7 +97,6 @@ test("GET /api/account/agreement/:leadId returns 403 (IDOR) when accessing anoth
 
 test("GET /api/account/agreement/:leadId returns 200 for the lead's owner", async () => {
   await withApp(app, async (client) => {
-    await register(client, "first-admin@example.com");
     const userSession = await register(client, "user@example.com");
 
     const user = [...store.users.values()].find((u) => u.email === "user@example.com");
@@ -113,7 +113,6 @@ test("GET /api/account/agreement/:leadId returns 200 for the lead's owner", asyn
 
 test("GET /api/account/onboarding/:leadId returns 403 when accessing another user's onboarding", async () => {
   await withApp(app, async (client) => {
-    await register(client, "first-admin@example.com");
     const userASession = await register(client, "user-a@example.com");
     await register(client, "user-b@example.com");
 
@@ -129,7 +128,6 @@ test("GET /api/account/onboarding/:leadId returns 403 when accessing another use
 
 test("GET /api/account/agreement/:leadId returns 404 when the lead does not exist", async () => {
   await withApp(app, async (client) => {
-    await register(client, "first-admin@example.com");
     const userSession = await register(client, "user@example.com");
 
     const res = await client.get(`/api/account/agreement/${randomUUID()}`, {
@@ -142,7 +140,7 @@ test("GET /api/account/agreement/:leadId returns 404 when the lead does not exis
 
 test("GET /api/account/agreement/:leadId rejects an invalid leadId with 400", async () => {
   await withApp(app, async (client) => {
-    const adminSession = await register(client, "admin@example.com");
+    const adminSession = await makeAdmin(client, store);
 
     const res = await client.get("/api/account/agreement/not-a-uuid", {
       token: adminSession.token,
@@ -154,7 +152,7 @@ test("GET /api/account/agreement/:leadId rejects an invalid leadId with 400", as
 
 test("an admin can read another user's agreement (no IDOR for admins)", async () => {
   await withApp(app, async (client) => {
-    const adminSession = await register(client, "admin@example.com");
+    const adminSession = await makeAdmin(client, store);
     await register(client, "user@example.com");
 
     const user = [...store.users.values()].find((u) => u.email === "user@example.com");

@@ -53,9 +53,11 @@ export function renderOnboardingHtml({
         <li>Any supporting documents requested by the office</li>
       </ul>
 
-      <h2 style="font-size:22px; margin:20px 0 10px;">Timeline</h2>
+      <h2 style="font-size:22px; margin:20px 0 10px;">Preparation target</h2>
       <p>
-        The matter will be filed within two weeks after the office receives all required client documents.
+        Internal preparation target: within two weeks after all required documents and information
+        are received and the matter is accepted. This is not a guarantee of filing date, USCIS
+        acceptance, approval, or government processing time.
       </p>
 
       <h2 style="font-size:22px; margin:20px 0 10px;">Important reminders</h2>

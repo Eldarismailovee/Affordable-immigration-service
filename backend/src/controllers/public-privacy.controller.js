@@ -3,15 +3,38 @@ import { publicPrivacyRequestResponseSchema } from "../schemas/responses/dsar.re
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { getAuditContext } from "../utils/auditContext.js";
 import { sendResponse } from "../utils/sendResponse.js";
+import {
+  applyIdempotentReplayHeader,
+  executeIdempotentHttpCommand,
+} from "../utils/idempotentCommand.js";
 
 export const createPublicPrivacyRequestController = asyncHandler(async (req, res) => {
-  const result = await createPublicPrivacyRequest({
-    user: req.user ?? null,
-    type: req.body.type,
-    email: req.body.email,
-    message: req.body.message,
-    requestedChanges: req.body.requestedChanges,
-    auditContext: getAuditContext(req),
+  const auditContext = getAuditContext(req);
+
+  const result = await executeIdempotentHttpCommand({
+    req,
+    auditContext,
+    actor: req.user ?? null,
+    handler: async (client) => {
+      const responseBody = await createPublicPrivacyRequest({
+        user: req.user ?? null,
+        type: req.body.type,
+        email: req.body.email,
+        message: req.body.message,
+        requestedChanges: req.body.requestedChanges,
+        auditContext,
+        client,
+      });
+
+      return {
+        httpStatus: 201,
+        responseBody,
+        resourceType: "dsar_request",
+        resourceId: responseBody.id,
+      };
+    },
   });
-  sendResponse(res, publicPrivacyRequestResponseSchema, result, 201);
+
+  applyIdempotentReplayHeader(res, result.replayed);
+  sendResponse(res, publicPrivacyRequestResponseSchema, result.responseBody, result.httpStatus);
 });

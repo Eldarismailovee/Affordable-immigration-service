@@ -1,0 +1,11 @@
+# Gitleaks configuration — point exclusions only; no blanket test/docs ignores.
+title = "Affordable Immigration Service"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "allow-env-example"
+description = "Placeholder values in .env.example files"
+regex = '''(?i)(example|change-me|your-.*-here|placeholder)'''
+paths = ['''\.env\.example$''', '''\.env\.production\.example$''']

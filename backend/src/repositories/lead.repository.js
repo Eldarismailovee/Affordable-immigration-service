@@ -169,6 +169,10 @@ export async function createIntakeRecord(
     selectedPackage,
     caseType,
     notes,
+    petitionRelationship = null,
+    location = null,
+    hasUrgentDeadline = false,
+    urgentDeadlineNotes = "",
     additionalI130Count,
     expedited,
     pricingMin,
@@ -188,6 +192,10 @@ export async function createIntakeRecord(
       selected_package,
       case_type,
       notes,
+      petition_relationship,
+      location,
+      has_urgent_deadline,
+      urgent_deadline_notes,
       additional_i130_count,
       expedited,
       pricing_min,
@@ -197,7 +205,7 @@ export async function createIntakeRecord(
       payment_status,
       docketwise_status
     ) VALUES (
-      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
     )
     `,
     [
@@ -206,6 +214,10 @@ export async function createIntakeRecord(
       selectedPackage,
       caseType,
       notes || "",
+      petitionRelationship,
+      location,
+      Boolean(hasUrgentDeadline),
+      urgentDeadlineNotes || "",
       Number(additionalI130Count || 0),
       Boolean(expedited),
       pricingMin,
@@ -247,6 +259,10 @@ export async function findLatestIntakeByLeadId(leadId, db = pool) {
       selected_package,
       case_type,
       notes,
+      petition_relationship,
+      location,
+      has_urgent_deadline,
+      urgent_deadline_notes,
       additional_i130_count,
       expedited,
       pricing_min,

@@ -1,25 +1,137 @@
 name: CI
 
+# Action SHA sources verified: 2026-07-06 via https://api.github.com/repos/*/commits/<tag>
+
 on:
   pull_request:
   push:
     branches:
       - main
+  merge_group:
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  CI_AUTH_SECRET: ci-auth-token-secret-with-at-least-32-chars
+  CI_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/immigration_ci
+
 jobs:
+  workflow-security:
+    name: Workflow Security
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Install actionlint
+        run: |
+          set -Eeuo pipefail
+          curl -sSfL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash | bash
+          ./actionlint -version
+
+      - name: Lint workflows
+        run: ./actionlint
+
+      - name: Validate workflow policy
+        run: |
+          node scripts/ci/validate-workflows.js
+          node --test tests/ci/workflow-policy.test.js
+
+  secrets:
+    name: Secret Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Gitleaks
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: .gitleaks.toml
+
   backend:
     name: Backend
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      NODE_ENV: test
+      DATABASE_URL: ${{ env.CI_POSTGRES_URL }}
+      CLIENT_URL: http://127.0.0.1:5173
+      BASE_URL: http://127.0.0.1:5000
+      AUTH_TOKEN_SECRET: ${{ env.CI_AUTH_SECRET }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "26"
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Production dependency audit
+        run: node ../scripts/ci/check-npm-audit.js . ../security/dependency-audit-baseline.json --production
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+        env:
+          VITE_API_URL: /api
+
+      - name: Production dependency audit
+        run: node ../scripts/ci/check-npm-audit.js . ../security/dependency-audit-baseline.json --production
+
+  migrations:
+    name: Migrations
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     services:
       postgres:
         image: postgres:16-alpine
@@ -34,101 +146,150 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
-
     defaults:
       run:
         working-directory: backend
-
     env:
-      NODE_ENV: test
-      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/immigration_ci
-      CLIENT_URL: http://127.0.0.1:5173
-      BASE_URL: http://127.0.0.1:5000
-      AUTH_TOKEN_SECRET: ci-auth-token-secret-with-at-least-32-chars
-
+      DATABASE_URL: ${{ env.CI_POSTGRES_URL }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: 26
+          node-version: "26"
           cache: npm
           cache-dependency-path: backend/package-lock.json
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Audit dependencies
-        run: npm audit --audit-level=high
+      - name: Clean apply migrations
+        run: |
+          set -Eeuo pipefail
+          npm run migrate
+          npm run migrate:check
 
-      - name: Run tests
-        run: npm test
+      - name: Upgrade migration scenarios
+        if: github.ref == 'refs/heads/main' || github.event_name == 'merge_group' || github.event_name == 'workflow_dispatch'
+        run: node scripts/ci/migration-upgrade-test.js
 
-      - name: Apply migrations on CI database
-        run: npm run migrate
-
-      - name: Check migration state
-        run: npm run migrate:check
-
-  frontend:
-    name: Frontend
+  dependency-review:
+    name: Dependency Review
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-
-    defaults:
-      run:
-        working-directory: frontend
-
+    timeout-minutes: 10
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4
+        with:
+          fail-on-severity: high
+          deny-licenses: GPL-3.0, AGPL-3.0
+
+  codeql:
+    name: CodeQL
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+      packages: read
+      actions: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@411c4c9a36b3fca4d674f06b6396b2c6d23522c6 # v3
+        with:
+          languages: javascript-typescript
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@411c4c9a36b3fca4d674f06b6396b2c6d23522c6 # v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@411c4c9a36b3fca4d674f06b6396b2c6d23522c6 # v3
+
+  postgres-integration:
+    name: PostgreSQL Integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: github.ref == 'refs/heads/main' || github.event_name == 'merge_group' || github.event_name == 'workflow_dispatch'
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: immigration_ci
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d immigration_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      NODE_ENV: test
+      DATABASE_URL: ${{ env.CI_POSTGRES_URL }}
+      AUTH_TOKEN_SECRET: ${{ env.CI_AUTH_SECRET }}
+      RUN_MFA_PG_INTEGRATION: "1"
+      RUN_EMAIL_VERIFICATION_PG_INTEGRATION: "1"
+      RUN_IDEMPOTENCY_PG_INTEGRATION: "1"
+      IDEMPOTENCY_KEY_HMAC_SECRET: test-idempotency-hmac-secret-value-32bytes-long
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: 24
+          node-version: "26"
           cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: backend/package-lock.json
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Audit dependencies
-        run: npm audit --audit-level=high
+      - name: Apply migrations
+        run: npm run migrate
 
-      - name: Lint
-        run: npm run lint
+      - name: Run PostgreSQL integration tests
+        run: |
+          set -Eeuo pipefail
+          NODE_ENV=test node --test --experimental-test-module-mocks --test-reporter=spec \
+            tests/db/mfa.integration.test.js \
+            tests/db/email-verification.integration.test.js \
+            tests/db/idempotency.integration.test.js 2>&1 | tee /tmp/pg-integration.log
+          test ${PIPESTATUS[0]} -eq 0
+          node ../scripts/ci/assert-integration-ran.js /tmp/pg-integration.log \
+            "migration 017 privileged MFA (PostgreSQL)" \
+            "migration 018 email verification security (PostgreSQL)" \
+            "migration 019 idempotency records (PostgreSQL)"
 
-      - name: Build
-        run: npm run build
-
-  docker:
+  docker-build:
     name: Docker Build
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     needs:
       - backend
       - frontend
-    env:
-      POSTGRES_DB: immigration_ci
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      PORT: 5000
-      CLIENT_URL: http://127.0.0.1
-      BASE_URL: http://127.0.0.1/api
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/immigration_ci
-      CHROMIUM_PATH: /usr/bin/chromium
-      AUTH_TOKEN_SECRET: ci-auth-token-secret-with-at-least-32-chars
-      ADMIN_EMAIL: admin@example.com
-      ADMIN_PASSWORD: change-me-admin-password
-      ADMIN_NAME: CI Administrator
-      VITE_API_URL: /api
-
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
       - name: Build backend image
         run: docker build --pull -t immigration-backend:ci ./backend
@@ -138,3 +299,203 @@ jobs:
 
       - name: Validate compose file
         run: docker compose config --quiet
+
+      - name: Save images
+        if: github.ref == 'refs/heads/main' || github.event_name == 'merge_group' || github.event_name == 'workflow_dispatch'
+        run: |
+          set -Eeuo pipefail
+          docker save immigration-backend:ci | gzip > backend-image.tar.gz
+          docker save immigration-frontend:ci | gzip > frontend-image.tar.gz
+
+      - name: Upload backend image artifact
+        if: github.ref == 'refs/heads/main' || github.event_name == 'merge_group' || github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: backend-image
+          path: backend-image.tar.gz
+          retention-days: 3
+
+      - name: Upload frontend image artifact
+        if: github.ref == 'refs/heads/main' || github.event_name == 'merge_group' || github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: frontend-image
+          path: frontend-image.tar.gz
+          retention-days: 3
+
+  compose-smoke:
+    name: Compose Smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs:
+      - docker-build
+    if: github.ref == 'refs/heads/main' || github.event_name == 'merge_group' || github.event_name == 'workflow_dispatch'
+    env:
+      POSTGRES_DB: immigration_ci
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      PORT: 5000
+      CLIENT_URL: http://127.0.0.1
+      BASE_URL: http://127.0.0.1/api
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/immigration_ci
+      CHROMIUM_PATH: /usr/bin/chromium
+      AUTH_TOKEN_SECRET: ${{ env.CI_AUTH_SECRET }}
+      ADMIN_EMAIL: admin@example.com
+      ADMIN_PASSWORD: change-me-admin-password
+      ADMIN_NAME: CI Administrator
+      VITE_API_URL: /api
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Compose smoke test
+        run: bash scripts/ci/compose-smoke.sh
+
+  container-scan:
+    name: Container Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs:
+      - docker-build
+    if: github.ref == 'refs/heads/main' || github.event_name == 'merge_group' || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Download backend image
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: backend-image
+
+      - name: Download frontend image
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: frontend-image
+
+      - name: Load images
+        run: |
+          set -Eeuo pipefail
+          gunzip -c backend-image.tar.gz | docker load
+          gunzip -c frontend-image.tar.gz | docker load
+
+      - name: Scan backend image
+        uses: aquasecurity/trivy-action@915b19bbe73b92a6cf82a1bc12b087c9a19a5fe2 # 0.28.0
+        with:
+          scan-type: image
+          image-ref: immigration-backend:ci
+          format: json
+          output: trivy-backend.json
+          severity: CRITICAL,HIGH
+          ignore-unfixed: false
+
+      - name: Scan frontend image
+        uses: aquasecurity/trivy-action@915b19bbe73b92a6cf82a1bc12b087c9a19a5fe2 # 0.28.0
+        with:
+          scan-type: image
+          image-ref: immigration-frontend:ci
+          format: json
+          output: trivy-frontend.json
+          severity: CRITICAL,HIGH
+          ignore-unfixed: false
+
+      - name: Evaluate scan policy
+        run: |
+          set -Eeuo pipefail
+          node scripts/ci/check-container-scan.js trivy-backend.json security/container-scan-baseline.json
+          node scripts/ci/check-container-scan.js trivy-frontend.json security/container-scan-baseline.json
+
+      - name: Upload sanitized scan reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: container-scan-reports
+          path: trivy-*.json
+          retention-days: 7
+
+  ci-required:
+    name: ci-required
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs:
+      - workflow-security
+      - secrets
+      - backend
+      - frontend
+      - migrations
+      - dependency-review
+      - codeql
+      - postgres-integration
+      - docker-build
+      - compose-smoke
+      - container-scan
+    if: always()
+    steps:
+      - name: Verify required job results
+        env:
+          WORKFLOW_SECURITY: ${{ needs.workflow-security.result }}
+          SECRETS: ${{ needs.secrets.result }}
+          BACKEND: ${{ needs.backend.result }}
+          FRONTEND: ${{ needs.frontend.result }}
+          MIGRATIONS: ${{ needs.migrations.result }}
+          DEPENDENCY_REVIEW: ${{ needs.dependency-review.result }}
+          CODEQL: ${{ needs.codeql.result }}
+          POSTGRES_INTEGRATION: ${{ needs.postgres-integration.result }}
+          DOCKER_BUILD: ${{ needs.docker-build.result }}
+          COMPOSE_SMOKE: ${{ needs.compose-smoke.result }}
+          CONTAINER_SCAN: ${{ needs.container-scan.result }}
+          IS_MAIN: ${{ github.ref == 'refs/heads/main' || github.event_name == 'merge_group' || github.event_name == 'workflow_dispatch' }}
+          IS_PR: ${{ github.event_name == 'pull_request' }}
+        run: |
+          set -Eeuo pipefail
+          fail=0
+
+          require_success() {
+            local name="$1"
+            local result="$2"
+            if [[ "$result" != "success" ]]; then
+              echo "REQUIRED FAIL: $name => $result"
+              fail=1
+            fi
+          }
+
+          allow_skip() {
+            local name="$1"
+            local result="$2"
+            if [[ "$result" == "success" || "$result" == "skipped" ]]; then
+              return 0
+            fi
+            echo "OPTIONAL FAIL: $name => $result"
+            fail=1
+          }
+
+          require_success "workflow-security" "$WORKFLOW_SECURITY"
+          require_success "secrets" "$SECRETS"
+          require_success "backend" "$BACKEND"
+          require_success "frontend" "$FRONTEND"
+          require_success "migrations" "$MIGRATIONS"
+          require_success "codeql" "$CODEQL"
+          require_success "docker-build" "$DOCKER_BUILD"
+
+          if [[ "$IS_PR" == "true" ]]; then
+            require_success "dependency-review" "$DEPENDENCY_REVIEW"
+          else
+            allow_skip "dependency-review" "$DEPENDENCY_REVIEW"
+          fi
+
+          if [[ "$IS_MAIN" == "true" ]]; then
+            require_success "postgres-integration" "$POSTGRES_INTEGRATION"
+            require_success "compose-smoke" "$COMPOSE_SMOKE"
+            require_success "container-scan" "$CONTAINER_SCAN"
+          else
+            allow_skip "postgres-integration" "$POSTGRES_INTEGRATION"
+            allow_skip "compose-smoke" "$COMPOSE_SMOKE"
+            allow_skip "container-scan" "$CONTAINER_SCAN"
+          fi
+
+          if [[ "$fail" -ne 0 ]]; then
+            exit 1
+          fi
+          echo "All required CI jobs passed."

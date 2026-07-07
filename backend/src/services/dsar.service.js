@@ -9,6 +9,7 @@ import {
   dsarExportNotAvailableError,
   dsarPdfUnavailableError,
   dsarRequestNotFoundError,
+  dsarInvalidStatusTransitionError,
 } from "../domain/errors.js";
 import {
   assertAdmin,
@@ -79,13 +80,19 @@ function initialIdentityStatus() {
   return "pending";
 }
 
-async function logEvent(requestId, actorUserId, eventType, metadata) {
-  return createDsarEvent({
+async function logEvent(requestId, actorUserId, eventType, metadata, client = null) {
+  const args = {
     dsarRequestId: requestId,
     actorUserId,
     eventType,
     metadata,
-  });
+  };
+
+  if (client) {
+    return createDsarEvent(args, client);
+  }
+
+  return createDsarEvent(args);
 }
 
 async function auditDsar({
@@ -96,8 +103,9 @@ async function auditDsar({
   auditContext,
   metadata = {},
   result = AUDIT_RESULTS.SUCCESS,
+  client = null,
 }) {
-  await recordAuditEvent({
+  const auditPayload = {
     eventType,
     category: AUDIT_CATEGORIES.DSAR,
     action,
@@ -107,7 +115,14 @@ async function auditDsar({
     targetId: requestId,
     request: auditContext,
     metadata,
-  });
+  };
+
+  if (client) {
+    await recordAuditEvent(auditPayload, client);
+    return;
+  }
+
+  await recordAuditEvent(auditPayload);
 }
 
 function userOwnsRequest(request, { userId, email }) {
@@ -144,6 +159,7 @@ async function submitDsarRequest({
   requestedChanges,
   actorUserId,
   auditContext,
+  client = null,
 }) {
   const normalizedType = normalizeRequestType(type);
 
@@ -152,17 +168,20 @@ async function submitDsarRequest({
   }
 
   const status = initialStatusForType(normalizedType);
-  const row = await createDsarRequest({
-    requesterUserId,
-    requesterEmail,
-    requestType: normalizedType,
-    status,
-    identityVerificationStatus: initialIdentityStatus(),
-    userMessage: message,
-    requestedChanges,
-  });
+  const row = await createDsarRequest(
+    {
+      requesterUserId,
+      requesterEmail,
+      requestType: normalizedType,
+      status,
+      identityVerificationStatus: initialIdentityStatus(),
+      userMessage: message,
+      requestedChanges,
+    },
+    client || undefined
+  );
 
-  await logEvent(row.id, actorUserId ?? null, "submitted", { type: normalizedType });
+  await logEvent(row.id, actorUserId ?? null, "submitted", { type: normalizedType }, client);
 
   await auditDsar({
     eventType: AUDIT_EVENT_TYPES.DSAR_REQUEST_SUBMIT,
@@ -176,16 +195,21 @@ async function submitDsarRequest({
       changedFields: requestedChanges ? Object.keys(requestedChanges) : [],
       targetUserId: requesterUserId,
     },
+    client,
   });
 
   if (status === "identity_verification_required") {
-    await logEvent(row.id, actorUserId ?? null, "identity_verification_requested", {
-      type: normalizedType,
-    });
+    await logEvent(
+      row.id,
+      actorUserId ?? null,
+      "identity_verification_requested",
+      { type: normalizedType },
+      client
+    );
   }
 
   if (normalizedType === "objection") {
-    await logEvent(row.id, actorUserId ?? null, "objection_submitted", {});
+    await logEvent(row.id, actorUserId ?? null, "objection_submitted", {}, client);
   }
 
   return mapDsarRequestRow(row);
@@ -215,6 +239,7 @@ export async function createUserDsarRequest({
   message,
   requestedChanges,
   auditContext = null,
+  client = null,
 }) {
   assertAuthenticated(user);
 
@@ -226,6 +251,7 @@ export async function createUserDsarRequest({
     requestedChanges,
     actorUserId: user.id,
     auditContext,
+    client,
   });
 }
 
@@ -236,6 +262,7 @@ export async function createPublicPrivacyRequest({
   message,
   requestedChanges,
   auditContext = null,
+  client = null,
 }) {
   const requesterEmail = user?.email ?? email;
 
@@ -258,6 +285,7 @@ export async function createPublicPrivacyRequest({
     requestedChanges,
     actorUserId: user?.id ?? null,
     auditContext,
+    client,
   });
 
   return {
@@ -590,22 +618,69 @@ export async function applyDsarAnonymization({
     throw dsarRequestNotFoundError();
   }
 
+  if (["processing", "completed", "partially_completed"].includes(request.status)) {
+    return loadAdminRequestDetail(request);
+  }
+
   if (!request.requester_user_id) {
     throw dsarAccountRequiredError();
   }
 
-  await anonymizeUserRecord(request.requester_user_id);
+  await updateDsarRequest(requestId, { status: "processing" });
+  await logEvent(requestId, actor.id, "deletion_processing", {
+    userId: request.requester_user_id,
+  });
+
+  const deletionResult = await anonymizeUserRecord(request.requester_user_id, {
+    requestId,
+  });
+
+  const verification = deletionResult.verification;
+  const fileFailures = deletionResult.fileFailures ?? [];
+  const hasRemainingPii = !verification?.complete;
+  const hasFileFailures = fileFailures.length > 0;
+
+  let finalStatus = "completed";
+  let deletionFailureReason = null;
+
+  if (hasRemainingPii || hasFileFailures) {
+    finalStatus = hasRemainingPii && hasFileFailures ? "partially_completed" : hasRemainingPii ? "failed" : "partially_completed";
+    deletionFailureReason = [
+      hasRemainingPii
+        ? `Remaining PII indicators: ${verification.remaining.map((item) => item.key).join(", ")}`
+        : null,
+      hasFileFailures ? `Failed to delete ${fileFailures.length} export file(s)` : null,
+    ]
+      .filter(Boolean)
+      .join("; ");
+  }
 
   const updated = await updateDsarRequest(requestId, {
-    status: "completed",
-    completedAt: new Date(),
-    completedBy: actor.id,
+    status: finalStatus,
+    ...(finalStatus === "completed"
+      ? { completedAt: new Date(), completedBy: actor.id }
+      : { completedAt: null, completedBy: null }),
+    deletionFailureReason,
+    deletionVerificationJson: verification ?? null,
   });
 
   await logEvent(requestId, actor.id, "anonymization_applied", {
     userId: request.requester_user_id,
+    finalStatus,
   });
-  await logEvent(requestId, actor.id, "completed", {});
+
+  if (finalStatus === "completed") {
+    await logEvent(requestId, actor.id, "deletion_verified", {});
+    await logEvent(requestId, actor.id, "completed", {});
+  } else if (finalStatus === "partially_completed") {
+    await logEvent(requestId, actor.id, "deletion_partial", {
+      reason: deletionFailureReason,
+    });
+  } else {
+    await logEvent(requestId, actor.id, "deletion_failed", {
+      reason: deletionFailureReason,
+    });
+  }
 
   await auditDsar({
     eventType: AUDIT_EVENT_TYPES.DSAR_ANONYMIZATION_APPLY,
@@ -731,6 +806,13 @@ export async function updateDsarStatus({
   assertAdmin(actor);
   const request = await getRequestForAdmin(requestId);
   assertStatusTransition(request.status, status);
+
+  if (
+    status === "completed" &&
+    isDeletionRequestType(request.request_type)
+  ) {
+    throw dsarInvalidStatusTransitionError();
+  }
 
   const oldStatus = request.status;
 

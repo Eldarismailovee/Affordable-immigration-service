@@ -1,12 +1,13 @@
 import { Check } from "lucide-react";
 import SectionTitle from "../layout/SectionTitle";
 import services from "../../data/services";
+import { cardInsetClass, sectionAltClass } from "../../constants/themeClasses.js";
 
 export default function ServicesSection() {
   return (
-    <section id="services" className="mx-auto max-w-7xl px-4 py-20 md:px-6 lg:px-8">
+    <section id="services" className={`${sectionAltClass} mx-auto max-w-7xl px-4 md:px-6 lg:px-8`}>
       <div className="grid gap-6 lg:grid-cols-[1fr_1.1fr]">
-        <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 p-8">
+        <div className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
           <SectionTitle
             eyebrow="Family Petitions / Services"
             title="Family-based"
@@ -18,24 +19,24 @@ export default function ServicesSection() {
             {services.map((service) => (
               <div
                 key={service}
-                className="flex items-start gap-3 rounded-2xl border border-white/10 bg-slate-950/40 p-4"
+                className={`flex items-start gap-3 p-4 ${cardInsetClass}`}
               >
-                <div className="mt-0.5 rounded-full bg-amber-400/15 p-1.5 text-amber-400">
+                <div className="mt-0.5 rounded-full bg-blue-50 p-1.5 text-blue-900">
                   <Check className="h-3.5 w-3.5" />
                 </div>
-                <div className="text-sm leading-6 text-slate-200">{service}</div>
+                <div className="text-sm leading-6 text-slate-700">{service}</div>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 p-8">
+        <div className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
           <div className="grid h-full gap-6 md:grid-cols-2">
             <div>
-              <h3 className="text-2xl font-semibold text-white">
+              <h3 className="text-2xl font-semibold text-slate-950">
                 What the website handles
               </h3>
-              <div className="mt-6 space-y-4 text-sm leading-7 text-slate-300">
+              <div className="mt-6 space-y-4 text-base leading-7 text-slate-600">
                 <p>Clear service pricing and package selection.</p>
                 <p>Client onboarding with intake questions and document checklist.</p>
                 <p>Auto-populated fee agreement preview based on the selected package.</p>
@@ -45,7 +46,7 @@ export default function ServicesSection() {
             </div>
 
             <div className="space-y-5">
-              <div className="overflow-hidden rounded-[1.75rem] border border-white/10">
+              <div className="overflow-hidden rounded-[1.75rem] border border-slate-200">
                 <img
                   src="/images/family-immigration.jpg"
                   alt="Family immigration support"
@@ -53,18 +54,18 @@ export default function ServicesSection() {
                 />
               </div>
 
-              <div className="rounded-[1.75rem] border border-white/10 bg-slate-950/70 p-5">
-                <div className="text-sm uppercase tracking-[0.18em] text-slate-400">
+              <div className={`p-5 ${cardInsetClass}`}>
+                <div className="font-mono text-sm uppercase tracking-[0.18em] text-slate-500">
                   Integration area
                 </div>
-                <div className="mt-3 text-2xl font-semibold text-white">
+                <div className="mt-3 text-2xl font-semibold text-slate-950">
                   Docketwise block
                 </div>
-                <p className="mt-3 text-sm leading-7 text-slate-300">
+                <p className="mt-3 text-base leading-7 text-slate-600">
                   Reserve this section for intake launch, portal access,
                   engagement-letter logic, and document-sharing entry points.
                 </p>
-                <div className="mt-6 rounded-2xl border border-dashed border-amber-400/30 bg-amber-400/5 p-4 text-sm text-amber-200">
+                <div className="mt-6 rounded-2xl border border-dashed border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
                   Intake form, engagement letter, and client portal buttons can be
                   connected here.
                 </div>

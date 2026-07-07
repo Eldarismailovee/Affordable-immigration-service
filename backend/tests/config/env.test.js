@@ -30,9 +30,21 @@ const CONFIG_KEYS = [
   "UPLOAD_VIRUS_SCAN_ENABLED",
   "UPLOAD_VIRUS_SCAN_COMMAND",
   "UPLOAD_VIRUS_SCAN_TIMEOUT_MS",
+  "PAYMENT_HOST_ALLOWLIST",
   "TECHNICAL_LOG_RETENTION_DAYS",
   "SECURITY_AUDIT_RETENTION_DAYS",
   "DOCUMENT_ENCRYPTION_KEY_BASE64",
+  "MFA_ENCRYPTION_KEY",
+  "MFA_ENCRYPTION_KEY_VERSION",
+  "MFA_ISSUER",
+  "MFA_CHALLENGE_TTL_SECONDS",
+  "MFA_STEP_UP_MAX_AGE_SECONDS",
+  "MFA_MAX_ATTEMPTS",
+  "APP_PUBLIC_URL",
+  "EMAIL_VERIFICATION_TOKEN_TTL_SECONDS",
+  "EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS",
+  "EMAIL_VERIFICATION_MAX_SENDS_PER_HOUR",
+  "EMAIL_VERIFICATION_MAX_VERIFY_ATTEMPTS",
 ];
 
 function withConfigEnv(overrides) {
@@ -77,9 +89,19 @@ function validProductionEnv(overrides = {}) {
     BASE_URL: "https://api.example.com",
     DATABASE_URL: "postgresql://user:password@db.example.com:5432/app",
     AUTH_TOKEN_SECRET: "x".repeat(32),
+    MFA_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString("base64"),
+    APP_PUBLIC_URL: "https://example.com",
+    PAYMENT_HOST_ALLOWLIST: "checkout.stripe.com,pay.example.com",
     ...overrides,
   };
 }
+
+test("env rejects production startup without payment host allowlist", async () => {
+  await assert.rejects(
+    importEnvWith(validProductionEnv({ PAYMENT_HOST_ALLOWLIST: "" })),
+    /PAYMENT_HOST_ALLOWLIST/
+  );
+});
 
 test("env rejects production startup without DATABASE_URL", async () => {
   await assert.rejects(

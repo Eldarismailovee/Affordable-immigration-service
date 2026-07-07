@@ -18,7 +18,7 @@ function createUserRow(overrides = {}) {
   };
 }
 
-async function loadAuthService(t, { userRepo = {}, authTokenRepo = {}, emailService = {}, sessionService = {} } = {}) {
+async function loadAuthService(t, { userRepo = {}, authTokenRepo = {}, emailService = {}, sessionService = {}, mfaService = {} } = {}) {
   const sessionCalls = [];
 
   t.mock.module("../../src/repositories/user.repository.js", {
@@ -27,7 +27,34 @@ async function loadAuthService(t, { userRepo = {}, authTokenRepo = {}, emailServ
       createUser: async () => null,
       findUserByEmail: async () => null,
       findUserById: async () => null,
+      getSessionSecurityVersion: async () => 1,
+      bumpSessionSecurityVersion: async () => 2,
       ...userRepo,
+    },
+  });
+
+  t.mock.module("../../src/services/mfa.service.js", {
+    namedExports: {
+      hasActiveMfa: async () => false,
+      createLoginMfaChallenge: async () => ({
+        mfaChallengeToken: "challenge",
+        expiresIn: 300,
+        user: { id: "user-1" },
+      }),
+      isPrivilegedRole: (role) => role === "admin" || role === "attorney",
+      ...mfaService,
+    },
+  });
+
+  t.mock.module("../../src/services/email-verification.service.js", {
+    namedExports: {
+      createRegistrationVerification: async (...args) => {
+        if (emailService.createRegistrationVerification) {
+          return emailService.createRegistrationVerification(...args);
+        }
+        return { deliveryStatus: "sent", message: "Verification email sent" };
+      },
+      assertPrivilegedEmailVerified: () => {},
     },
   });
 
@@ -115,10 +142,10 @@ test("registerUser creates a user, issues a session and a verification token, an
         });
       },
     },
-    authTokenRepo: {
-      createEmailVerificationToken: async (input) => {
+    emailService: {
+      createRegistrationVerification: async (input) => {
         verificationCalls.push(input);
-        return null;
+        return { deliveryStatus: "sent" };
       },
     },
   });
@@ -145,7 +172,7 @@ test("registerUser creates a user, issues a session and a verification token, an
   assert.ok(!("password_hash" in result.user));
 });
 
-test("registerUser assigns the admin role to the very first user", async (t) => {
+test("registerUser always assigns the user role, including for the first account", async (t) => {
   const created = [];
   const { registerUser } = await loadAuthService(t, {
     userRepo: {
@@ -167,7 +194,32 @@ test("registerUser assigns the admin role to the very first user", async (t) => 
     {}
   );
 
-  assert.equal(created[0].role, "admin");
+  assert.equal(created[0].role, "user");
+});
+
+test("registerUser always assigns user role for subsequent accounts", async (t) => {
+  const created = [];
+  const { registerUser } = await loadAuthService(t, {
+    userRepo: {
+      countUsers: async () => 5,
+      findUserByEmail: async () => null,
+      createUser: async (input) => {
+        created.push(input);
+        return createUserRow({
+          email: input.email,
+          full_name: input.fullName,
+          role: input.role,
+        });
+      },
+    },
+  });
+
+  await registerUser(
+    { fullName: "Demo", email: "second@example.com", password: "longenough1" },
+    {}
+  );
+
+  assert.equal(created[0].role, "user");
 });
 
 test("loginUser rejects an unknown email with 401 (no user enumeration)", async (t) => {
@@ -260,7 +312,7 @@ test("getUserFromAccessToken returns null when the user has been disabled", asyn
   void env;
   const { SignJWT } = await import("jose");
 
-  const token = await new SignJWT({ typ: "access", role: "user" })
+  const token = await new SignJWT({ typ: "access", role: "user", mfa: false, secVer: 1 })
     .setProtectedHeader({ alg: "HS256", typ: "JWT" })
     .setSubject("user-1")
     .setIssuedAt()
@@ -270,6 +322,7 @@ test("getUserFromAccessToken returns null when the user has been disabled", asyn
   const { getUserFromAccessToken } = await loadAuthService(t, {
     userRepo: {
       findUserById: async () => createUserRow({ status: "disabled" }),
+      getSessionSecurityVersion: async () => 1,
     },
   });
 

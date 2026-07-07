@@ -49,7 +49,14 @@ export async function requestPasswordReset(payload) {
     tokenHash: hashToken(resetToken),
     expiresAt: addMinutes(new Date(), PASSWORD_RESET_TOKEN_TTL_MINUTES),
   });
-  sendPasswordResetEmail(user.email, resetToken);
+  const delivery = await sendPasswordResetEmail(user.email, resetToken);
+
+  if (delivery.deliveryStatus === "not_configured") {
+    return authMessage(
+      "If an account exists, password reset could not be delivered because email is not configured",
+      resetToken
+    );
+  }
 
   return authMessage(
     "If an account exists, password reset instructions will be sent",

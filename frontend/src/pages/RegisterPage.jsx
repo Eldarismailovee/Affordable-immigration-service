@@ -1,12 +1,11 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-
-const inputClassName =
-  "w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-white";
+import { formInputClass, formLabelClass, formSurfaceClass, pageSurfaceClass } from "../constants/themeClasses.js";
 
 export default function RegisterPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { register } = useAuth();
   const [form, setForm] = useState({ fullName: "", email: "", password: "" });
   const [loading, setLoading] = useState(false);
@@ -23,7 +22,10 @@ export default function RegisterPage() {
 
     try {
       const user = await register(form);
-      navigate(user.role === "admin" ? "/admin" : "/account", { replace: true });
+      navigate("/verify-email", {
+        replace: true,
+        state: { from: location.state?.from || (user.role === "admin" ? "/admin" : "/account") },
+      });
     } catch (err) {
       setError(err.message || "Failed to create account");
     } finally {
@@ -32,28 +34,28 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#040816] px-4 py-16 text-white">
+    <div className={`${pageSurfaceClass} px-4 py-16`}>
       <main id="main-content" className="mx-auto max-w-xl">
         <form
           onSubmit={handleSubmit}
-          className="rounded-[2rem] border border-white/10 bg-white/5 p-8"
+          className={`${formSurfaceClass} p-8`}
           aria-describedby={error ? "register-form-error" : undefined}
           noValidate
         >
-          <Link to="/" className="text-sm font-medium text-amber-400 hover:text-amber-300">
+          <Link to="/" className="text-sm font-medium text-blue-900 hover:text-blue-800">
             Back home
           </Link>
-          <div className="mt-8 text-sm font-semibold uppercase tracking-[0.2em] text-amber-400">
+          <div className="mt-8 text-sm font-semibold uppercase tracking-[0.2em] text-blue-900">
             Register
           </div>
-          <h1 className="mt-3 text-4xl font-semibold tracking-tight">Create account</h1>
-          <p className="mt-3 text-slate-300">
+          <h1 className="mt-3 text-4xl font-semibold tracking-tight text-slate-950">Create account</h1>
+          <p className="mt-3 text-slate-600">
             Registered clients can submit intake and access their own documents.
           </p>
 
           <div className="mt-8 grid gap-4">
             <div>
-              <label htmlFor="register-full-name" className="mb-1.5 block text-sm font-medium text-slate-200">
+              <label htmlFor="register-full-name" className={formLabelClass}>
                 Full name
               </label>
               <input
@@ -61,7 +63,7 @@ export default function RegisterPage() {
                 name="fullName"
                 value={form.fullName}
                 onChange={(event) => updateField("fullName", event.target.value)}
-                className={inputClassName}
+                className={formInputClass}
                 autoComplete="name"
                 required
                 aria-invalid={Boolean(error)}
@@ -69,7 +71,7 @@ export default function RegisterPage() {
               />
             </div>
             <div>
-              <label htmlFor="register-email" className="mb-1.5 block text-sm font-medium text-slate-200">
+              <label htmlFor="register-email" className={formLabelClass}>
                 Email
               </label>
               <input
@@ -78,7 +80,7 @@ export default function RegisterPage() {
                 type="email"
                 value={form.email}
                 onChange={(event) => updateField("email", event.target.value)}
-                className={inputClassName}
+                className={formInputClass}
                 autoComplete="email"
                 required
                 aria-invalid={Boolean(error)}
@@ -86,7 +88,7 @@ export default function RegisterPage() {
               />
             </div>
             <div>
-              <label htmlFor="register-password" className="mb-1.5 block text-sm font-medium text-slate-200">
+              <label htmlFor="register-password" className={formLabelClass}>
                 Password
               </label>
               <input
@@ -95,14 +97,14 @@ export default function RegisterPage() {
                 type="password"
                 value={form.password}
                 onChange={(event) => updateField("password", event.target.value)}
-                className={inputClassName}
+                className={formInputClass}
                 autoComplete="new-password"
                 required
                 minLength={8}
                 aria-invalid={Boolean(error)}
                 aria-describedby={error ? "register-form-error register-password-help" : "register-password-help"}
               />
-              <p id="register-password-help" className="mt-1.5 text-sm text-slate-300">
+              <p id="register-password-help" className="mt-1.5 text-sm text-slate-600">
                 At least 8 characters.
               </p>
             </div>
@@ -112,7 +114,7 @@ export default function RegisterPage() {
             <div
               id="register-form-error"
               role="alert"
-              className="mt-6 rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-red-200"
+              className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-red-800"
             >
               {error}
             </div>
@@ -122,13 +124,13 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={loading}
-              className="rounded-full bg-amber-400 px-5 py-3 font-semibold text-slate-950 hover:bg-amber-300 disabled:opacity-70"
+              className="rounded-full bg-slate-900 px-5 py-3 font-semibold text-white hover:bg-slate-800 disabled:opacity-70"
             >
               {loading ? "Creating..." : "Create account"}
             </button>
             <Link
               to="/login"
-              className="rounded-full border border-white/15 bg-white/5 px-5 py-3 font-semibold text-white hover:border-amber-400/40 hover:text-amber-300"
+              className="rounded-full border border-slate-300 bg-white px-5 py-3 font-semibold text-slate-900 hover:border-slate-400 hover:bg-slate-50"
             >
               Sign in
             </Link>

@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useIntake } from "../../context/IntakeContext";
 import usePricingCalculator from "../../hooks/usePricingCalculator";
+import { cardInsetClass, formInputClass, formLabelClass } from "../../constants/themeClasses.js";
 
 export default function AddonsStepPage() {
   const navigate = useNavigate();
@@ -14,15 +15,15 @@ export default function AddonsStepPage() {
 
   return (
     <div>
-      <div className="text-sm uppercase tracking-[0.18em] text-amber-400">Step 4</div>
-      <h2 className="mt-2 text-3xl font-semibold">Add-ons</h2>
-      <p className="mt-3 text-slate-300">
+      <div className="font-mono text-sm uppercase tracking-[0.18em] text-blue-900">Step 4</div>
+      <h2 className="mt-2 text-3xl font-semibold text-slate-950">Add-ons</h2>
+      <p className="mt-3 text-slate-600">
         Add additional I-130 petitions or expedited processing.
       </p>
 
       <div className="mt-8 grid gap-4">
         <div>
-          <label htmlFor="intake-i130-count" className="mb-1.5 block text-sm font-medium text-slate-200">
+          <label htmlFor="intake-i130-count" className={formLabelClass}>
             Additional I-130 count
           </label>
           <input
@@ -32,13 +33,13 @@ export default function AddonsStepPage() {
             min="0"
             value={intake.additionalI130Count}
             onChange={(e) => updateField("additionalI130Count", e.target.value)}
-            className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3"
+            className={formInputClass}
           />
         </div>
 
         <label
           htmlFor="intake-expedited"
-          className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3"
+          className={`flex items-center gap-3 px-4 py-3 ${cardInsetClass}`}
         >
           <input
             id="intake-expedited"
@@ -47,13 +48,13 @@ export default function AddonsStepPage() {
             checked={intake.expedited}
             onChange={(e) => updateField("expedited", e.target.checked)}
           />
-          <span className="text-slate-200">Expedited processing (+$500)</span>
+          <span className="text-slate-700">Expedited processing (+$500)</span>
         </label>
       </div>
 
-      <div className="mt-6 rounded-2xl border border-white/10 bg-slate-950/50 p-4 text-sm leading-7 text-slate-300">
+      <div className={`mt-6 p-4 text-base leading-7 text-slate-600 ${cardInsetClass}`}>
         Estimated legal fee range:{" "}
-        <span className="font-semibold text-amber-400">
+        <span className="font-semibold text-blue-900">
           ${preview.minTotal} – ${preview.maxTotal}
         </span>
       </div>
@@ -62,14 +63,14 @@ export default function AddonsStepPage() {
         <button
           type="button"
           onClick={() => navigate("/intake/case")}
-          className="text-slate-300 hover:text-white"
+          className="text-slate-600 hover:text-slate-950"
         >
           Back
         </button>
         <button
           type="button"
           onClick={() => navigate("/intake/agreement-preview")}
-          className="rounded-full bg-amber-400 px-5 py-3 font-semibold text-slate-950 hover:bg-amber-300"
+          className="rounded-full bg-slate-900 px-5 py-3 font-semibold text-white hover:bg-slate-800"
         >
           Continue
         </button>

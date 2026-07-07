@@ -1,17 +1,14 @@
+import { getSafeJson, setSafeJson } from "../services/safeBrowserStorage.js";
+
 export const COOKIE_CONSENT_VERSION = "2026-05-31-v3";
-const STORAGE_KEY = "cookie_consent_preferences";
+const STORAGE_KEY = "ais.ui.cookieConsent";
 
 const listeners = new Set();
 let analyticsLoaded = false;
 let marketingLoaded = false;
 
 function readStoredRaw() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
+  return getSafeJson(STORAGE_KEY);
 }
 
 function notifyListeners(consent) {
@@ -100,7 +97,7 @@ export function saveConsent({ analytics, marketing, source, anonymousId, gpcActi
     anonymousId: anonymousId || existing?.anonymousId || crypto.randomUUID(),
   };
 
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(consent));
+  setSafeJson(STORAGE_KEY, consent);
   notifyListeners(consent);
   applyConsentedScripts();
   return consent;

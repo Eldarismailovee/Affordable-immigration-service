@@ -284,23 +284,25 @@ test("anonymization changes user PII via repository", async (t) => {
     status: "disabled",
   };
 
-  t.mock.module("../../src/repositories/lead.repository.js", {
-    namedExports: { anonymizeLeadsForUserId: async () => {} },
-  });
-  t.mock.module("../../src/repositories/user.repository.js", {
-    namedExports: { anonymizeUserById: async () => anonymized },
-  });
-  t.mock.module("../../src/repositories/auth-token.repository.js", {
-    namedExports: { revokeUserRefreshTokens: async () => {} },
+  t.mock.module("../../src/services/dsar-deletion.service.js", {
+    namedExports: {
+      runDsarDeletionWorkflow: async () => ({
+        user: anonymized,
+        verification: { complete: true, remaining: [], indicators: {} },
+        fileFailures: [],
+        exportPaths: [],
+      }),
+    },
   });
 
   const { anonymizeUserRecord } = await import(
     `../../src/services/dsar-anonymization.service.js?case=${Math.random()}`
   );
 
-  const result = await anonymizeUserRecord(USER_ID);
-  assert.match(result.email, /anonymized\+/);
-  assert.equal(result.full_name, "Deleted User");
+  const result = await anonymizeUserRecord(USER_ID, { requestId: USER_ID });
+  assert.match(result.user.email, /anonymized\+/);
+  assert.equal(result.user.full_name, "Deleted User");
+  assert.equal(result.verification.complete, true);
 });
 
 test("restriction request marks processing restricted", async (t) => {

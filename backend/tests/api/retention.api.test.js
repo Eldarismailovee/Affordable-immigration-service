@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { mock } from "node:test";
 import { randomUUID } from "crypto";
 import { clearStore, setupTestEnvironment } from "../helpers/buildTestApp.js";
+import { makeAdmin, makeRegularUser } from "../helpers/authTestHelpers.js";
 import { withApp } from "../helpers/httpClient.js";
 
 let app;
@@ -41,24 +42,9 @@ beforeEach(() => {
   lastRunOptions = null;
 });
 
-async function registerAndLogin(client, { email, password = "longenough1", fullName = "Demo" }) {
-  const res = await client.post("/api/auth/register", { fullName, email, password });
-  assert.equal(res.status, 201);
-  return res.body;
-}
-
-async function makeAdmin(client) {
-  return registerAndLogin(client, { email: "admin@example.com" });
-}
-
-async function makeRegularUser(client, email = "user@example.com") {
-  await registerAndLogin(client, { email: "first-admin@example.com" });
-  return registerAndLogin(client, { email });
-}
-
 test("POST /api/admin/retention/run requires admin role", async () => {
   await withApp(app, async (client) => {
-    const userSession = await makeRegularUser(client);
+    const userSession = await makeRegularUser(client, store);
 
     const res = await client.post(
       "/api/admin/retention/run",
@@ -75,7 +61,7 @@ test("POST /api/admin/retention/run requires admin role", async () => {
 
 test("POST /api/admin/retention/run accepts dryRun for admin", async () => {
   await withApp(app, async (client) => {
-    const adminSession = await makeAdmin(client);
+    const adminSession = await makeAdmin(client, store);
 
     const res = await client.post(
       "/api/admin/retention/run",
@@ -97,7 +83,7 @@ test("POST /api/admin/retention/run accepts dryRun for admin", async () => {
 
 test("POST /api/admin/retention/actions requires reason min length", async () => {
   await withApp(app, async (client) => {
-    const adminSession = await makeAdmin(client);
+    const adminSession = await makeAdmin(client, store);
 
     const res = await client.post(
       "/api/admin/retention/actions",
@@ -117,7 +103,7 @@ test("POST /api/admin/retention/actions requires reason min length", async () =>
 
 test("POST /api/admin/retention/actions applies override for admin", async () => {
   await withApp(app, async (client) => {
-    const adminSession = await makeAdmin(client);
+    const adminSession = await makeAdmin(client, store);
     const targetId = randomUUID();
 
     const res = await client.post(

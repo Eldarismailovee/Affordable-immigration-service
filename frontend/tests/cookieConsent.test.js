@@ -109,7 +109,7 @@ test("optional scripts load only after consent", () => {
 
 test("version mismatch shows consent prompt again", () => {
   localStorage.setItem(
-    "cookie_consent_preferences",
+    "ais.ui.cookieConsent",
     JSON.stringify({
       version: "old-version",
       strictlyNecessary: true,
@@ -156,7 +156,7 @@ test("GPC skips consent banner prompt", () => {
 
 test("version mismatch preserves previous opt-outs in getPreviousOptionalChoices", () => {
   localStorage.setItem(
-    "cookie_consent_preferences",
+    "ais.ui.cookieConsent",
     JSON.stringify({
       version: "old-version",
       strictlyNecessary: true,

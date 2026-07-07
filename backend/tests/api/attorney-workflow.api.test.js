@@ -2,6 +2,7 @@ import { before, beforeEach, test } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "crypto";
 import { clearStore, setupTestEnvironment } from "../helpers/buildTestApp.js";
+import { makeAdmin, loginPrivilegedUser, registerAndLogin, verifyUserEmail } from "../helpers/authTestHelpers.js";
 import { withApp } from "../helpers/httpClient.js";
 
 let app;
@@ -15,18 +16,8 @@ beforeEach(() => {
   clearStore(store);
 });
 
-async function registerAndLogin(client, { email, password = "longenough1", fullName = "Demo" }) {
-  const res = await client.post("/api/auth/register", { fullName, email, password });
-  assert.equal(res.status, 201);
-  return res.body;
-}
-
-async function makeAdmin(client) {
-  return registerAndLogin(client, { email: "admin@example.com" });
-}
-
 async function makeAttorney(client, adminSession) {
-  const userSession = await registerAndLogin(client, { email: "attorney@example.com" });
+  await registerAndLogin(client, { email: "attorney@example.com" });
   const userId = [...store.users.values()].find((u) => u.email === "attorney@example.com").id;
 
   const res = await client.patch(
@@ -36,12 +27,12 @@ async function makeAttorney(client, adminSession) {
   );
   assert.equal(res.status, 200);
 
-  const login = await client.post("/api/auth/login", {
+  verifyUserEmail(store, "attorney@example.com");
+
+  return loginPrivilegedUser(client, store, {
     email: "attorney@example.com",
-    password: "longenough1",
+    role: "attorney",
   });
-  assert.equal(login.status, 200);
-  return login.body;
 }
 
 function seedLeadForWorkflow(leadId, status = "attorney_review") {
@@ -113,7 +104,7 @@ function seedDraftAgreement(leadId) {
 
 test("attorney role is accepted by user role validation", async () => {
   await withApp(app, async (client) => {
-    const adminSession = await makeAdmin(client);
+    const adminSession = await makeAdmin(client, store);
     const attorneySession = await makeAttorney(client, adminSession);
     assert.equal(attorneySession.user.role, "attorney");
   });
@@ -121,8 +112,9 @@ test("attorney role is accepted by user role validation", async () => {
 
 test("user cannot approve agreement packet", async () => {
   await withApp(app, async (client) => {
-    await makeAdmin(client);
+    await makeAdmin(client, store);
     const userSession = await registerAndLogin(client, { email: "client@example.com" });
+    verifyUserEmail(store, "client@example.com");
     const leadId = randomUUID();
     seedDraftAgreement(leadId);
 
@@ -138,7 +130,7 @@ test("user cannot approve agreement packet", async () => {
 
 test("attorney can approve draft agreement packet", async () => {
   await withApp(app, async (client) => {
-    const adminSession = await makeAdmin(client);
+    const adminSession = await makeAdmin(client, store);
     const attorneySession = await makeAttorney(client, adminSession);
     const leadId = randomUUID();
     seedDraftAgreement(leadId);
@@ -155,8 +147,9 @@ test("attorney can approve draft agreement packet", async () => {
 
 test("user cannot change lead state", async () => {
   await withApp(app, async (client) => {
-    await makeAdmin(client);
+    await makeAdmin(client, store);
     const userSession = await registerAndLogin(client, { email: "client@example.com" });
+    verifyUserEmail(store, "client@example.com");
     const leadId = randomUUID();
     seedDraftAgreement(leadId);
 
@@ -172,7 +165,7 @@ test("user cannot change lead state", async () => {
 
 test("attorney can transition conflict_check to attorney_review when conflict check is clear", async () => {
   await withApp(app, async (client) => {
-    const adminSession = await makeAdmin(client);
+    const adminSession = await makeAdmin(client, store);
     const attorneySession = await makeAttorney(client, adminSession);
     const leadId = randomUUID();
     seedLeadForWorkflow(leadId, "conflict_check");
@@ -189,7 +182,7 @@ test("attorney can transition conflict_check to attorney_review when conflict ch
 
 test("lead cannot move to accepted without attorney review acceptance", async () => {
   await withApp(app, async (client) => {
-    const adminSession = await makeAdmin(client);
+    const adminSession = await makeAdmin(client, store);
     const leadId = randomUUID();
     seedLeadForWorkflow(leadId, "attorney_review");
     store.leads.get(leadId).attorney_review_status = null;
@@ -206,7 +199,7 @@ test("lead cannot move to accepted without attorney review acceptance", async ()
 
 test("invalid lead state transition is rejected", async () => {
   await withApp(app, async (client) => {
-    const adminSession = await makeAdmin(client);
+    const adminSession = await makeAdmin(client, store);
     const leadId = randomUUID();
     seedDraftAgreement(leadId);
     store.leads.get(leadId).status = "new";
@@ -223,7 +216,7 @@ test("invalid lead state transition is rejected", async () => {
 
 test("agreement generation is blocked before attorney review acceptance", async () => {
   await withApp(app, async (client) => {
-    const adminSession = await makeAdmin(client);
+    const adminSession = await makeAdmin(client, store);
     const leadId = randomUUID();
     seedLeadForWorkflow(leadId, "new");
 
@@ -237,7 +230,7 @@ test("agreement generation is blocked before attorney review acceptance", async 
 
 test("filing packet generation is blocked before engaged status", async () => {
   await withApp(app, async (client) => {
-    const adminSession = await makeAdmin(client);
+    const adminSession = await makeAdmin(client, store);
     const leadId = randomUUID();
     seedLeadForWorkflow(leadId, "accepted");
 

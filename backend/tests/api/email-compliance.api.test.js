@@ -4,6 +4,7 @@ import { hashEmail } from "../../src/utils/email.js";
 import { createUnsubscribeToken } from "../../src/utils/unsubscribeToken.js";
 import { EMAIL_SUPPRESSION_SCOPES } from "../../src/constants/emailCompliance.js";
 import { AUDIT_EVENT_TYPES } from "../../src/constants/audit.js";
+import { verifyUserEmail } from "../helpers/authTestHelpers.js";
 import { clearStore, setupTestEnvironment } from "../helpers/buildTestApp.js";
 import { withApp } from "../helpers/httpClient.js";
 
@@ -35,6 +36,8 @@ async function registerUser(client, email = "marketing@example.com") {
     email,
     password: "SecurePass123!",
   });
+  assert.equal(res.status, 201);
+  verifyUserEmail(store, email);
   return res.body;
 }
 

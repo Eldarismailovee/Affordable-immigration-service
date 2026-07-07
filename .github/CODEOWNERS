@@ -1,0 +1,14 @@
+# CODEOWNERS — requires branch protection "Require review from Code Owners" to enforce.
+# Replace @org/security-team with the actual GitHub team or username before enabling enforcement.
+
+/.github/workflows/                    @org/security-team
+/.github/actions/                      @org/security-team
+/.github/dependabot.yml                @org/security-team
+/Dockerfile                            @org/security-team
+/backend/Dockerfile                    @org/security-team
+/frontend/Dockerfile                   @org/security-team
+/docker-compose.yml                    @org/security-team
+/backend/src/db/migrations/            @org/security-team
+/security/                             @org/security-team
+/scripts/ci/                           @org/security-team
+/.gitleaks.toml                        @org/security-team

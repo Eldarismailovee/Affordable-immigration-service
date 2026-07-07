@@ -1,0 +1,26 @@
+export function buildValidIntakePayload(overrides = {}) {
+  return {
+    firstName: "Test",
+    lastName: "User",
+    email: "user@example.com",
+    phone: "5551234567",
+    caseType: "Marriage-based green cards",
+    petitionRelationship: "Spouse / fiancé(e)",
+    location: "California, USA",
+    hasUrgentDeadline: false,
+    urgentDeadlineNotes: "",
+    notes: "",
+    selectedPackage: "guidance",
+    additionalI130Count: 0,
+    expedited: false,
+    consultationType: "Zoom",
+    preferredDateTime: "2026-06-01T10:00:00",
+    billingName: "Test User",
+    billingEmail: "user@example.com",
+    paymentPreference: "invoice",
+    consentManualProcessing: true,
+    consentAvailabilityAcknowledgment: true,
+    paymentNotes: "",
+    ...overrides,
+  };
+}

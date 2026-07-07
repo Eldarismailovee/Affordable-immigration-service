@@ -9,6 +9,12 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
     networks:
       - appnet
 
@@ -19,25 +25,43 @@ services:
     container_name: immigration-backend
     restart: unless-stopped
     environment:
+      NODE_ENV: production
       PORT: ${PORT}
       CLIENT_URL: ${CLIENT_URL}
       BASE_URL: ${BASE_URL}
       DATABASE_URL: ${DATABASE_URL}
+      DB_POOL_MAX: ${DB_POOL_MAX:-10}
+      DB_POOL_MIN: ${DB_POOL_MIN:-0}
+      DB_POOL_IDLE_TIMEOUT_MS: ${DB_POOL_IDLE_TIMEOUT_MS:-10000}
+      DB_POOL_CONNECTION_TIMEOUT_MS: ${DB_POOL_CONNECTION_TIMEOUT_MS:-5000}
+      DB_POOL_MAX_LIFETIME_SECONDS: ${DB_POOL_MAX_LIFETIME_SECONDS:-0}
+      DB_POOL_MAX_USES: ${DB_POOL_MAX_USES:-0}
+      DB_POOL_ALLOW_EXIT_ON_IDLE: ${DB_POOL_ALLOW_EXIT_ON_IDLE:-false}
+      DB_APPLICATION_NAME: ${DB_APPLICATION_NAME:-affordable-immigration-service}
+      DB_SLOW_QUERY_MS: ${DB_SLOW_QUERY_MS:-250}
       DB_SSL: ${DB_SSL:-false}
       DB_SSL_REJECT_UNAUTHORIZED: ${DB_SSL_REJECT_UNAUTHORIZED:-false}
       CHROMIUM_PATH: ${CHROMIUM_PATH}
       AUTH_TOKEN_SECRET: ${AUTH_TOKEN_SECRET}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      PAYMENT_HOST_ALLOWLIST: ${PAYMENT_HOST_ALLOWLIST:-}
       UPLOAD_STORAGE_DRIVER: ${UPLOAD_STORAGE_DRIVER:-local}
       UPLOAD_VIRUS_SCAN_ENABLED: ${UPLOAD_VIRUS_SCAN_ENABLED:-false}
       UPLOAD_VIRUS_SCAN_COMMAND: ${UPLOAD_VIRUS_SCAN_COMMAND:-clamdscan}
       UPLOAD_VIRUS_SCAN_TIMEOUT_MS: ${UPLOAD_VIRUS_SCAN_TIMEOUT_MS:-10000}
+      TECHNICAL_LOG_RETENTION_DAYS: ${TECHNICAL_LOG_RETENTION_DAYS:-90}
+      SECURITY_AUDIT_RETENTION_DAYS: ${SECURITY_AUDIT_RETENTION_DAYS:-365}
+      DOCUMENT_ENCRYPTION_KEY_BASE64: ${DOCUMENT_ENCRYPTION_KEY_BASE64:-}
       ADMIN_EMAIL: ${ADMIN_EMAIL}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
       ADMIN_NAME: ${ADMIN_NAME}
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     volumes:
       - uploads_data:/app/uploads
+      - dsar_exports:/app/var/dsar-exports
     networks:
       - appnet
 
@@ -71,6 +95,7 @@ services:
 volumes:
   pgdata:
   uploads_data:
+  dsar_exports:
 
 networks:
   appnet:

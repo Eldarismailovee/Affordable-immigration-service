@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { useIntake } from "../../context/IntakeContext";
+import { cardInsetClass } from "../../constants/themeClasses.js";
 
 export default function SuccessPage() {
   const { intake, resetIntake } = useIntake();
@@ -7,16 +8,16 @@ export default function SuccessPage() {
 
   return (
     <div>
-      <div className="text-sm uppercase tracking-[0.18em] text-emerald-400">Completed</div>
-      <h2 className="mt-2 text-3xl font-semibold">Your intake was submitted</h2>
-      <p className="mt-3 text-slate-300">
+      <div className="text-sm uppercase tracking-[0.18em] text-emerald-700">Completed</div>
+      <h2 className="mt-2 text-3xl font-semibold text-slate-950">Your intake was submitted</h2>
+      <p className="mt-3 text-slate-600">
         Our office will review your submission and follow up regarding your consultation and next steps.
       </p>
 
-      <div className="mt-8 rounded-3xl border border-white/10 bg-slate-950/50 p-6 text-slate-300">
+      <div className={`mt-8 p-6 text-slate-600 ${cardInsetClass}`}>
         {leadId ? (
           <p>
-            <strong className="text-white">Lead ID:</strong> {leadId}
+            <strong className="text-slate-950">Lead ID:</strong> {leadId}
           </p>
         ) : null}
         <p className="mt-4">
@@ -28,7 +29,7 @@ export default function SuccessPage() {
         {leadId ? (
           <Link
             to={`/onboarding/${leadId}`}
-            className="rounded-full border border-white/15 bg-white/5 px-5 py-3 font-semibold text-white hover:border-amber-400/40 hover:text-amber-300"
+            className="rounded-full border border-slate-300 bg-white px-5 py-3 font-semibold text-slate-900 hover:border-slate-400 hover:bg-slate-50"
           >
             View onboarding packet
           </Link>
@@ -37,7 +38,7 @@ export default function SuccessPage() {
         <Link
           to="/"
           onClick={resetIntake}
-          className="rounded-full bg-amber-400 px-5 py-3 font-semibold text-slate-950 hover:bg-amber-300"
+          className="rounded-full bg-slate-900 px-5 py-3 font-semibold text-white hover:bg-slate-800"
         >
           Return home
         </Link>

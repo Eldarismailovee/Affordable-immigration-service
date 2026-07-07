@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { logError } from "../utils/safeLog.js";
 import { getSiteSettings } from "../services/api";
 
 const DEFAULT_SETTINGS = {
@@ -26,8 +27,8 @@ export function SiteSettingsProvider({ children }) {
     try {
       const result = await getSiteSettings();
       setSettings(result?.settings ? { ...DEFAULT_SETTINGS, ...result.settings } : DEFAULT_SETTINGS);
-    } catch (error) {
-      console.error("Failed to load site settings:", error);
+    } catch {
+      logError("Failed to load site settings", { operation: "getSiteSettings" });
       setSettings(DEFAULT_SETTINGS);
     } finally {
       setLoading(false);

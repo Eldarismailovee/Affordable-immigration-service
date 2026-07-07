@@ -27,26 +27,29 @@ export default function Header() {
   }, [menuOpen]);
 
   return (
-    <header id="top" className="sticky top-0 z-40 border-b border-white/10 bg-slate-950/80 backdrop-blur-xl">
+    <header
+      id="top"
+      className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur-xl"
+    >
       <div className="mx-auto flex h-[72px] max-w-7xl items-center justify-between gap-5 px-4 md:px-6 lg:px-8">
         <a href="#top" className="flex min-w-0 items-center gap-3">
           {settings?.logo_url ? (
             <img
               src={settings.logo_url}
               alt={settings.firm_name || "Logo"}
-              className="h-10 w-10 shrink-0 rounded-xl border border-white/10 object-cover"
+              className="h-10 w-10 shrink-0 rounded-xl border border-slate-200 object-cover"
             />
           ) : (
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-400/40 bg-amber-400/10 text-amber-400">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-blue-800/30 bg-blue-50 text-blue-900">
               <ShieldCheck className="h-5 w-5" aria-hidden="true" />
             </div>
           )}
 
           <div className="min-w-0">
-            <div className="max-w-[190px] truncate text-sm font-semibold text-amber-300">
+            <div className="max-w-[190px] truncate text-sm font-semibold text-blue-900">
               {settings?.firm_name || "Immigration Law"}
             </div>
-            <div className="hidden max-w-[190px] truncate text-sm text-slate-300 sm:block">
+            <div className="hidden max-w-[190px] truncate text-sm text-slate-600 sm:block">
               Flat-fee family petitions
             </div>
           </div>
@@ -54,13 +57,13 @@ export default function Header() {
 
         <nav
           aria-label="Primary"
-          className="hidden items-center gap-1 rounded-full border border-white/10 bg-white/[0.03] p-1 lg:flex"
+          className="hidden items-center gap-1 rounded-full border border-slate-200 bg-slate-50 p-1 lg:flex"
         >
           {navigation.map((item) => (
             <a
               key={item.label}
               href={item.href}
-              className="whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium text-slate-300 transition hover:bg-white/[0.07] hover:text-white"
+              className="whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium text-slate-700 transition hover:bg-white hover:text-slate-950"
             >
               {item.label}
             </a>
@@ -80,7 +83,7 @@ export default function Header() {
               <button
                 type="button"
                 onClick={logout}
-                className="inline-flex items-center justify-center rounded-full px-4 py-2.5 text-sm font-semibold text-slate-300 transition hover:bg-white/[0.07] hover:text-white"
+                className="inline-flex items-center justify-center rounded-full px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-950"
               >
                 Sign out
               </button>
@@ -89,21 +92,21 @@ export default function Header() {
             <>
               <Link
                 to="/login"
-                className="whitespace-nowrap rounded-full px-4 py-2.5 text-sm font-semibold text-slate-300 transition hover:bg-white/[0.07] hover:text-white"
+                className="whitespace-nowrap rounded-full px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 hover:text-slate-950"
               >
                 Sign in
               </Link>
             </>
           )}
-          <Button to="/start" className="px-5 py-2.5">
-            Start intake
+          <Button to="/case-review" className="px-5 py-2.5">
+            Start case review
           </Button>
         </div>
 
         <button
           type="button"
           onClick={() => setMenuOpen((prev) => !prev)}
-          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 lg:hidden"
+          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 lg:hidden"
           aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"}
           aria-expanded={menuOpen}
           aria-controls="mobile-navigation"
@@ -121,7 +124,7 @@ export default function Header() {
           id="mobile-navigation"
           role="navigation"
           aria-label="Mobile"
-          className="border-t border-white/10 bg-slate-950/95 px-4 py-4 shadow-2xl lg:hidden"
+          className="border-t border-slate-200 bg-white px-4 py-4 shadow-lg lg:hidden"
         >
           <div className="mx-auto grid max-w-7xl gap-2">
             {navigation.map((item) => (
@@ -129,7 +132,7 @@ export default function Header() {
                 key={item.label}
                 href={item.href}
                 onClick={() => setMenuOpen(false)}
-                className="rounded-xl px-4 py-3 text-base font-medium text-slate-200 transition hover:bg-white/10 hover:text-white"
+                className="rounded-xl px-4 py-3 text-base font-medium text-slate-800 transition hover:bg-slate-50"
               >
                 {item.label}
               </a>
@@ -142,7 +145,7 @@ export default function Header() {
                 <button
                   type="button"
                   onClick={logout}
-                  className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-base font-semibold text-slate-200 transition hover:border-amber-400/40 hover:bg-white/10 hover:text-white"
+                  className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-base font-semibold text-slate-800 transition hover:border-slate-300 hover:bg-slate-100"
                 >
                   Sign out
                 </button>
@@ -157,8 +160,8 @@ export default function Header() {
                 </Button>
               </>
             )}
-            <Button to="/start" className="rounded-xl">
-              Start intake
+            <Button to="/case-review" className="rounded-xl">
+              Start case review
             </Button>
           </div>
         </div>

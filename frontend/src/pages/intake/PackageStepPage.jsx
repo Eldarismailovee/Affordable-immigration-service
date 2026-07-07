@@ -14,9 +14,9 @@ export default function PackageStepPage() {
     },
     {
       id: "filing",
-      title: "Attorney Filing",
+      title: "Attorney-prepared filing package",
       price: "$2,000–$2,500",
-      text: "Attorney-prepared and attorney-filed package.",
+      text: "Attorney-reviewed and prepared filing package for accepted matters. Subject to attorney review.",
     },
   ];
 
@@ -49,11 +49,11 @@ export default function PackageStepPage() {
 
   return (
     <div>
-      <div className="text-sm uppercase tracking-[0.18em] text-amber-400">Step 1</div>
-      <h2 id="package-step-title" className="mt-2 text-3xl font-semibold">
+      <div className="font-mono text-sm uppercase tracking-[0.18em] text-blue-900">Step 1</div>
+      <h2 id="package-step-title" className="mt-2 text-3xl font-semibold text-slate-950">
         Choose your package
       </h2>
-      <p className="mt-3 text-slate-300">Select the level of attorney support you need.</p>
+      <p className="mt-3 text-slate-600">Select the level of attorney support you need.</p>
 
       <div
         role="radiogroup"
@@ -74,13 +74,13 @@ export default function PackageStepPage() {
               onKeyDown={(event) => handlePackageKeyDown(event, item.id)}
               className={`rounded-3xl border p-5 text-left transition ${
                 selected
-                  ? "border-amber-400/50 bg-amber-400/10"
-                  : "border-white/10 bg-slate-950/40 hover:border-white/20"
+                  ? "border-blue-300 bg-blue-50 ring-1 ring-blue-100"
+                  : "border-slate-200 bg-white hover:border-slate-300"
               }`}
             >
-              <h3 className="text-xl font-semibold">{item.title}</h3>
-              <p className="mt-2 text-amber-400">{item.price}</p>
-              <p className="mt-3 text-sm leading-6 text-slate-300">{item.text}</p>
+              <h3 className="text-xl font-semibold text-slate-950">{item.title}</h3>
+              <p className="mt-2 font-mono text-blue-900">{item.price}</p>
+              <p className="mt-3 text-base leading-7 text-slate-600">{item.text}</p>
             </button>
           );
         })}
@@ -90,7 +90,7 @@ export default function PackageStepPage() {
         <button
           type="button"
           onClick={() => navigate("/intake/client")}
-          className="rounded-full bg-amber-400 px-5 py-3 font-semibold text-slate-950 hover:bg-amber-300"
+          className="rounded-full bg-slate-900 px-5 py-3 font-semibold text-white hover:bg-slate-800"
         >
           Continue
         </button>

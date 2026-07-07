@@ -17,3 +17,49 @@ export const authRateLimit = rateLimit({
   legacyHeaders: false,
   message: { message: "Too many login attempts, please try again later" },
 });
+
+export const mfaRateLimit = rateLimit({
+  windowMs: FIFTEEN_MINUTES,
+  limit: 15,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  keyGenerator: (req) => req.body?.challengeToken || req.ip || "unknown",
+  message: { message: "Too many MFA attempts, please try again later" },
+});
+
+export const mfaSensitiveRateLimit = rateLimit({
+  windowMs: FIFTEEN_MINUTES,
+  limit: 5,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  keyGenerator: (req) => req.user?.id || req.body?.challengeToken || req.ip || "unknown",
+  message: { message: "Too many sensitive MFA attempts, please try again later" },
+});
+
+export const emailVerificationRateLimit = rateLimit({
+  windowMs: FIFTEEN_MINUTES,
+  limit: 10,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  keyGenerator: (req) => req.user?.id || req.ip || "unknown",
+  message: { message: "Too many verification requests, please try again later" },
+});
+
+export const emailVerificationResendRateLimit = rateLimit({
+  windowMs: FIFTEEN_MINUTES,
+  limit: 10,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  keyGenerator: (req) =>
+    `${req.body?.email || "unknown"}:${req.ip || "unknown"}`,
+  message: { message: "Too many verification requests, please try again later" },
+});
+
+export const emailChangeRateLimit = rateLimit({
+  windowMs: FIFTEEN_MINUTES,
+  limit: 5,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  keyGenerator: (req) => req.user?.id || req.ip || "unknown",
+  message: { message: "Too many email change attempts, please try again later" },
+});

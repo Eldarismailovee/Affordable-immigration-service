@@ -45,7 +45,7 @@ test("POST /api/auth/register creates a user and returns a session", async () =>
 
     assert.equal(res.status, 201);
     assert.equal(res.body.user.email, "demo@example.com");
-    assert.equal(res.body.user.role, "admin");
+    assert.equal(res.body.user.role, "user");
     assert.ok(res.body.token);
     assert.equal(res.body.refreshToken, undefined);
     assertRefreshCookie(res);

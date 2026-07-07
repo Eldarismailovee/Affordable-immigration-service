@@ -11,6 +11,7 @@ import {
   availabilityDisclaimers,
   findUnavailableMatterMatch,
 } from "../../constants/jurisdictionAvailability";
+import { cardInsetClass, formInputClass, formLabelClass } from "../../constants/themeClasses.js";
 
 const requiredFields = [
   ["firstName", "First name"],
@@ -65,8 +66,7 @@ function getValidationMessage(intake) {
   return "";
 }
 
-const fieldClassName =
-  "w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-white";
+const fieldClassName = formInputClass;
 
 export default function BookingStepPage() {
   const navigate = useNavigate();
@@ -109,9 +109,9 @@ export default function BookingStepPage() {
 
   return (
     <div>
-      <div className="text-sm uppercase tracking-[0.18em] text-amber-400">Step 6</div>
-      <h2 className="mt-2 text-3xl font-semibold">Consultation and payment</h2>
-      <p className="mt-3 text-slate-300">
+      <div className="font-mono text-sm uppercase tracking-[0.18em] text-blue-900">Step 6</div>
+      <h2 className="mt-2 text-3xl font-semibold text-slate-950">Consultation and payment</h2>
+      <p className="mt-3 text-slate-600">
         Request your consultation and provide billing contact details. Card payments happen only
         on a secure hosted checkout link from our payment provider — never on this site.
       </p>
@@ -120,7 +120,7 @@ export default function BookingStepPage() {
         <div
           id="booking-form-error"
           role="alert"
-          className="mt-6 rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-red-200"
+          className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-red-800"
         >
           {error}
         </div>
@@ -128,7 +128,7 @@ export default function BookingStepPage() {
 
       <div className="mt-8 grid gap-4">
         <div>
-          <label htmlFor="booking-consultation-type" className="mb-1.5 block text-sm font-medium text-slate-200">
+          <label htmlFor="booking-consultation-type" className={formLabelClass}>
             Consultation type
           </label>
           <select
@@ -144,7 +144,7 @@ export default function BookingStepPage() {
         </div>
 
         <div>
-          <label htmlFor="booking-preferred-datetime" className="mb-1.5 block text-sm font-medium text-slate-200">
+          <label htmlFor="booking-preferred-datetime" className={formLabelClass}>
             Preferred date and time
           </label>
           <input
@@ -160,7 +160,7 @@ export default function BookingStepPage() {
         </div>
 
         <div>
-          <label htmlFor="booking-billing-name" className="mb-1.5 block text-sm font-medium text-slate-200">
+          <label htmlFor="booking-billing-name" className={formLabelClass}>
             Billing contact name
           </label>
           <input
@@ -177,7 +177,7 @@ export default function BookingStepPage() {
         </div>
 
         <div>
-          <label htmlFor="booking-billing-email" className="mb-1.5 block text-sm font-medium text-slate-200">
+          <label htmlFor="booking-billing-email" className={formLabelClass}>
             Billing contact email
           </label>
           <input
@@ -195,7 +195,7 @@ export default function BookingStepPage() {
         </div>
 
         <div>
-          <label htmlFor="booking-payment-preference" className="mb-1.5 block text-sm font-medium text-slate-200">
+          <label htmlFor="booking-payment-preference" className={formLabelClass}>
             Payment preference
           </label>
           <select
@@ -212,7 +212,7 @@ export default function BookingStepPage() {
         </div>
 
         <div>
-          <label htmlFor="booking-payment-notes" className="mb-1.5 block text-sm font-medium text-slate-200">
+          <label htmlFor="booking-payment-notes" className={formLabelClass}>
             Optional billing notes
           </label>
           <textarea
@@ -227,7 +227,7 @@ export default function BookingStepPage() {
               error ? "booking-form-error payment-notes-help" : "payment-notes-help"
             }
           />
-          <p id="payment-notes-help" className="mt-2 text-sm text-slate-300">
+          <p id="payment-notes-help" className="mt-2 text-base leading-7 text-slate-600">
             Do not enter card numbers, CVV/CVC, or expiry dates here. You will receive a secure
             payment link when it is ready.
           </p>
@@ -235,7 +235,7 @@ export default function BookingStepPage() {
 
         <label
           htmlFor="booking-availability-ack"
-          className="flex items-start gap-3 rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3"
+          className={`flex items-start gap-3 px-4 py-3 ${cardInsetClass}`}
         >
           <input
             id="booking-availability-ack"
@@ -247,9 +247,9 @@ export default function BookingStepPage() {
             aria-invalid={Boolean(error)}
             aria-describedby={error ? "booking-form-error" : undefined}
           />
-          <span className="text-sm text-slate-300">
+          <span className="text-sm text-slate-600">
             {availabilityDisclaimers.intakeAcknowledgment}{" "}
-            <Link to="/availability" className="text-amber-300 underline hover:text-amber-200">
+            <Link to="/availability" className="text-blue-900 underline hover:text-blue-800">
               State &amp; Jurisdiction Availability
             </Link>
             .
@@ -258,7 +258,7 @@ export default function BookingStepPage() {
 
         <label
           htmlFor="booking-consent"
-          className="flex items-start gap-3 rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3"
+          className={`flex items-start gap-3 px-4 py-3 ${cardInsetClass}`}
         >
           <input
             id="booking-consent"
@@ -270,7 +270,7 @@ export default function BookingStepPage() {
             aria-invalid={Boolean(error)}
             aria-describedby={error ? "booking-form-error" : undefined}
           />
-          <span className="text-sm text-slate-300">
+          <span className="text-sm text-slate-600">
             I understand card payment happens only on a secure hosted checkout link, and I will not
             enter card details on this website.
           </span>
@@ -281,7 +281,7 @@ export default function BookingStepPage() {
         <button
           type="button"
           onClick={() => navigate("/intake/agreement-preview")}
-          className="text-slate-300 hover:text-white"
+          className="text-slate-600 hover:text-slate-950"
         >
           Back
         </button>
@@ -289,7 +289,7 @@ export default function BookingStepPage() {
           type="button"
           onClick={handleSubmit}
           disabled={loading}
-          className="rounded-full bg-amber-400 px-5 py-3 font-semibold text-slate-950 hover:bg-amber-300 disabled:opacity-70"
+          className="rounded-full bg-slate-900 px-5 py-3 font-semibold text-white hover:bg-slate-800 disabled:opacity-70"
         >
           {loading ? "Submitting..." : "Submit"}
         </button>

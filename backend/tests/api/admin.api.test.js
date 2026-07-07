@@ -2,6 +2,7 @@ import { before, beforeEach, test } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "crypto";
 import { clearStore, setupTestEnvironment } from "../helpers/buildTestApp.js";
+import { makeAdmin, makeRegularUser, registerAndLogin } from "../helpers/authTestHelpers.js";
 import { withApp } from "../helpers/httpClient.js";
 
 let app;
@@ -15,21 +16,6 @@ beforeEach(() => {
   clearStore(store);
 });
 
-async function registerAndLogin(client, { email, password = "longenough1", fullName = "Demo" }) {
-  const res = await client.post("/api/auth/register", { fullName, email, password });
-  assert.equal(res.status, 201);
-  return res.body;
-}
-
-async function makeAdmin(client) {
-  return registerAndLogin(client, { email: "admin@example.com" });
-}
-
-async function makeRegularUser(client, email = "user@example.com") {
-  await registerAndLogin(client, { email: "first-admin@example.com" });
-  return registerAndLogin(client, { email });
-}
-
 test("GET /api/admin/leads requires authentication (401 without token)", async () => {
   await withApp(app, async (client) => {
     const res = await client.get("/api/admin/leads");
@@ -40,7 +26,7 @@ test("GET /api/admin/leads requires authentication (401 without token)", async (
 
 test("GET /api/admin/leads requires admin role (403 for regular user)", async () => {
   await withApp(app, async (client) => {
-    const userSession = await makeRegularUser(client);
+    const userSession = await makeRegularUser(client, store);
 
     const res = await client.get("/api/admin/leads", { token: userSession.token });
     assert.equal(res.status, 403);
@@ -50,7 +36,7 @@ test("GET /api/admin/leads requires admin role (403 for regular user)", async ()
 
 test("GET /api/admin/leads returns 200 and leads list for an admin", async () => {
   await withApp(app, async (client) => {
-    const adminSession = await makeAdmin(client);
+    const adminSession = await makeAdmin(client, store);
 
     const res = await client.get("/api/admin/leads", { token: adminSession.token });
     assert.equal(res.status, 200);
@@ -60,7 +46,7 @@ test("GET /api/admin/leads returns 200 and leads list for an admin", async () =>
 
 test("GET /api/admin/leads/:leadId rejects a non-UUID leadId with 400", async () => {
   await withApp(app, async (client) => {
-    const adminSession = await makeAdmin(client);
+    const adminSession = await makeAdmin(client, store);
 
     const res = await client.get("/api/admin/leads/not-a-uuid", {
       token: adminSession.token,
@@ -72,7 +58,7 @@ test("GET /api/admin/leads/:leadId rejects a non-UUID leadId with 400", async ()
 
 test("GET /api/admin/leads/:leadId returns 404 when the lead is missing", async () => {
   await withApp(app, async (client) => {
-    const adminSession = await makeAdmin(client);
+    const adminSession = await makeAdmin(client, store);
 
     const res = await client.get(`/api/admin/leads/${randomUUID()}`, {
       token: adminSession.token,
@@ -83,7 +69,7 @@ test("GET /api/admin/leads/:leadId returns 404 when the lead is missing", async 
 
 test("DELETE /api/admin/leads/:leadId soft-deletes the lead and writes an audit entry", async () => {
   await withApp(app, async (client) => {
-    const adminSession = await makeAdmin(client);
+    const adminSession = await makeAdmin(client, store);
     const leadId = randomUUID();
     store.leads.set(leadId, {
       id: leadId,
@@ -122,7 +108,7 @@ test("DELETE /api/admin/leads/:leadId soft-deletes the lead and writes an audit 
 
 test("DELETE /api/admin/leads/:leadId returns 404 (and still audits) for a missing lead", async () => {
   await withApp(app, async (client) => {
-    const adminSession = await makeAdmin(client);
+    const adminSession = await makeAdmin(client, store);
     const missingId = randomUUID();
 
     const res = await client.delete(`/api/admin/leads/${missingId}`, {
@@ -134,7 +120,7 @@ test("DELETE /api/admin/leads/:leadId returns 404 (and still audits) for a missi
 
 test("POST /api/admin/* by a regular user returns 403 and never invokes the admin handler", async () => {
   await withApp(app, async (client) => {
-    const userSession = await makeRegularUser(client);
+    const userSession = await makeRegularUser(client, store);
 
     const userId = [...store.users.values()].find((u) => u.role === "user").id;
 
@@ -155,7 +141,7 @@ test("POST /api/admin/* by a regular user returns 403 and never invokes the admi
 
 test("PATCH /api/admin/users/:userId/role rejects unknown roles with 400", async () => {
   await withApp(app, async (client) => {
-    const adminSession = await makeAdmin(client);
+    const adminSession = await makeAdmin(client, store);
 
     const res = await client.patch(
       `/api/admin/users/${randomUUID()}/role`,

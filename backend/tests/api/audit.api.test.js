@@ -2,6 +2,7 @@ import { before, beforeEach, test } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "crypto";
 import { clearStore, setupTestEnvironment } from "../helpers/buildTestApp.js";
+import { makeAdmin, verifyUserEmail } from "../helpers/authTestHelpers.js";
 import { withApp } from "../helpers/httpClient.js";
 import { AUDIT_EVENT_TYPES } from "../../src/constants/audit.js";
 
@@ -28,13 +29,7 @@ function assertNoSensitiveAuditPayload() {
 }
 
 async function registerAdmin(client) {
-  const res = await client.post("/api/auth/register", {
-    fullName: "Admin",
-    email: "admin@example.com",
-    password: "longenough1",
-  });
-  assert.equal(res.status, 201);
-  return res.body;
+  return makeAdmin(client, store);
 }
 
 async function registerSecondUser(client, email = "user@example.com") {
@@ -44,12 +39,17 @@ async function registerSecondUser(client, email = "user@example.com") {
     password: "longenough1",
   });
   assert.equal(res.status, 201);
+  verifyUserEmail(store, email);
   return res.body;
 }
 
 test("successful login creates auth.login.success audit event", async () => {
   await withApp(app, async (client) => {
-    await registerAdmin(client);
+    await client.post("/api/auth/register", {
+      fullName: "Admin",
+      email: "admin@example.com",
+      password: "longenough1",
+    });
     client.clearCookies();
 
     const login = await client.post("/api/auth/login", {
@@ -69,7 +69,11 @@ test("successful login creates auth.login.success audit event", async () => {
 
 test("failed login creates auth.login.failure without password in audit payload", async () => {
   await withApp(app, async (client) => {
-    await registerAdmin(client);
+    await client.post("/api/auth/register", {
+      fullName: "Admin",
+      email: "admin@example.com",
+      password: "longenough1",
+    });
     client.clearCookies();
 
     const res = await client.post("/api/auth/login", {

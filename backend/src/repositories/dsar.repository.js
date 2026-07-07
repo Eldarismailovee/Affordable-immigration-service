@@ -127,6 +127,8 @@ export async function updateDsarRequest(requestId, fields, db = pool) {
     denialReason: "denial_reason",
     completedAt: "completed_at",
     completedBy: "completed_by",
+    deletionFailureReason: "deletion_failure_reason",
+    deletionVerificationJson: "deletion_verification_json",
   };
 
   for (const [key, column] of Object.entries(columnMap)) {

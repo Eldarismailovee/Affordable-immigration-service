@@ -1,0 +1,92 @@
+name: Release Readiness
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_compose_smoke:
+        description: Run Docker Compose E2E smoke
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-readiness-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  readiness:
+    name: Release Readiness
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: immigration_ci
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d immigration_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/immigration_ci
+      AUTH_TOKEN_SECRET: ci-auth-token-secret-with-at-least-32-chars
+      RUN_MFA_PG_INTEGRATION: "1"
+      RUN_EMAIL_VERIFICATION_PG_INTEGRATION: "1"
+      RUN_IDEMPOTENCY_PG_INTEGRATION: "1"
+      IDEMPOTENCY_KEY_HMAC_SECRET: test-idempotency-hmac-secret-value-32bytes-long
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Backend clean install and test
+        working-directory: backend
+        run: |
+          set -Eeuo pipefail
+          npm ci
+          npm test
+          node ../scripts/ci/check-npm-audit.js . ../security/dependency-audit-baseline.json --production
+          npm run migrate
+          npm run migrate:check
+          node scripts/ci/migration-upgrade-test.js
+
+      - name: PostgreSQL integration
+        working-directory: backend
+        run: |
+          set -Eeuo pipefail
+          NODE_ENV=test node --test --experimental-test-module-mocks tests/db/mfa.integration.test.js tests/db/email-verification.integration.test.js tests/db/idempotency.integration.test.js
+
+      - name: Frontend clean install and test
+        working-directory: frontend
+        env:
+          VITE_API_URL: /api
+        run: |
+          set -Eeuo pipefail
+          npm ci
+          npm test
+          npm run lint
+          npm run build
+          node ../scripts/ci/check-npm-audit.js . ../security/dependency-audit-baseline.json --production
+
+      - name: Docker builds
+        run: |
+          set -Eeuo pipefail
+          docker build --pull -t immigration-backend:release ./backend
+          docker build --pull --build-arg VITE_API_URL=/api -t immigration-frontend:release ./frontend
+          docker compose config --quiet
+
+      - name: Compose smoke
+        if: inputs.run_compose_smoke
+        run: bash scripts/ci/compose-smoke.sh
+
+      - name: Workflow validation
+        run: node scripts/ci/validate-workflows.js
+
+      - name: Release readiness summary
+        run: echo "Release readiness checks completed. Review container scan and open security findings before deploy."

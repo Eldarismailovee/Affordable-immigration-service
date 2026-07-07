@@ -6,11 +6,13 @@ import { registerSchema } from "../../schemas/auth.schema.js";
 import emailVerificationRoutes from "./email-verification.routes.js";
 import passwordResetRoutes from "./password-reset.routes.js";
 import sessionRoutes from "./session.routes.js";
+import mfaRoutes from "./mfa.routes.js";
 
 const router = Router();
 
 router.post("/register", authRateLimit, validateRequest(registerSchema), registerController);
 router.use(sessionRoutes);
+router.use("/mfa", mfaRoutes);
 router.use(passwordResetRoutes);
 router.use(emailVerificationRoutes);
 

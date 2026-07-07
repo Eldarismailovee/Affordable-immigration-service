@@ -41,10 +41,26 @@ export async function verifyPassword(password, passwordHash) {
   return timingSafeEqual(storedBuffer, key);
 }
 
-export async function createAccessToken(user, { sessionId } = {}) {
+export async function createAccessToken(
+  user,
+  {
+    sessionId,
+    mfaCompleted = false,
+    mfaCompletedAt = null,
+    sessionSecurityVersion = 1,
+  } = {}
+) {
+  const emailVerified = Boolean(user.emailVerifiedAt ?? user.email_verified_at);
+
   return new SignJWT({
     role: user.role,
     typ: "access",
+    mfa: mfaCompleted,
+    emailVerified,
+    ...(mfaCompletedAt
+      ? { mfaAt: Math.floor(new Date(mfaCompletedAt).getTime() / 1000) }
+      : {}),
+    secVer: sessionSecurityVersion,
     ...(sessionId ? { sid: sessionId } : {}),
   })
     .setProtectedHeader({ alg: "HS256", typ: "JWT" })
@@ -72,12 +88,20 @@ export async function verifyAuthToken(token) {
   }
 }
 
+export function isMfaChallengeJwtPayload(payload) {
+  return payload?.typ === "mfa_challenge";
+}
+
 export function createOpaqueToken() {
   return randomBytes(48).toString("base64url");
 }
 
 export function hashToken(token) {
   return createHash("sha256").update(String(token)).digest("hex");
+}
+
+export function addSeconds(date, seconds) {
+  return new Date(date.getTime() + seconds * 1000);
 }
 
 export function addMinutes(date, minutes) {
@@ -98,17 +122,23 @@ export function sanitizeUser(user) {
   return {
     id: user.id,
     email: user.email,
-    fullName: user.full_name,
+    fullName: user.full_name ?? user.fullName,
     role: user.role,
     status: user.status,
-    emailVerifiedAt: user.email_verified_at,
-    processingRestrictedAt: user.processing_restricted_at ?? null,
-    processingRestrictionReason: user.processing_restriction_reason ?? null,
-    marketingConsent: Boolean(user.marketing_consent),
-    newsletterConsent: Boolean(user.newsletter_consent),
-    marketingConsentAt: user.marketing_consent_at ?? null,
-    marketingOptOutAt: user.marketing_opt_out_at ?? null,
-    createdAt: user.created_at,
-    updatedAt: user.updated_at,
+    emailVerifiedAt: user.email_verified_at ?? user.emailVerifiedAt ?? null,
+    pendingEmail: user.pending_email ?? user.pendingEmail ?? null,
+    pendingEmailRequestedAt:
+      user.pending_email_requested_at ?? user.pendingEmailRequestedAt ?? null,
+    emailChangedAt: user.email_changed_at ?? user.emailChangedAt ?? null,
+    processingRestrictedAt:
+      user.processing_restricted_at ?? user.processingRestrictedAt ?? null,
+    processingRestrictionReason:
+      user.processing_restriction_reason ?? user.processingRestrictionReason ?? null,
+    marketingConsent: Boolean(user.marketing_consent ?? user.marketingConsent),
+    newsletterConsent: Boolean(user.newsletter_consent ?? user.newsletterConsent),
+    marketingConsentAt: user.marketing_consent_at ?? user.marketingConsentAt ?? null,
+    marketingOptOutAt: user.marketing_opt_out_at ?? user.marketingOptOutAt ?? null,
+    createdAt: user.created_at ?? user.createdAt,
+    updatedAt: user.updated_at ?? user.updatedAt,
   };
 }

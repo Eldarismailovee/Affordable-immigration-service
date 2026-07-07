@@ -26,7 +26,7 @@ export function renderAgreementHtml({
       <p><strong>Government filing fees:</strong> Separate from legal fees.</p>
       <p><strong>Engagement:</strong> No attorney-client relationship is formed by website use alone.</p>
       <p><strong>Consultation rule:</strong> Engagement begins only after the first 15-minute lawyer consultation confirms the adequacy of submitted documents.</p>
-      <p><strong>Processing promise:</strong> Matter will be filed within two weeks after all required documents are received.</p>
+      <p><strong>Preparation target:</strong> Internal preparation target of within two weeks after all required documents and information are received and the matter is accepted. This is not a guarantee of filing date, USCIS acceptance, approval, or government processing time.</p>
     </div>
   `;
 }

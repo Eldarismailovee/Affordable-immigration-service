@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { SYNCED_STATUS } from "../constants/domain.js";
+import { NOT_CONFIGURED_STATUS } from "../constants/domain.js";
 import {
   findLatestDocketwiseSyncByLeadId,
   findLatestIntakeByLeadId,
@@ -13,8 +13,16 @@ import {
 import { withUnitOfWork } from "../repositories/unit-of-work.repository.js";
 import { intakeNotFoundError, leadNotFoundError } from "../domain/errors.js";
 import { assertAdminAccess } from "./access.service.js";
+import env from "../config/env.js";
 
-export async function syncLeadToDocketwise({ leadId, actor }) {
+const INTEGRATION_MESSAGE =
+  "Docketwise integration is not configured; no provider sync was performed";
+
+function isDocketwiseConfigured() {
+  return Boolean(env.DOCKETWISE_API_URL && env.DOCKETWISE_API_TOKEN);
+}
+
+export async function syncLeadToDocketwise({ leadId, actor, client = null }) {
   assertAdminAccess(actor);
 
   const lead = await findLeadById(leadId);
@@ -29,43 +37,55 @@ export async function syncLeadToDocketwise({ leadId, actor }) {
     throw intakeNotFoundError();
   }
 
-  const existingSync = await findLatestDocketwiseSyncByLeadId(leadId);
+  if (!isDocketwiseConfigured()) {
+    const existingSync = await findLatestDocketwiseSyncByLeadId(leadId);
 
-  const externalId = `DW-${leadId.split("-")[0].toUpperCase()}`;
-  const now = new Date();
+    const run = client
+      ? async (callback) => callback(client)
+      : async (callback) => withUnitOfWork(callback);
 
-  const syncRow = await withUnitOfWork(async (client) => {
-    const nextSync = existingSync
-      ? await updateDocketwiseSyncById(
-          existingSync.id,
-          {
-            externalId,
-            status: SYNCED_STATUS,
-            errorMessage: null,
-            lastSyncedAt: now,
-          },
-          client
-        )
-      : await createDocketwiseSyncRecord(
-          {
-            id: randomUUID(),
-            leadId,
-            externalId,
-            status: SYNCED_STATUS,
-            errorMessage: null,
-            lastSyncedAt: now,
-          },
-          client
-        );
+    const syncRow = await run(async (txClient) => {
+      const nextSync = existingSync
+        ? await updateDocketwiseSyncById(
+            existingSync.id,
+            {
+              externalId: null,
+              status: NOT_CONFIGURED_STATUS,
+              errorMessage: INTEGRATION_MESSAGE,
+              lastSyncedAt: null,
+            },
+            txClient
+          )
+        : await createDocketwiseSyncRecord(
+            {
+              id: randomUUID(),
+              leadId,
+              externalId: null,
+              status: NOT_CONFIGURED_STATUS,
+              errorMessage: INTEGRATION_MESSAGE,
+              lastSyncedAt: null,
+            },
+            txClient
+          );
 
-    await updateIntakeDocketwiseStatusByLeadId(leadId, SYNCED_STATUS, client);
-    return nextSync;
-  });
+      await updateIntakeDocketwiseStatusByLeadId(leadId, NOT_CONFIGURED_STATUS, txClient);
+      return nextSync;
+    });
+
+    return {
+      success: false,
+      provider: "Docketwise",
+      configured: false,
+      message: INTEGRATION_MESSAGE,
+      sync: syncRow,
+    };
+  }
 
   return {
-    success: true,
+    success: false,
     provider: "Docketwise",
-    message: "Lead marked as synced with Docketwise",
-    sync: syncRow,
+    configured: true,
+    message: "Docketwise provider adapter is not implemented yet",
+    sync: await findLatestDocketwiseSyncByLeadId(leadId),
   };
 }
