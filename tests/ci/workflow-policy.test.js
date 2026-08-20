@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, existsSync, writeFileSync, unlinkSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { execSync } from "node:child_process";
+import { execFileSync, execSync } from "node:child_process";
 
 const repoRoot = resolve(import.meta.dirname, "../..");
 const ciPath = join(repoRoot, ".github/workflows/ci.yml");
@@ -82,8 +82,9 @@ test("check-npm-audit fails on expired baseline", () => {
   try {
     assert.throws(
       () =>
-        execSync(
-          `node scripts/ci/check-npm-audit.js backend ${baselinePath} --production`,
+        execFileSync(
+          process.execPath,
+          ["scripts/ci/check-npm-audit.js", "backend", baselinePath, "--production"],
           { cwd: repoRoot, stdio: "pipe" }
         ),
       /Command failed/

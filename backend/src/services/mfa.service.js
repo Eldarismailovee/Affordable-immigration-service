@@ -140,13 +140,24 @@ function normalizeRecoveryCode(code) {
 }
 
 function generateRecoveryCodePlaintext() {
-  const bytes = randomBytes(
-    MFA_RECOVERY_CODE_SEGMENTS * MFA_RECOVERY_CODE_SEGMENT_LENGTH
-  );
+  const codeLength = MFA_RECOVERY_CODE_SEGMENTS * MFA_RECOVERY_CODE_SEGMENT_LENGTH;
+  const alphabetLength = RECOVERY_ALPHABET.length;
+  const maxAcceptedByte = 256 - (256 % alphabetLength);
   let raw = "";
 
-  for (let index = 0; index < bytes.length; index += 1) {
-    raw += RECOVERY_ALPHABET[bytes[index] % RECOVERY_ALPHABET.length];
+  while (raw.length < codeLength) {
+    const bytes = randomBytes(codeLength - raw.length);
+
+    for (const byte of bytes) {
+      if (byte >= maxAcceptedByte) {
+        continue;
+      }
+
+      raw += RECOVERY_ALPHABET[byte % alphabetLength];
+      if (raw.length === codeLength) {
+        break;
+      }
+    }
   }
 
   const segments = [];

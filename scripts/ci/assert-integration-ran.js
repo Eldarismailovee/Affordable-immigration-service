@@ -17,13 +17,12 @@ const output = readFileSync(outputPath, "utf8");
 const failures = [];
 
 for (const name of expectedTests) {
-  const skippedPattern = new RegExp(`${name}[\\s\\S]*?# SKIP`, "m");
-  const passPattern = new RegExp(`${name}[\\s\\S]*?# PASS`, "m");
-  const failPattern = new RegExp(`${name}[\\s\\S]*?# FAIL`, "m");
+  const resultStart = output.indexOf(name);
+  const resultOutput = resultStart === -1 ? "" : output.slice(resultStart);
 
-  if (skippedPattern.test(output)) {
+  if (resultOutput.includes("# SKIP")) {
     failures.push(`${name} was SKIPPED`);
-  } else if (!passPattern.test(output) && !failPattern.test(output)) {
+  } else if (!resultOutput.includes("# PASS") && !resultOutput.includes("# FAIL")) {
     failures.push(`${name} was not found in test output`);
   }
 }

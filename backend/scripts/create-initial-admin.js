@@ -224,19 +224,21 @@ async function main() {
     logger.info(
       {
         userId: user.id,
-        email: user.email,
         role: user.role,
       },
       "Initial administrator provisioned"
     );
 
-    console.log(`Initial administrator created: ${user.email} (${user.id})`);
+    console.log(`Initial administrator created (${user.id})`);
     console.log(
       "Email verification and MFA enrollment are required before this account can access admin APIs."
     );
   } catch (error) {
-    logger.error({ err: error }, "Initial administrator provisioning failed");
-    console.error(error.message);
+    logger.error(
+      { errorType: error?.name, errorCode: error?.code },
+      "Initial administrator provisioning failed"
+    );
+    console.error("Initial administrator provisioning failed.");
     process.exitCode = 1;
   }
 }

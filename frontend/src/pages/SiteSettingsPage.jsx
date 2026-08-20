@@ -3,6 +3,23 @@ import { Link } from "react-router-dom";
 import { updateSiteSettings, uploadImage } from "../services/api";
 import { useSiteSettings } from "../context/SiteSettingsContext";
 
+function getSafeImageUrl(value) {
+  if (typeof value !== "string" || !value.trim()) {
+    return "";
+  }
+
+  try {
+    const url = new URL(value, window.location.origin);
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      return "";
+    }
+
+    return url.href;
+  } catch {
+    return "";
+  }
+}
+
 function ImageField({
   label,
   fieldName,
@@ -19,9 +36,9 @@ function ImageField({
         {label}
       </label>
 
-      {value ? (
+      {getSafeImageUrl(value) ? (
         <img
-          src={value}
+          src={getSafeImageUrl(value)}
           alt=""
           className="h-32 w-full rounded-2xl border border-white/10 object-cover"
         />

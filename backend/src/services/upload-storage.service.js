@@ -138,14 +138,16 @@ export async function removeUploadFile(fileOrPath) {
 }
 
 export async function assertUploadedImageContent(file) {
-  if (!file?.path) {
+  if (!file?.path || !file?.filename) {
     throw new AppError("No image file uploaded", 400, "FILE_UPLOAD_REQUIRED");
   }
 
-  const detectedMimeType = await detectUploadedImageMimeType(file.path);
+  const safeFilename = assertSafeUploadFilename(file.filename);
+  const safeFilePath = resolveUploadPath(safeFilename);
+  const detectedMimeType = await detectUploadedImageMimeType(safeFilePath);
 
   if (!detectedMimeType || !IMAGE_UPLOAD_MIME_TYPES.includes(detectedMimeType)) {
-    await removeUploadFile(file);
+    await removeUploadFile(safeFilePath);
     throw new AppError(
       "Uploaded file content is not a supported image",
       400,
@@ -154,7 +156,7 @@ export async function assertUploadedImageContent(file) {
   }
 
   if (detectedMimeType !== file.mimetype) {
-    await removeUploadFile(file);
+    await removeUploadFile(safeFilePath);
     throw new AppError(
       "Uploaded file content does not match declared MIME type",
       400,
@@ -164,6 +166,8 @@ export async function assertUploadedImageContent(file) {
 
   return {
     ...file,
+    path: safeFilePath,
+    filename: safeFilename,
     detectedMimeType,
   };
 }

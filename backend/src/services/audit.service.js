@@ -80,7 +80,10 @@ export async function recordAuditEvent(
       throw err;
     }
 
-    logger.error({ err, eventType, category, action }, "Failed to write audit event");
+    logger.error(
+      { errorType: err?.name, errorCode: err?.code, eventType, category, action },
+      "Failed to write audit event"
+    );
   }
 }
 

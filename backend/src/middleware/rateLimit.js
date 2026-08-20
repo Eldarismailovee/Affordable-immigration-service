@@ -1,4 +1,4 @@
-import rateLimit from "express-rate-limit";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 
 const FIFTEEN_MINUTES = 15 * 60 * 1000;
 
@@ -23,7 +23,7 @@ export const mfaRateLimit = rateLimit({
   limit: 15,
   standardHeaders: "draft-7",
   legacyHeaders: false,
-  keyGenerator: (req) => req.body?.challengeToken || req.ip || "unknown",
+  keyGenerator: (req) => req.body?.challengeToken || ipKeyGenerator(req.ip),
   message: { message: "Too many MFA attempts, please try again later" },
 });
 
@@ -32,7 +32,8 @@ export const mfaSensitiveRateLimit = rateLimit({
   limit: 5,
   standardHeaders: "draft-7",
   legacyHeaders: false,
-  keyGenerator: (req) => req.user?.id || req.body?.challengeToken || req.ip || "unknown",
+  keyGenerator: (req) =>
+    req.user?.id || req.body?.challengeToken || ipKeyGenerator(req.ip),
   message: { message: "Too many sensitive MFA attempts, please try again later" },
 });
 
@@ -41,7 +42,7 @@ export const emailVerificationRateLimit = rateLimit({
   limit: 10,
   standardHeaders: "draft-7",
   legacyHeaders: false,
-  keyGenerator: (req) => req.user?.id || req.ip || "unknown",
+  keyGenerator: (req) => req.user?.id || ipKeyGenerator(req.ip),
   message: { message: "Too many verification requests, please try again later" },
 });
 
@@ -51,7 +52,7 @@ export const emailVerificationResendRateLimit = rateLimit({
   standardHeaders: "draft-7",
   legacyHeaders: false,
   keyGenerator: (req) =>
-    `${req.body?.email || "unknown"}:${req.ip || "unknown"}`,
+    `${req.body?.email || "unknown"}:${ipKeyGenerator(req.ip)}`,
   message: { message: "Too many verification requests, please try again later" },
 });
 
@@ -60,6 +61,6 @@ export const emailChangeRateLimit = rateLimit({
   limit: 5,
   standardHeaders: "draft-7",
   legacyHeaders: false,
-  keyGenerator: (req) => req.user?.id || req.ip || "unknown",
+  keyGenerator: (req) => req.user?.id || ipKeyGenerator(req.ip),
   message: { message: "Too many email change attempts, please try again later" },
 });
