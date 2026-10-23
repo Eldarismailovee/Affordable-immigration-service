@@ -382,7 +382,7 @@ jobs:
           gunzip -c frontend-image.tar.gz | docker load
 
       - name: Scan backend image
-        uses: aquasecurity/trivy-action@915b19bbe73b92a6cf82a1bc12b087c9a19a5fe2 # 0.28.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # 0.36.0
         with:
           scan-type: image
           image-ref: immigration-backend:ci
@@ -392,7 +392,7 @@ jobs:
           ignore-unfixed: false
 
       - name: Scan frontend image
-        uses: aquasecurity/trivy-action@915b19bbe73b92a6cf82a1bc12b087c9a19a5fe2 # 0.28.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # 0.36.0
         with:
           scan-type: image
           image-ref: immigration-frontend:ci
